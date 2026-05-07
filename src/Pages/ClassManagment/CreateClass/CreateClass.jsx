@@ -1,177 +1,287 @@
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, BookOpen, X, Save } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
+import { createClass, deactivateClass, getBranches, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+
+const emptyForm = {
+    name: '',
+    branchId: '',
+};
 
 export const CreateClasses = () => {
-    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [branches, setBranches] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [search, setSearch] = useState('');
+    const [selectedBranchFilter, setSelectedBranchFilter] = useState('');
+    const [formData, setFormData] = useState(emptyForm);
     const [editMode, setEditMode] = useState(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        detail: '',
-        admissionFee: '',
-        monthlyFee: ''
-    });
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
-    const [classes] = useState([
-        { id: 1, name: 'حفظ اول', detail: 'تصیلی الفاظ', admissionFee: '1000', monthlyFee: '500' },
-    ]);
+    const activeBranches = useMemo(() => branches.filter((item) => item.status === 'active'), [branches]);
 
-    const handleEdit = (cls) => {
-        setEditMode(cls.id);
+    const loadDependencies = async () => {
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const [branchesResult, classesResult] = await Promise.all([
+                getBranches('page=1&limit=100'),
+                getClasses('page=1&limit=100'),
+            ]);
+
+            setBranches(branchesResult.items || []);
+            setClasses(classesResult.items || []);
+        } catch (loadError) {
+            setError(loadError.message || 'Classes data load nahi ho saka.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadDependencies();
+    }, []);
+
+    const resetForm = () => {
+        setEditMode(null);
+        setFormData(emptyForm);
+        setIsFormOpen(false);
+    };
+
+    const handleEdit = (academicClass) => {
+        setEditMode(academicClass.id);
         setFormData({
-            name: cls.name,
-            detail: cls.detail,
-            admissionFee: cls.admissionFee,
-            monthlyFee: cls.monthlyFee
+            name: academicClass.name || '',
+            branchId: academicClass.branchId ? String(academicClass.branchId) : '',
         });
+        setError('');
+        setSuccess('');
         setIsFormOpen(true);
     };
 
-    const closeForm = () => {
-        setIsFormOpen(false);
-        setEditMode(null);
-        setFormData({ name: '', detail: '', admissionFee: '', monthlyFee: '' });
+    const handleSubmit = async () => {
+        if (!formData.name.trim() || !formData.branchId) {
+            setError('Class name aur branch dono zaroori hain.');
+            return;
+        }
+
+        setIsSaving(true);
+        setError('');
+        setSuccess('');
+
+        try {
+            const payload = {
+                name: formData.name.trim(),
+                branchId: Number(formData.branchId),
+            };
+
+            if (editMode) {
+                await updateClass(editMode, payload);
+                setSuccess('Class update ho gayi.');
+            } else {
+                await createClass(payload);
+                setSuccess('Class create ho gayi.');
+            }
+
+            resetForm();
+            await loadDependencies();
+        } catch (saveError) {
+            setError(saveError.message || 'Class save nahi ho saki.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
+    const handleDeactivate = async (classId) => {
+        setError('');
+        setSuccess('');
+
+        try {
+            await deactivateClass(classId);
+            setSuccess('Class inactive kar di gayi.');
+            await loadDependencies();
+        } catch (actionError) {
+            setError(actionError.message || 'Class inactive nahi ho saki.');
+        }
+    };
+
+    const filteredClasses = classes.filter((academicClass) => {
+        const matchesBranch = selectedBranchFilter ? String(academicClass.branchId) === selectedBranchFilter : true;
+        const query = search.trim().toLowerCase();
+        const matchesSearch = !query
+            ? true
+            : [academicClass.name, academicClass.branch?.name]
+                  .filter(Boolean)
+                  .some((value) => String(value).toLowerCase().includes(query));
+
+        return matchesBranch && matchesSearch;
+    });
+
     return (
-        <div className="space-y-6 animate-in fade-in duration-700 p-2">
-            {/* --- HEADER --- */}
-            <div 
-                className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)] shadow-sm backdrop-blur-sm"
-            >
+        <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
+            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">جماعت مینجمنٹ</h2>
-                    <p className="text-sm text-[var(--color-text-muted)] font-medium tracking-wide mt-4">کل فہرست: {classes.length}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredClasses.length}</p>
                 </div>
-                <button
-                    onClick={() => isFormOpen ? closeForm() : setIsFormOpen(true)}
-                    className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${
-                        isFormOpen 
-                        ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
-                        : 'bg-[#00d094] text-white shadow-emerald-500/20'
-                    }`}
-                >
-                    {isFormOpen ? 'بند کریں' : 'نئی جماعت بنائیں'}
-                    {isFormOpen ? <X size={20} /> : <Plus size={20} />}
-                </button>
+
+                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                    <select
+                        value={selectedBranchFilter}
+                        onChange={(e) => setSelectedBranchFilter(e.target.value)}
+                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-52"
+                    >
+                        <option value="">تمام برانچز</option>
+                        {activeBranches.map((branch) => (
+                            <option key={branch.id} value={branch.id}>
+                                {branch.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="relative md:w-72">
+                        <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                        <input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="جماعت تلاش کریں"
+                            className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none"
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))}
+                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all ${
+                            isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white'
+                        }`}
+                    >
+                        {isFormOpen ? 'بند کریں' : 'نئی جماعت'}
+                        {isFormOpen ? <X size={18} /> : <Plus size={18} />}
+                    </button>
+                </div>
             </div>
 
-            {/* --- FORM --- */}
-            {isFormOpen && (
-                <div 
-                    className="bg-[var(--color-surface)] border border-[#00d094]/20 rounded-[2.5rem] p-8 animate-in slide-in-from-top duration-500 shadow-xl"
-                >
-                    <div className="flex items-center justify-start gap-2 mb-6 text-[#00d094] font-black">
-                        <span>{editMode ? 'جماعت کی معلومات تبدیل کریں' : 'نئی جماعت کا اندراج'}</span>
+            {isFormOpen ? (
+                <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
+                    <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
+                        <span>{editMode ? 'جماعت اپڈیٹ کریں' : 'نئی جماعت کا اندراج'}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 text-right block uppercase tracking-widest">جماعت *</label>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">برانچ</label>
+                            <select
+                                value={formData.branchId}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, branchId: e.target.value }))}
+                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                            >
+                                <option value="">برانچ منتخب کریں</option>
+                                {activeBranches.map((branch) => (
+                                    <option key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">جماعت نام</label>
+                            <div className="relative">
+                                <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                                 <input
-                                    type="text"
                                     value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="جماعت کا نام"
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5 outline-none h-[54px] px-4 rounded-2xl text-sm font-bold text-right text-[var(--color-text)] transition-all"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 text-right block uppercase tracking-widest">داخلہ فیس</label>
-                                <input
-                                    type="number"
-                                    value={formData.admissionFee}
-                                    onChange={(e) => setFormData({ ...formData, admissionFee: e.target.value })}
-                                    placeholder="0.00"
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5 outline-none h-[54px] px-4 rounded-2xl text-sm font-bold text-right text-[var(--color-text)] transition-all"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 text-right block uppercase tracking-widest">تفصیل</label>
-                                <input
-                                    type="text"
-                                    value={formData.detail}
-                                    onChange={(e) => setFormData({ ...formData, detail: e.target.value })}
-                                    placeholder="تفصیلی الفاظ"
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5 outline-none h-[54px] px-4 rounded-2xl text-sm font-bold text-right text-[var(--color-text)] transition-all"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 text-right block uppercase tracking-widest">ماہانہ فیس</label>
-                                <input
-                                    type="number"
-                                    value={formData.monthlyFee}
-                                    onChange={(e) => setFormData({ ...formData, monthlyFee: e.target.value })}
-                                    placeholder="0.00"
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5 outline-none h-[54px] px-4 rounded-2xl text-sm font-bold text-right text-[var(--color-text)] transition-all"
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                    placeholder="مثلاً حفظ اول"
+                                    className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
                                 />
                             </div>
                         </div>
                     </div>
+
+                    {error ? <MessageBox tone="error" message={error} /> : null}
+                    {success ? <MessageBox tone="success" message={success} /> : null}
 
                     <div className="mt-8 flex justify-end gap-3">
-                        {editMode && (
-                            <button onClick={closeForm} className="px-6 py-4 rounded-xl font-black text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] transition-all">کینسل</button>
-                        )}
-                        <button className="bg-[#218838] hover:bg-[#1a6d2c] text-white px-10 py-4 rounded-xl font-black text-sm shadow-xl shadow-green-900/20 transition-all flex items-center gap-3">
-                            {editMode ? 'تبدیل کریں' : 'بنائیں'}
-                            {editMode ? <Save size={20} /> : <Plus size={20} />}
+                        {editMode ? (
+                            <button onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">
+                                منسوخ
+                            </button>
+                        ) : null}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={isSaving}
+                            className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
+                        >
+                            {editMode ? 'اپڈیٹ' : 'بنائیں'}
+                            {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>
                 </div>
-            )}
+            ) : null}
 
-            {/* --- TABLE --- */}
-            <div 
-                className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[2.5rem] overflow-hidden shadow-sm"
-            >
-                <div className="overflow-x-auto" dir="rtl">
-                    <table className="w-full text-right border-separate border-spacing-y-2 px-4">
+            {error && !isFormOpen ? <MessageBox tone="error" message={error} /> : null}
+            {success && !isFormOpen ? <MessageBox tone="success" message={success} /> : null}
+
+            <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-right">
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right">جماعت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right">تفصیل</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right">داخلہ فیس</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right">ماہانہ فیس</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-right">ایکشن</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشنز</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {classes.map((cls) => (
-                                <tr
-                                    key={cls.id}
-                                    className={`bg-[var(--color-bg)]/40 hover:bg-[var(--color-bg)] hover:scale-[1.01] transition-all duration-300 group shadow-sm rounded-2xl ${editMode === cls.id ? 'ring-2 ring-[#00d094]' : ''}`}
-                                >
-                                    <td className="px-6 py-4 first:rounded-r-2xl text-right">
-                                        <div className="flex items-center justify-start gap-3 font-black text-[var(--color-text)]">
-                                            <div className="p-2 bg-[var(--color-surface)] text-[var(--color-text-muted)] rounded-lg group-hover:bg-[#00d094] group-hover:text-white transition-all border border-[var(--color-border)]">
-                                                <BookOpen size={16} />
-                                            </div>
-                                            <span>{cls.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-[var(--color-text-muted)] text-sm text-right">{cls.detail}</td>
-                                    <td className="px-6 py-4 font-bold text-[var(--color-text)] text-right">Rs. {cls.admissionFee}</td>
-                                    <td className="px-6 py-4 font-bold text-[var(--color-text)] text-right">Rs. {cls.monthlyFee}</td>
-                                    <td className="px-6 py-4 last:rounded-l-2xl text-right">
-                                        <div className="flex items-center justify-start gap-2">
-                                            <button className="p-2.5 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm">
-                                                <Trash2 size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleEdit(cls)}
-                                                className="p-2.5 bg-emerald-500/10 text-[#00d094] rounded-xl hover:bg-[#00d094] hover:text-white transition-all shadow-sm"
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
-                                        </div>
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                        Classes load ho rahi hain...
                                     </td>
                                 </tr>
-                            ))}
+                            ) : filteredClasses.length ? (
+                                filteredClasses.map((academicClass) => (
+                                    <tr key={academicClass.id} className="border-t border-[var(--color-border)]/60">
+                                        <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
+                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass.branch?.name || '-'}</td>
+                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${academicClass.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                {academicClass.status === 'active' ? 'فعال' : 'غیر فعال'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-start gap-2">
+                                                <button
+                                                    onClick={() => handleEdit(academicClass)}
+                                                    className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeactivate(academicClass.id)}
+                                                    disabled={academicClass.status === 'inactive'}
+                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                        Koi class record nahi mila.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -179,3 +289,9 @@ export const CreateClasses = () => {
         </div>
     );
 };
+
+const MessageBox = ({ tone, message }) => (
+    <div className={`mt-6 rounded-2xl px-4 py-3 text-sm font-bold ${tone === 'error' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'}`}>
+        {message}
+    </div>
+);

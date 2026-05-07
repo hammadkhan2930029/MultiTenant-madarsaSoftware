@@ -30,7 +30,16 @@ export const SelectField = ({ label, options, isDark, className = '', ...props }
         className={`w-full p-4 rounded-2xl border outline-none font-bold appearance-none transition-all ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
         } ${className}`}
       >
-        {options.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+        {options.map((opt, i) => {
+          const optionValue = typeof opt === 'object' && opt !== null ? opt.value : opt;
+          const optionLabel = typeof opt === 'object' && opt !== null ? opt.label : opt;
+
+          return (
+            <option key={i} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
       </select>
       <ChevronDown size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)] pointer-events-none" />
     </div>

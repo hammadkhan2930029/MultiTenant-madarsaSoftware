@@ -1,0 +1,96 @@
+import { apiRequest } from './Api';
+import { getAdminToken } from './AdminAuth';
+
+const withToken = (options = {}) => ({
+  ...options,
+  token: getAdminToken(),
+});
+
+const withJson = (method, body) =>
+  withToken({
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+export const getBranches = async (query = '') => {
+  const result = await apiRequest(`/branches${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const createBranch = async (payload) => {
+  const result = await apiRequest('/branches', withJson('POST', payload));
+  return result?.data;
+};
+
+export const updateBranch = async (id, payload) => {
+  const result = await apiRequest(`/branches/${id}`, withJson('PATCH', payload));
+  return result?.data;
+};
+
+export const deactivateBranch = async (id) => {
+  const result = await apiRequest(`/branches/${id}/deactivate`, withToken({ method: 'PATCH' }));
+  return result?.data;
+};
+
+export const getClasses = async (query = '') => {
+  const result = await apiRequest(`/classes${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const createClass = async (payload) => {
+  const result = await apiRequest('/classes', withJson('POST', payload));
+  return result?.data;
+};
+
+export const updateClass = async (id, payload) => {
+  const result = await apiRequest(`/classes/${id}`, withJson('PATCH', payload));
+  return result?.data;
+};
+
+export const deactivateClass = async (id) => {
+  const result = await apiRequest(`/classes/${id}/deactivate`, withToken({ method: 'PATCH' }));
+  return result?.data;
+};
+
+export const getSections = async (query = '') => {
+  const result = await apiRequest(`/sections${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const createSection = async (payload) => {
+  const result = await apiRequest('/sections', withJson('POST', payload));
+  return result?.data;
+};
+
+export const updateSection = async (id, payload) => {
+  const result = await apiRequest(`/sections/${id}`, withJson('PATCH', payload));
+  return result?.data;
+};
+
+export const deactivateSection = async (id) => {
+  const result = await apiRequest(`/sections/${id}/deactivate`, withToken({ method: 'PATCH' }));
+  return result?.data;
+};
+
+export const getSessions = async (query = '') => {
+  const result = await apiRequest(`/sessions${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const createSession = async (payload) => {
+  const result = await apiRequest('/sessions', withJson('POST', payload));
+  return result?.data;
+};
+
+export const updateSession = async (id, payload) => {
+  const result = await apiRequest(`/sessions/${id}`, withJson('PATCH', payload));
+  return result?.data;
+};
+
+export const deactivateSession = async (id) => {
+  const result = await apiRequest(`/sessions/${id}/deactivate`, withToken({ method: 'PATCH' }));
+  return result?.data;
+};

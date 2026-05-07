@@ -4,11 +4,12 @@ import {
     BookOpen, Wallet, Settings, LogOut, Search,
     Bell, MessageSquare, Menu, ChevronDown,
     ClipboardList, GraduationCap as ExamIcon, HeartHandshake, Building2,
-    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, BarChart3, Settings2
+    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, BarChart3, Settings2, KeyRound
 } from 'lucide-react';
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
+import { fetchCurrentAdminProfile, getAdminSession, logoutAdmin } from '../../Constant/AdminAuth'
 
 
 export const SideBar = () => {
@@ -21,6 +22,7 @@ export const SideBar = () => {
     const [openSubSubMenu, setOpenSubSubMenu] = useState(null);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isDark] = useState(() => localStorage.getItem('theme') === 'dark');
+    const [adminProfile, setAdminProfile] = useState(() => getAdminSession()?.admin || null);
     //--------------------------------------------------------------------
 
     useEffect(() => {
@@ -29,7 +31,43 @@ export const SideBar = () => {
         }
     }, [isDark]);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        const syncAdminProfile = async () => {
+            try {
+                const profile = await fetchCurrentAdminProfile();
+                if (isMounted) {
+                    setAdminProfile(profile);
+                }
+            } catch (error) {
+                const message = error?.message?.toLowerCase() || '';
+                if (
+                    message.includes('session') ||
+                    message.includes('token') ||
+                    message.includes('expired') ||
+                    message.includes('inactive') ||
+                    message.includes('not found')
+                ) {
+                    logoutAdmin();
+                    navigate('/login', { replace: true });
+                }
+            }
+        };
+
+        syncAdminProfile();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [navigate]);
+
     const isActive = (path) => path && location.pathname === path;
+    const handleLogout = () => {
+        logoutAdmin();
+        setIsProfileOpen(false);
+        navigate('/login');
+    };
     //--------------------------------------------------------------------
 
     const menuItems = [
@@ -298,6 +336,7 @@ export const SideBar = () => {
     //--------------------------------------------------------------------
     const profileMenuItems = [
         { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
+        { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
         { id: 'add_branch', label: 'نئی برانچ شامل کریں', path: '/branch-management/create-branch', icon: UserCheck },
         { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck },
     ];
@@ -508,10 +547,10 @@ export const SideBar = () => {
                                     <Avatar src="https://i.pravatar.cc/150?u=a" className="w-11 h-11 border-2 border-emerald-100 shadow-sm" />
                                 </div>
                                 <div className="hidden sm:block text-right leading-tight">
-                                    <p className="font-black text-sm text-themeText">محمد علی</p>
+                                    <p className="font-black text-sm text-themeText">{adminProfile?.name || 'Admin'}</p>
                                     <div className="flex items-center justify-end gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        <p className="text-[10px] text-themeMuted font-bold uppercase">Super Admin</p>
+                                        <p className="text-[10px] text-themeMuted font-bold uppercase">{adminProfile?.role || 'Admin'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -540,7 +579,7 @@ export const SideBar = () => {
                                         <div className="h-px bg-white/5 my-2 mx-3" />
 
                                         {/* Logout Button */}
-                                        <button className="w-full flex items-center justify-between gap-3 p-4 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all group">
+                                        <button onClick={handleLogout} className="w-full flex items-center justify-between gap-3 p-4 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all group">
                                             <LogOut size={20} />
                                             <span className="text-sm font-bold text-right flex-1">لاگ آؤٹ</span>
                                         </button>

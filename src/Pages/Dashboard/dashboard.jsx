@@ -6,6 +6,7 @@ import {
 /* eslint-disable-next-line no-unused-vars */
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 //--------------------------------------------------------------------------
 
@@ -59,6 +60,8 @@ const StatCard =
 //--------------------------------------------------------------------------
 
 export const Dashboard = () => {
+    const navigate = useNavigate();
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
@@ -164,12 +167,16 @@ export const Dashboard = () => {
                     <h3 className="text-lg font-bold text-[var(--color-text)] mb-6">کوئیک ایکشنز</h3>
                     <div className="grid grid-cols-2 gap-4">
                         {[
-                            { label: "نیا طالب علم", icon: UserPlus, bg: "bg-blue-600 shadow-blue-600/30" },
-                            { label: "نیا والدین", icon: Users, bg: "bg-emerald-500 shadow-emerald-500/30" },
-                            { label: "حاضری لگائیں", icon: Calendar, bg: "bg-indigo-500 shadow-indigo-500/30" },
-                            { label: "فیس جمع کریں", icon: Wallet, bg: "bg-orange-500 shadow-orange-500/30" }
+                            { label: "نیا طالب علم", icon: UserPlus, bg: "bg-blue-600 shadow-blue-600/30", path: "/students/admission" },
+                            { label: "نیا والدین", icon: Users, bg: "bg-emerald-500 shadow-emerald-500/30", path: "/students/parents" },
+                            { label: "حاضری لگائیں", icon: Calendar, bg: "bg-indigo-500 shadow-indigo-500/30", path: "/students/attendance" },
+                            { label: "فیس جمع کریں", icon: Wallet, bg: "bg-orange-500 shadow-orange-500/30", path: "/finance/income/fund-collection" }
                         ].map((btn, i) => (
-                            <button key={i} className={`flex flex-col items-center justify-center p-6 ${btn.bg} shadow-lg hover:shadow-2xl text-white rounded-3xl transition-all hover:scale-105 active:scale-95`}>
+                            <button
+                                key={i}
+                                onClick={() => navigate(btn.path)}
+                                className={`flex flex-col items-center justify-center p-6 ${btn.bg} shadow-lg hover:shadow-2xl text-white rounded-3xl transition-all hover:scale-105 active:scale-95`}
+                            >
                                 <btn.icon size={26} />
                                 <span className="text-xs font-bold mt-2">{btn.label}</span>
                             </button>

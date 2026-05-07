@@ -14,12 +14,8 @@ import {
 } from 'lucide-react';
 import { Field, Form, Formik } from 'formik';
 import { AppImages } from '../../../Constant/AppImages';
-import { DateField, InputField } from '../../../Components/HR/FormElements';
-import {
-    createStudentProfileFromAdmission,
-    initializeStudentProfiles,
-    saveStudentProfile,
-} from '../../../Constant/StudentProfiles';
+import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
+import { createStudent } from '../../../Constant/StudentsApi';
 
 const INITIAL_VALUES = {
     idNo: '',
@@ -27,6 +23,7 @@ const INITIAL_VALUES = {
     admissionFee: '',
     fullName: '',
     fatherName: '',
+    gender: 'male',
     caste: '',
     cnic: '',
     dob: '',
@@ -67,19 +64,67 @@ const formatDate = (dateStr) => {
 
 export const AdmissionForm = () => {
     const [imagePreview, setImagePreview] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [savedProfile, setSavedProfile] = useState(null);
+    const [submitError, setSubmitError] = useState('');
 
     useEffect(() => {
-        initializeStudentProfiles();
         window.scrollTo(0, 0);
     }, []);
 
-    const handleFormSubmit = (values) => {
-        const profile = createStudentProfileFromAdmission(values);
-        const nextProfile = saveStudentProfile(profile);
-        setSavedProfile(nextProfile);
-        setShowModal(true);
+    const handleFormSubmit = async (values, { setSubmitting, resetForm }) => {
+        setSubmitError('');
+
+        try {
+            const parents = [];
+
+            if (values.fatherName) {
+                parents.push({
+                    fullName: values.fatherName,
+                    relationship: 'father',
+                    isPrimary: true,
+                    phone: values.mobile,
+                    cnic: values.cnic,
+                    occupation: values.fatherOccupation,
+                    address: values.currentAddress,
+                });
+            }
+
+            if (values.guardianName && values.guardianName !== values.fatherName) {
+                parents.push({
+                    fullName: values.guardianName,
+                    relationship: values.relation || 'guardian',
+                    isPrimary: false,
+                    phone: values.guardianMobile,
+                    email: values.guardianEmail,
+                    cnic: values.guardianCnic,
+                    address: values.currentAddress,
+                });
+            }
+
+            const student = await createStudent({
+                admissionNumber: values.idNo,
+                fullName: values.fullName,
+                fatherName: values.fatherName,
+                gender: values.gender,
+                dob: values.dob,
+                phone: values.mobile || values.whatsapp,
+                address: values.currentAddress,
+                parents,
+                image: imageFile,
+            });
+
+            setSavedProfile(student);
+            setShowModal(true);
+            resetForm();
+            setImagePreview(null);
+            setImageFile(null);
+        } catch (error) {
+            setSubmitError(error.message || 'Student save nahi ho saka.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const triggerPrint = () => {
@@ -92,7 +137,7 @@ export const AdmissionForm = () => {
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-2 bg-[var(--color-bg)]" dir="rtl">
             <Formik initialValues={INITIAL_VALUES} onSubmit={handleFormSubmit}>
-                {({ setFieldValue, values }) => (
+                {({ setFieldValue, values, isSubmitting }) => (
                     <>
                         <Form className="print:hidden space-y-8 pb-10">
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
@@ -124,7 +169,8 @@ export const AdmissionForm = () => {
                                                         reader.onloadend = () => {
                                                             const nextImage = reader.result;
                                                             setImagePreview(nextImage);
-                                                            setFieldValue('studentImage', nextImage);
+                                                            setImageFile(file);
+                                                            setFieldValue('studentImage', file.name);
                                                         };
                                                         reader.readAsDataURL(file);
                                                     }}
@@ -151,6 +197,7 @@ export const AdmissionForm = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-6">
                                             <FormikInputField label="نام طالب علم" name="fullName" />
                                             <FormikInputField label="والد کا نام" name="fatherName" />
+                                            <FormikSelectField label="جنس" name="gender" options={['male', 'female', 'other']} />
                                             <FormikInputField label="قومیت / ذات" name="caste" />
                                             <FormikInputField label="شناختی کارڈ نمبر" name="cnic" />
                                             <FormikInputField label="بے فارم نمبر" name="bForm" />
@@ -200,11 +247,18 @@ export const AdmissionForm = () => {
                                         </div>
                                     </FormSection>
 
+                                    {submitError ? (
+                                        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">
+                                            {submitError}
+                                        </div>
+                                    ) : null}
+
                                     <button
                                         type="submit"
+                                        disabled={isSubmitting}
                                         className="w-full bg-[#00d094] hover:bg-[#00b37e] text-[#002a33] py-6 rounded-2xl font-black text-2xl transition-all shadow-xl flex items-center justify-center gap-4"
                                     >
-                                        <Save size={28} /> ڈیٹا محفوظ کریں
+                                        <Save size={28} /> {isSubmitting ? 'محفوظ ہو رہا ہے...' : 'ڈیٹا محفوظ کریں'}
                                     </button>
                                 </div>
                             </div>
@@ -224,7 +278,7 @@ export const AdmissionForm = () => {
                                     </div>
                                     <div className="p-10 space-y-6 text-center">
                                         <p className="text-slate-600 text-lg">
-                                            طالب علم <b>{savedProfile?.personal?.fullName || values.fullName}</b> کا فارم مکمل ہو چکا ہے۔ کیا آپ ابھی پرنٹ نکالنا چاہتے ہیں؟
+                                            طالب علم <b>{savedProfile?.fullName || values.fullName}</b> کا فارم مکمل ہو چکا ہے۔ کیا آپ ابھی پرنٹ نکالنا چاہتے ہیں؟
                                         </p>
                                         <div className="flex flex-col gap-3">
                                             <button
@@ -383,6 +437,19 @@ const FormikInputField = ({ label, name, type = 'text', ...props }) => (
                 />
             )
         }
+    </Field>
+);
+
+const FormikSelectField = ({ label, name, options }) => (
+    <Field name={name}>
+        {({ field, form }) => (
+            <SelectField
+                label={label}
+                options={options}
+                value={field.value || options[0]}
+                onChange={(event) => form.setFieldValue(name, event.target.value)}
+            />
+        )}
     </Field>
 );
 

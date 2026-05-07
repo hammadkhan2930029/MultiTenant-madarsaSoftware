@@ -1,129 +1,115 @@
 import React, { useState } from 'react';
-import {
-  User, Briefcase, Wallet, GraduationCap, Award,
-  Building, Clock, ShieldCheck, Search, Save,
-  Trash2, X, ArrowRight, ChevronDown
-} from 'lucide-react';
-//--------------------------------------------------------------
-import { PersonalTab } from '../../Components/HR/PersonalTab';
-import { AppoinmentTab } from '../../Components/HR/AppointmentTab';
-import { ActionButtons } from '../../Components/HR/ActionButtons';
-import { SalaryTab } from '../../Components/HR/SalaryTab';
-// import { AcademicTab } from '../../Components/HR/AcademicTab';
-import { ExperienceTab } from '../../Components/HR/Experience'
-import { BankAccountTab } from '../../Components/HR/BankAccounts';
-// import { AttendanceTimingTab } from '../../Components/HR/AttendanceTimingTab';
-// import { RukhsatPolicyTab } from '../../Components/HR/RukhsatPolicyTab'
-export const HRManagement = () => {
-  const [activeTab, setActiveTab] = useState('personal');
+import { Camera, Save, UserPlus } from 'lucide-react';
+import { InputField } from '../../Components/HR/FormElements';
+import { createTeacher } from '../../Constant/TeachersApi';
 
-  // Tabs ki list Urdu mein
-  const tabs = [
-    { id: 'personal', label: 'ذاتی معلومات', icon: <User size={18} /> },
-    { id: 'appointment', label: 'تقرری', icon: <Briefcase size={18} /> },
-    { id: 'salary', label: 'تنخواہ', icon: <Wallet size={18} /> },
-    // { id: 'academic', label: 'تعلیمی اسناد', icon: <GraduationCap size={18} /> },
-    { id: 'experience', label: 'تجربہ', icon: <Award size={18} /> },
-    { id: 'bank', label: 'بینک اکاؤنٹ', icon: <Building size={18} /> },
-    // { id: 'timing', label: 'اوقات حاضری', icon: <Clock size={18} /> },
-    // { id: 'policy', label: 'رخصت پالیسی', icon: <ShieldCheck size={18} /> },
-  ];
+const INITIAL_VALUES = {
+  fullName: '',
+  email: '',
+  phone: '',
+  cnic: '',
+  subject: '',
+  qualification: '',
+  address: '',
+  basicSalary: '',
+};
+
+export const HRManagement = () => {
+  const [formData, setFormData] = useState(INITIAL_VALUES);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    setError('');
+    setSuccess('');
+    setIsSaving(true);
+
+    try {
+      await createTeacher({
+        ...formData,
+        basicSalary: Number(formData.basicSalary || 0),
+        image: imageFile,
+      });
+
+      setSuccess('Teacher successfully create ho gaye.');
+      setFormData(INITIAL_VALUES);
+      setImagePreview(null);
+      setImageFile(null);
+    } catch (saveError) {
+      setError(saveError.message || 'Teacher save nahi ho sake.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-
-
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-main)] p-2 md:p-4 transition-colors duration-300" dir="rtl">
-
-      {/* --- TOP HEADER / SEARCH BAR --- */}
-      <div className="max-w-7xl mx-auto bg-[var(--color-surface)] rounded-[1.5rem] lg:rounded-[2.5rem] p-4 shadow-sm border border-[var(--color-border)] mb-8 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 transition-all" dir="rtl">
-
-        {/* --- SECTION 1: Search & Checkbox --- */}
-        <div className="flex items-center gap-2 w-full lg:w-auto">
-          
-
-          <div className="flex items-center gap-2 bg-rose-50/50 px-3 py-2 rounded-xl border border-rose-100 shrink-0">
-            <input type="checkbox" className="w-3.5 h-3.5 accent-rose-500 cursor-pointer" />
-            <label className="text-[10px] font-black text-rose-500 whitespace-nowrap">تنخواہ بند</label>
-          </div>
-        </div>
-
-        {/* --- SECTION 2: Select Field --- */}
-        <div className="w-full lg:max-w-xs lg:flex-1">
-          <div className="relative group">
-            <select className="w-full bg-[var(--color-input)] border border-[var(--color-border)] rounded-xl py-2.5 pr-4 pl-10 outline-none font-bold text-[11px] appearance-none focus:border-[var(--color-primary)] cursor-pointer">
-              <option>عملہ منتخب کریں</option>
-              <option>استاد</option>
-
-              <option>دیگر عملہ</option>
-              <option>انتظامیہ</option>
-            </select>
-            <ChevronDown size={14} className="absolute left-3 top-3 text-[var(--color-text-muted)] pointer-events-none" />
-          </div>
-        </div>
-
-        {/* --- SECTION 3: Status & Location --- */}
-        <div className="flex items-center justify-between lg:justify-end gap-6 border-t lg:border-t-0 lg:border-r border-[var(--color-border)] pt-3 lg:pt-0 lg:pr-6 shrink-0">
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase leading-none mb-1">حیثیت</p>
-              <div className="flex items-center gap-1.5 justify-end">
-                <span className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse"></span>
-                <p className="font-bold text-[11px] text-[var(--color-primary)] uppercase">Active</p>
-              </div>
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="bg-[var(--color-surface)] rounded-[2.5rem] p-8 shadow-sm border border-[var(--color-border)]">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-black">نیا استاد شامل کریں</h1>
+              <p className="text-sm font-bold text-[var(--color-text-muted)] mt-3">Teacher profile backend API ke sath directly save hogi.</p>
             </div>
-
-            <div className="h-8 w-[1px] bg-[var(--color-border)] opacity-50"></div>
-
-            <div className="text-right">
-              <p className="text-[8px] font-black text-[var(--color-text-muted)] uppercase leading-none mb-1">مقام</p>
-              <p className="font-bold text-[11px] whitespace-nowrap">مین برانچ</p>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* --- NAVIGATION TABS --- */}
-      <div className="max-w-7xl mx-auto overflow-x-auto no-scrollbar mb-6">
-        <div className="flex gap-2 min-w-max p-1 bg-[var(--color-input)] rounded-[2rem] border border-[var(--color-border)]">
-          {tabs.map((tab) => (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-full font-black text-sm transition-all ${activeTab === tab.id
-                ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-emerald-200/20'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-surface)]'
-                }`}
+              onClick={handleSubmit}
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-[var(--color-primary)] text-white px-8 py-4 rounded-2xl font-black disabled:opacity-70"
             >
-              {tab.icon}
-              {tab.label}
+              <Save size={18} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
             </button>
-          ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-8">
+          <div className="bg-[var(--color-surface)] rounded-[2.5rem] p-8 shadow-sm border border-[var(--color-border)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <InputField label="استاد کا نام" value={formData.fullName} onChange={(e) => handleChange('fullName', e.target.value)} />
+              <InputField label="ای میل" type="email" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} />
+              <InputField label="فون نمبر" value={formData.phone} onChange={(e) => handleChange('phone', e.target.value)} />
+              <InputField label="CNIC" value={formData.cnic} onChange={(e) => handleChange('cnic', e.target.value)} />
+              <InputField label="مضمون" value={formData.subject} onChange={(e) => handleChange('subject', e.target.value)} />
+              <InputField label="Qualification" value={formData.qualification} onChange={(e) => handleChange('qualification', e.target.value)} />
+              <InputField label="بنیادی تنخواہ" type="number" value={formData.basicSalary} onChange={(e) => handleChange('basicSalary', e.target.value)} />
+              <InputField label="پتہ" value={formData.address} onChange={(e) => handleChange('address', e.target.value)} />
+            </div>
+
+            {error ? <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
+            {success ? <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">{success}</div> : null}
+          </div>
+
+          <div className="bg-[var(--color-surface)] rounded-[2.5rem] p-8 shadow-sm border border-[var(--color-border)] flex flex-col items-center justify-center gap-5">
+            <div className="w-48 h-48 rounded-[2rem] border-2 border-dashed border-[var(--color-border)] overflow-hidden flex items-center justify-center bg-[var(--color-bg)]">
+              {imagePreview ? (
+                <img src={imagePreview} alt="teacher" className="w-full h-full object-cover" />
+              ) : (
+                <UserPlus size={60} className="text-[var(--color-text-muted)]" />
+              )}
+            </div>
+            <label className="cursor-pointer flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-black">
+              <Camera size={18} /> تصویر اپ لوڈ کریں
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  setImageFile(file);
+                  setImagePreview(URL.createObjectURL(file));
+                }}
+              />
+            </label>
+          </div>
         </div>
       </div>
-
-      {/* --- MAIN FORM AREA --- */}
-      <div className="max-w-7xl mx-auto rounded-2xl  bg-[var(--color-surface)] p-3 shadow-2xl...">
-        {activeTab === 'personal' && <PersonalTab />}
-        {activeTab === 'appointment' && <AppoinmentTab />}
-        {activeTab === 'salary' && <SalaryTab />}
-        {/* {activeTab === 'academic' && <AcademicTab />} */}
-        {activeTab === 'experience' && <ExperienceTab />}
-        {activeTab === 'bank' && <BankAccountTab />}
-        {/* {activeTab === 'timing' && <AttendanceTimingTab />} */}
-        {/* {activeTab === 'policy' && <RukhsatPolicyTab />} */}
-
-
-
-        {/* Yahan baki tabs aayenge */}
-
-        <ActionButtons
-          onBack={() => console.log('Back clicked')}
-          onSave={() => console.log('Save clicked')}
-        />
-      </div>
-
     </div>
   );
 };
-

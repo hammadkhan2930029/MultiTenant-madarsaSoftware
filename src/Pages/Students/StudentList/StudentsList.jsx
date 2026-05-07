@@ -1,55 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Search, Edit3, Trash2, UserPlus, Eye,
-    GraduationCap, School, Users, Phone
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Eye, GraduationCap, Phone, School, Search, UserPlus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import {
-    getStudentProfiles,
-    initializeStudentProfiles,
-    subscribeToStudentProfiles,
-} from '../../../Constant/StudentProfiles';
+import { getStudents } from '../../../Constant/StudentsApi';
 
-const mapStudentsForList = (profiles) =>
-    profiles.map((student) => ({
-        idNo: student.admission.idNo,
-        name: student.personal.fullName,
-        fatherName: student.personal.fatherName,
-        campus: student.classInfo.campus,
-        class: student.classInfo.className,
-        section: student.classInfo.section,
-        familyNo: student.classInfo.familyNo,
-    }));
+const mapStudentsForList = (items) =>
+    items.map((student) => {
+        const activeAssignment = student.assignments?.find((assignment) => assignment.status === 'active');
+        return {
+            id: student.id,
+            idNo: student.admissionNumber,
+            name: student.fullName,
+            fatherName: student.fatherName,
+            campus: activeAssignment?.branch?.name || '---',
+            className: activeAssignment?.class?.name || '---',
+            section: activeAssignment?.section?.name || '---',
+            familyNo: student.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.phone || student.phone || '---',
+        };
+    });
 
 export const StudentList = () => {
     const navigate = useNavigate();
-    const [students, setStudents] = useState(() => mapStudentsForList(getStudentProfiles()));
-    const [searchTerm, setSearchTerm] = useState("");
+    const [students, setStudents] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        initializeStudentProfiles();
         window.scrollTo(0, 0);
-        const unsubscribe = subscribeToStudentProfiles((profiles) => {
-            setStudents(mapStudentsForList(profiles));
-        });
-        return unsubscribe;
+
+        const loadStudents = async () => {
+            setIsLoading(true);
+            setError('');
+
+            try {
+                const result = await getStudents('page=1&limit=100');
+                setStudents(mapStudentsForList(result.items || []));
+            } catch (loadError) {
+                setError(loadError.message || 'Students load nahi ho sake.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadStudents();
     }, []);
 
-    const filteredStudents = students.filter(student =>
-        student.name.includes(searchTerm) ||
-        student.idNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.familyNo.includes(searchTerm)
+    const filteredStudents = useMemo(
+        () =>
+            students.filter((student) =>
+                [student.name, student.idNo, student.familyNo]
+                    .filter(Boolean)
+                    .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())),
+            ),
+        [searchTerm, students],
     );
 
-    const handleDelete = (id) => {
-        if (window.confirm("کیا آپ واقعی یہ ریکارڈ ختم کرنا چاہتے ہیں؟")) {
-            setStudents(students.filter((student) => student.idNo !== id));
-        }
-    };
-
     return (
-        <div className="max-w-6xl mx-auto p-2 md:p-0 space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
-            <div className="flex flex-col gap-6 bg-[var(--color-surface)] p-6 md:p-10 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
+        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
+            <div className="flex flex-col gap-6 rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 md:p-10 shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)]">
                 <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-xl md:text-3xl font-black text-themeText flex items-center gap-3">
@@ -72,31 +80,36 @@ export const StudentList = () => {
                     <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" size={20} />
                     <input
                         type="text"
-                        placeholder="نام، آئی ڈی یا فیملی نمبر سے تلاش کریں..."
+                        placeholder="نام، آئی ڈی یا فون سے تلاش کریں..."
                         className="w-full pr-14 pl-6 py-4 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]"
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
             </div>
 
+            {error ? (
+                <div className="rounded-[2rem] border border-red-500/20 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-400">
+                    {error}
+                </div>
+            ) : null}
+
             <div className="grid grid-cols-1 gap-4 md:hidden">
                 {filteredStudents.map((student) => (
                     <div
-                        key={student.idNo}
-                        onClick={() => navigate(`/students/profile/${student.idNo}`)}
+                        key={student.id}
+                        onClick={() => navigate(`/students/profile/${student.id}`)}
                         className="bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] space-y-5 cursor-pointer hover:border-[var(--color-primary)]/40 transition-all"
                     >
                         <div className="flex justify-between items-start">
                             <div className="flex gap-4">
                                 <div className="w-14 h-14 bg-[var(--color-primary)]/10 rounded-2xl flex items-center justify-center text-[var(--color-primary)] font-black text-xs border border-[var(--color-primary)]/20">
-                                    {student.idNo.split('-')[1]}
+                                    {student.idNo}
                                 </div>
                                 <div>
                                     <h4 className="font-black text-[var(--color-text)] text-lg">{student.name}</h4>
                                     <p className="text-[11px] text-[var(--color-text-muted)] font-bold mt-0.5">ولدیت: {student.fatherName}</p>
                                 </div>
                             </div>
-                            <span className="bg-[var(--color-input)] text-[var(--color-text-muted)] px-3 py-1 rounded-xl font-black text-[10px] border border-[var(--color-border)]">{student.idNo}</span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 py-4 border-y border-[var(--color-border)]">
@@ -106,7 +119,7 @@ export const StudentList = () => {
                             </div>
                             <div className="flex items-center gap-2 justify-end">
                                 <Users size={16} className="text-[var(--color-primary)]" />
-                                <span className="text-[12px] font-bold text-[var(--color-text)]/80">{student.class} ({student.section})</span>
+                                <span className="text-[12px] font-bold text-[var(--color-text)]/80">{student.className} ({student.section})</span>
                             </div>
                         </div>
 
@@ -115,34 +128,15 @@ export const StudentList = () => {
                                 <Phone size={15} className="text-[var(--color-text-muted)]" />
                                 <span className="text-xs font-black text-[var(--color-text-muted)]">{student.familyNo}</span>
                             </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        navigate(`/students/profile/${student.idNo}`);
-                                    }}
-                                    className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all"
-                                >
-                                    <Eye size={18} />
-                                </button>
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                    }}
-                                    className="p-3 bg-blue-500/10 text-blue-400 rounded-2xl hover:bg-blue-500 hover:text-white transition-all"
-                                >
-                                    <Edit3 size={18} />
-                                </button>
-                                <button
-                                    onClick={(event) => {
-                                        event.stopPropagation();
-                                        handleDelete(student.idNo);
-                                    }}
-                                    className="p-3 bg-rose-500/10 text-rose-400 rounded-2xl hover:bg-rose-500 hover:text-white transition-all"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
+                            <button
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    navigate(`/students/profile/${student.id}`);
+                                }}
+                                className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all"
+                            >
+                                <Eye size={18} />
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -155,14 +149,14 @@ export const StudentList = () => {
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">آئی ڈی</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">طالب علم کی تفصیلات</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">کیمپس و کلاس</th>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">انتظامی ایکشن</th>
+                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">ایکشن</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {filteredStudents.map((student) => (
                             <tr
-                                key={student.idNo}
-                                onClick={() => navigate(`/students/profile/${student.idNo}`)}
+                                key={student.id}
+                                onClick={() => navigate(`/students/profile/${student.id}`)}
                                 className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
                             >
                                 <td className="p-6">
@@ -172,43 +166,24 @@ export const StudentList = () => {
                                 </td>
                                 <td className="p-6">
                                     <div className="font-black text-[var(--color-text)] text-base">{student.name}</div>
-                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">ولدیت: {student.fatherName} | فیملی: {student.familyNo}</div>
+                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">ولدیت: {student.fatherName} | فون: {student.familyNo}</div>
                                 </td>
                                 <td className="p-6">
                                     <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
                                         {student.campus}
                                     </span>
-                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-2 pr-1">{student.class} ({student.section})</div>
+                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-2 pr-1">{student.className} ({student.section})</div>
                                 </td>
                                 <td className="p-6 text-center">
-                                    <div className="flex items-center justify-center gap-3">
-                                        <button
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                navigate(`/students/profile/${student.idNo}`);
-                                            }}
-                                            className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/5"
-                                        >
-                                            <Eye size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                            }}
-                                            className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-lg shadow-blue-500/5"
-                                        >
-                                            <Edit3 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                handleDelete(student.idNo);
-                                            }}
-                                            className="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg shadow-rose-500/5"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            navigate(`/students/profile/${student.id}`);
+                                        }}
+                                        className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/5"
+                                    >
+                                        <Eye size={16} />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -216,7 +191,7 @@ export const StudentList = () => {
                 </table>
             </div>
 
-            {filteredStudents.length === 0 && (
+            {!isLoading && filteredStudents.length === 0 ? (
                 <div className="p-24 text-center bg-[var(--color-surface)] rounded-[3rem] border border-[var(--color-border)]">
                     <div className="w-24 h-24 bg-[var(--color-input)] rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-[var(--color-text-muted)] opacity-20">
                         <Search size={48} />
@@ -224,7 +199,7 @@ export const StudentList = () => {
                     <h3 className="text-[var(--color-text)] text-xl font-black">کوئی طالب علم نہیں ملا</h3>
                     <p className="text-[var(--color-text-muted)] font-bold mt-2">براہ کرم تلاش کے الفاظ چیک کریں</p>
                 </div>
-            )}
+            ) : null}
         </div>
     );
 };
