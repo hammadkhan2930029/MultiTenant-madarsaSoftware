@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, LockKeyhole, Sparkles, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAdminCredentials, loginAdmin } from '../../Constant/AdminAuth';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const staggerWrap = {
     hidden: {},
@@ -20,6 +21,7 @@ export const AdminLogin = () => {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const credentials = getAdminCredentials();
+    useNotificationBridge({ error });
 
     const handleChange = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -123,16 +125,6 @@ export const AdminLogin = () => {
                                 />
                             </div>
                         </motion.div>
-
-                        {error ? (
-                            <motion.div
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400"
-                            >
-                                {error}
-                            </motion.div>
-                        ) : null}
 
                         <motion.button
                             initial={{ opacity: 0, y: 16 }}

@@ -3,6 +3,7 @@ import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Save, ChevronRight,
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { getTeacherById } from '../../../Constant/TeachersApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const monthsUrdu = [
     'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون',
@@ -48,6 +49,7 @@ export const TeacherAttendanceHistory = () => {
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    useNotificationBridge({ error, success: successMessage });
 
     useEffect(() => {
         const loadTeacherAndAttendance = async () => {
@@ -202,9 +204,6 @@ export const TeacherAttendanceHistory = () => {
                     </button>
                 </div>
             </div>
-
-            {error ? <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
-            {successMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">{successMessage}</div> : null}
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="xl:col-span-1 bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-xl flex flex-col items-center text-center">

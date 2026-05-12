@@ -3,6 +3,7 @@ import { Eye, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InputField } from '../../../Components/HR/FormElements';
 import { createParent, deactivateParent, getParents, updateParent } from '../../../Constant/StudentsApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const INITIAL_FORM = {
     fullName: '',
@@ -21,6 +22,7 @@ export const ParentsList = () => {
     const [editingParentId, setEditingParentId] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const loadParents = async () => {
         try {
@@ -146,8 +148,6 @@ export const ParentsList = () => {
                         <InputField label="CNIC" value={formValues.cnic} onChange={(event) => handleChange('cnic', event.target.value)} placeholder="42101-1234567-1" />
                     </div>
 
-                    {error ? <MessageBox tone="error" message={error} /> : null}
-                    {success ? <MessageBox tone="success" message={success} /> : null}
                 </form>
             </div>
 
@@ -211,9 +211,3 @@ export const ParentsList = () => {
         </div>
     );
 };
-
-const MessageBox = ({ tone, message }) => (
-    <div className={`rounded-2xl px-4 py-3 text-sm font-bold ${tone === 'error' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'}`}>
-        {message}
-    </div>
-);

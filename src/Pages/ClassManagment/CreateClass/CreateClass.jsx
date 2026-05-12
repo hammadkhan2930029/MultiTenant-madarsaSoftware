@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createClass, deactivateClass, getBranches, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
     name: '',
@@ -19,6 +20,7 @@ export const CreateClasses = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const activeBranches = useMemo(() => branches.filter((item) => item.status === 'active'), [branches]);
 
@@ -35,7 +37,7 @@ export const CreateClasses = () => {
             setBranches(branchesResult.items || []);
             setClasses(classesResult.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'Classes data load nahi ho saka.');
+            setError(loadError.message || 'جماعتوں کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
             setIsLoading(false);
         }
@@ -64,7 +66,7 @@ export const CreateClasses = () => {
 
     const handleSubmit = async () => {
         if (!formData.name.trim() || !formData.branchId) {
-            setError('Class name aur branch dono zaroori hain.');
+            setError('جماعت کا نام اور برانچ دونوں درج کرنا ضروری ہیں۔');
             return;
         }
 
@@ -80,16 +82,16 @@ export const CreateClasses = () => {
 
             if (editMode) {
                 await updateClass(editMode, payload);
-                setSuccess('Class update ho gayi.');
+                setSuccess('جماعت کامیابی سے اپڈیٹ ہو گئی۔');
             } else {
                 await createClass(payload);
-                setSuccess('Class create ho gayi.');
+                setSuccess('جماعت کامیابی سے شامل ہو گئی۔');
             }
 
             resetForm();
             await loadDependencies();
         } catch (saveError) {
-            setError(saveError.message || 'Class save nahi ho saki.');
+            setError(saveError.message || 'جماعت محفوظ نہیں ہو سکی۔');
         } finally {
             setIsSaving(false);
         }
@@ -101,10 +103,10 @@ export const CreateClasses = () => {
 
         try {
             await deactivateClass(classId);
-            setSuccess('Class inactive kar di gayi.');
+            setSuccess('جماعت غیر فعال کر دی گئی۔');
             await loadDependencies();
         } catch (actionError) {
-            setError(actionError.message || 'Class inactive nahi ho saki.');
+            setError(actionError.message || 'جماعت غیر فعال نہیں ہو سکی۔');
         }
     };
 
@@ -202,9 +204,6 @@ export const CreateClasses = () => {
                         </div>
                     </div>
 
-                    {error ? <MessageBox tone="error" message={error} /> : null}
-                    {success ? <MessageBox tone="success" message={success} /> : null}
-
                     <div className="mt-8 flex justify-end gap-3">
                         {editMode ? (
                             <button onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">
@@ -223,9 +222,6 @@ export const CreateClasses = () => {
                 </div>
             ) : null}
 
-            {error && !isFormOpen ? <MessageBox tone="error" message={error} /> : null}
-            {success && !isFormOpen ? <MessageBox tone="success" message={success} /> : null}
-
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
@@ -242,7 +238,7 @@ export const CreateClasses = () => {
                             {isLoading ? (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Classes load ho rahi hain...
+                                        جماعتوں کی فہرست لوڈ ہو رہی ہے...
                                     </td>
                                 </tr>
                             ) : filteredClasses.length ? (
@@ -278,7 +274,7 @@ export const CreateClasses = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Koi class record nahi mila.
+                                        کوئی جماعت ریکارڈ نہیں ملی۔
                                     </td>
                                 </tr>
                             )}
@@ -289,9 +285,3 @@ export const CreateClasses = () => {
         </div>
     );
 };
-
-const MessageBox = ({ tone, message }) => (
-    <div className={`mt-6 rounded-2xl px-4 py-3 text-sm font-bold ${tone === 'error' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'}`}>
-        {message}
-    </div>
-);

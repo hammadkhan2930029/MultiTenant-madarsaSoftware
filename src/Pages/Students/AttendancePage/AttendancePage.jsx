@@ -4,6 +4,7 @@ import { SelectField, DateField } from '../../../Components/HR/FormElements';
 import { getBranches, getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { getStudentAttendance, saveStudentAttendance } from '../../../Constant/AttendanceApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const STATUS_OPTIONS = [
     { value: 'Present', label: 'حاضر' },
@@ -51,6 +52,7 @@ export const AttendancePage = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    useNotificationBridge({ error, success: successMessage });
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -303,9 +305,6 @@ export const AttendancePage = () => {
                     <Search size={18} /> {isLoading ? 'لوڈ ہو رہا ہے...' : 'حاضری لسٹ دکھائیں'}
                 </button>
             </div>
-
-            {error ? <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
-            {successMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">{successMessage}</div> : null}
 
             {isSearched && (
                 <div className="bg-[var(--color-surface)] rounded-[2.5rem] shadow-sm border border-[var(--color-border)] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Eye, GraduationCap, Phone, School, Search, UserPlus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getStudents } from '../../../Constant/StudentsApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const mapStudentsForList = (items) =>
     items.map((student) => {
@@ -24,6 +25,7 @@ export const StudentList = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    useNotificationBridge({ error });
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -86,12 +88,6 @@ export const StudentList = () => {
                     />
                 </div>
             </div>
-
-            {error ? (
-                <div className="rounded-[2rem] border border-red-500/20 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-400">
-                    {error}
-                </div>
-            ) : null}
 
             <div className="grid grid-cols-1 gap-4 md:hidden">
                 {filteredStudents.map((student) => (

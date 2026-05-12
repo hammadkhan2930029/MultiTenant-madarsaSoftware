@@ -1,23 +1,26 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Trash2, MapPin, X, ArrowRight, Check, ChevronDown, Map } from 'lucide-react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Plus, Search, Trash2, MapPin, X, ArrowRight, Check, ChevronDown, Map
+} from 'lucide-react';
+import { createCity, deactivateCity, getCities } from '../../../Constant/CityApi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
+
+const suggestedCities = [
+    'کراچی', 'لاہور', 'اسلام آباد', 'راولپنڈی', 'فیصل آباد',
+    'ملتان', 'پشاور', 'کوئٹہ', 'گوجرانوالہ', 'سیالکوٹ', 'حیدرآباد',
+    'سکھر', 'جھنگ', 'شیخوپورہ', 'گجرات', 'مردان', 'قصور', 'رحیم یار خان'
+];
 
 export const CreateCities = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCity, setSelectedCity] = useState(null);
+    const [selectedCity, setSelectedCity] = useState('');
+    const [cities, setCities] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const dropdownRef = useRef(null);
-
-    const allCities = [
-        "کراچی", "لاہور", "اسلام آباد", "راولپنڈی", "فیصل آباد",
-        "ملتان", "پشاور", "کوئٹہ", "گوجرانوالہ", "سیالکوٹ", "حیدرآباد",
-        "سکھر", "جھنگ", "شیخوپورہ", "گجرات", "مردان", "قصور", "رحیم یار خان"
-    ];
-
-    const [addedCities, setAddedCities] = useState([
-        { id: 1, name: 'کراچی' },
-        { id: 2, name: 'لاہور' },
-    ]);
+    const notify = useNotifier();
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -25,58 +28,96 @@ export const CreateCities = () => {
                 setIsOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filteredCities = allCities.filter(city => {
-        const isNotAdded = !addedCities.some(a => a.name === city);
+    const loadCities = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const result = await getCities();
+            setCities(result.items || []);
+        } catch (error) {
+            notify.error(error?.message || 'شہروں کی فہرست لوڈ نہیں ہو سکی۔', 'لوڈنگ میں مسئلہ پیش آیا');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [notify]);
+
+    useEffect(() => {
+        loadCities();
+    }, [loadCities]);
+
+    const activeCities = useMemo(
+        () => cities.filter((city) => city.status === 'active'),
+        [cities]
+    );
+
+    const filteredCities = suggestedCities.filter((city) => {
+        const isNotAdded = !activeCities.some((item) => item.name === city);
         return isNotAdded && city.includes(searchTerm);
     });
 
-    const handleAddCity = () => {
-        if (selectedCity) {
-            setAddedCities([{ id: Date.now(), name: selectedCity }, ...addedCities]);
-            setSelectedCity(null);
+    const handleAddCity = async () => {
+        if (!selectedCity) return;
+
+        try {
+            setIsSaving(true);
+            const createdCity = await createCity({ name: selectedCity });
+            setCities((prev) => [createdCity, ...prev]);
+            setSelectedCity('');
             setSearchTerm('');
             setIsOpen(false);
             setIsFormOpen(false);
+            notify.success(`${createdCity.name} فہرست میں شامل کر دیا گیا۔`, 'شہر شامل ہو گیا');
+        } catch (error) {
+            notify.error(error?.message || 'شہر محفوظ نہیں ہو سکا۔', 'محفوظ کرنے میں مسئلہ پیش آیا');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeactivateCity = async (id) => {
+        try {
+            const updatedCity = await deactivateCity(id);
+            setCities((prev) => prev.map((city) => (city.id === id ? updatedCity : city)));
+            notify.success(`${updatedCity.name} غیر فعال کر دیا گیا۔`, 'شہر غیر فعال ہو گیا');
+        } catch (error) {
+            notify.error(error?.message || 'شہر حذف نہیں ہو سکا۔', 'حذف کرنے میں مسئلہ پیش آیا');
         }
     };
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-700 pb-10" dir="rtl">
-            
-            {/* --- HEADER --- */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-[var(--color-surface)] p-8 rounded-[3rem] border border-[var(--color-border)] shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-32 h-32 bg-[#00d094]/5 rounded-full blur-3xl -ml-16 -mt-16"></div>
-                
+
                 <div className="text-right z-10">
                     <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight flex items-center gap-3">
                         <Map className="text-[#00d094]" size={28} /> شہروں کی فہرست
                     </h2>
-                    <p className="text-sm text-[var(--color-text-muted)] font-bold mt-1 mr-10">فعال شہر: {addedCities.length}</p>
+                    <p className="text-sm text-[var(--color-text-muted)] font-bold mt-5 mr-10">فعال شہر: {activeCities.length}</p>
                 </div>
 
                 <button
                     onClick={() => setIsFormOpen(!isFormOpen)}
                     className={`z-10 flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${isFormOpen
-                            ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white'
-                            : 'bg-[#00d094] text-white shadow-[#00d094]/20 hover:bg-[#00b07d]'
+                        ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white'
+                        : 'bg-[#00d094] text-white shadow-[#00d094]/20 hover:bg-[#00b07d]'
                         }`}
                 >
-                    {isFormOpen ? 'کینسل کریں' : 'نیا شہر شامل کریں'}
+                    {isFormOpen ? 'منسوخ کریں' : 'نیا شہر شامل کریں'}
                     {isFormOpen ? <X size={20} /> : <Plus size={20} />}
                 </button>
             </div>
 
-            {/* --- SEARCHABLE SELECT FORM --- */}
-            {isFormOpen && (
+            {isFormOpen ? (
                 <div className="bg-[var(--color-surface)] border border-[#00d094]/20 shadow-2xl rounded-[3rem] p-10 animate-in slide-in-from-top-6 duration-500 relative z-[100]">
                     <div className="max-w-md mx-auto space-y-6 text-right">
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 block uppercase tracking-[0.3em]">دستیاب شہر منتخب کریں</label>
-                            
+
                             <div className="relative" ref={dropdownRef}>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-[var(--color-text-muted)] group-focus-within:text-[#00d094] transition-colors">
@@ -90,7 +131,7 @@ export const CreateCities = () => {
                                         onChange={(e) => {
                                             setSearchTerm(e.target.value);
                                             setIsOpen(true);
-                                            if (selectedCity !== e.target.value) setSelectedCity(null);
+                                            if (selectedCity !== e.target.value) setSelectedCity('');
                                         }}
                                         className="w-full bg-[var(--color-bg)] border-2 border-transparent focus:border-[#00d094] outline-none h-[70px] pr-14 pl-14 rounded-[1.5rem] text-lg font-bold text-right text-[var(--color-text)] transition-all shadow-inner"
                                     />
@@ -102,13 +143,13 @@ export const CreateCities = () => {
                                     </div>
                                 </div>
 
-                                {isOpen && (
+                                {isOpen ? (
                                     <div className="absolute top-full left-0 right-0 z-[110] mt-3 bg-[var(--color-surface)] border border-[var(--color-border)] shadow-[0_20px_50px_rgba(0,0,0,0.3)] rounded-[2rem] max-h-[300px] overflow-hidden animate-in zoom-in-95 duration-300">
                                         <div className="overflow-y-auto max-h-[300px] p-3 custom-scrollbar">
                                             {filteredCities.length > 0 ? (
-                                                filteredCities.map((city, index) => (
+                                                filteredCities.map((city) => (
                                                     <div
-                                                        key={index}
+                                                        key={city}
                                                         onClick={() => {
                                                             setSelectedCity(city);
                                                             setSearchTerm(city);
@@ -130,24 +171,23 @@ export const CreateCities = () => {
                                             )}
                                         </div>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 
                         <button
                             onClick={handleAddCity}
-                            disabled={!selectedCity}
-                            className={`w-full py-5 rounded-2xl font-black text-sm shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${selectedCity 
-                                ? 'bg-[#00d094] text-white hover:bg-[#00b07d] hover:shadow-[#00d094]/30' 
+                            disabled={!selectedCity || isSaving}
+                            className={`w-full py-5 rounded-2xl font-black text-sm shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${selectedCity && !isSaving
+                                ? 'bg-[#00d094] text-white hover:bg-[#00b07d] hover:shadow-[#00d094]/30'
                                 : 'bg-[var(--color-bg)] text-[var(--color-text-muted)] opacity-50 cursor-not-allowed'}`}
                         >
-                            محفوظ کریں اور فہرست میں شامل کریں <Plus size={20} />
+                            {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں اور فہرست میں شامل کریں'} <Plus size={20} />
                         </button>
                     </div>
                 </div>
-            )}
+            ) : null}
 
-            {/* --- LIST TABLE --- */}
             <div className="bg-[var(--color-surface)] border border-[var(--color-border)] shadow-xl rounded-[3rem] overflow-hidden">
                 <div className="overflow-x-auto p-6">
                     <table className="w-full text-right border-separate border-spacing-y-3">
@@ -159,11 +199,17 @@ export const CreateCities = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {addedCities.length > 0 ? (
-                                addedCities.map((city, index) => (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan="3" className="py-16 text-center text-[var(--color-text-muted)] font-bold">
+                                        شہر لوڈ ہو رہے ہیں...
+                                    </td>
+                                </tr>
+                            ) : activeCities.length > 0 ? (
+                                activeCities.map((city, index) => (
                                     <tr key={city.id} className="bg-[var(--color-bg)]/50 hover:bg-[var(--color-bg)] transition-all duration-300 group rounded-2xl border border-transparent hover:border-[#00d094]/20">
                                         <td className="px-8 py-5 font-bold text-[var(--color-text-muted)] first:rounded-r-[1.5rem]">
-                                            {String(addedCities.length - index).padStart(2, '0')}
+                                            {String(activeCities.length - index).padStart(2, '0')}
                                         </td>
                                         <td className="px-8 py-5 font-black text-[var(--color-text)]">
                                             <div className="flex items-center gap-4">
@@ -175,7 +221,7 @@ export const CreateCities = () => {
                                         </td>
                                         <td className="px-8 py-5 last:rounded-l-[1.5rem] text-center">
                                             <button
-                                                onClick={() => setAddedCities(addedCities.filter(c => c.id !== city.id))}
+                                                onClick={() => handleDeactivateCity(city.id)}
                                                 className="p-3 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-90 hover:rotate-12"
                                                 title="حذف کریں"
                                             >
@@ -199,7 +245,6 @@ export const CreateCities = () => {
                 </div>
             </div>
 
-            {/* --- BACK BUTTON --- */}
             <div className="flex justify-start pt-4">
                 <button className="group flex items-center gap-3 bg-[var(--color-surface)] text-[var(--color-text-muted)] px-10 py-4 rounded-[1.5rem] font-black text-sm border border-[var(--color-border)] hover:bg-[var(--color-bg)] hover:text-[#00d094] transition-all shadow-md">
                     <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /> واپس جائیں

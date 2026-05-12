@@ -3,6 +3,7 @@ import { CheckCircle2, PlusCircle, Search, Trash2, UserPlus } from 'lucide-react
 import { SelectField, InputField } from '../../../Components/HR/FormElements';
 import { getBranches, getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { assignStudentClass, getStudents } from '../../../Constant/StudentsApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -16,6 +17,7 @@ export const StudentAddToClass = () => {
     const [sessions, setSessions] = useState([]);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -130,9 +132,6 @@ export const StudentAddToClass = () => {
                 <h2 className="text-3xl font-black text-[var(--color-text)]">کلاس میں طالب علم کا اندراج</h2>
                 <p className="text-xs text-[var(--color-text-muted)] font-bold mt-7">طالب علم کو تلاش کریں اور سیشن/کلاس الاٹ کریں</p>
             </div>
-
-            {error ? <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
-            {success ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">{success}</div> : null}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1 space-y-4 bg-[var(--color-surface)] p-5 rounded-[2rem] border border-[var(--color-border)] h-fit">

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Camera, Save, UserPlus } from 'lucide-react';
 import { InputField } from '../../Components/HR/FormElements';
 import { createTeacher } from '../../Constant/TeachersApi';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const INITIAL_VALUES = {
   fullName: '',
@@ -21,6 +22,7 @@ export const HRManagement = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  useNotificationBridge({ error, success });
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -81,8 +83,6 @@ export const HRManagement = () => {
               <InputField label="پتہ" value={formData.address} onChange={(e) => handleChange('address', e.target.value)} />
             </div>
 
-            {error ? <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
-            {success ? <div className="mt-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">{success}</div> : null}
           </div>
 
           <div className="bg-[var(--color-surface)] rounded-[2.5rem] p-8 shadow-sm border border-[var(--color-border)] flex flex-col items-center justify-center gap-5">

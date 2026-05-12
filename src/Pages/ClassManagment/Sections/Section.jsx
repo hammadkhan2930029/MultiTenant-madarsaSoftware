@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSection, deactivateSection, getBranches, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
     branchId: '',
@@ -22,6 +23,7 @@ export const CreateSections = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const activeBranches = useMemo(() => branches.filter((item) => item.status === 'active'), [branches]);
     const activeClasses = useMemo(() => classes.filter((item) => item.status === 'active'), [classes]);
@@ -51,7 +53,7 @@ export const CreateSections = () => {
             setClasses(classesResult.items || []);
             setSections(sectionsResult.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'Sections data load nahi ho saki.');
+            setError(loadError.message || 'سیکشنز کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
             setIsLoading(false);
         }
@@ -82,7 +84,7 @@ export const CreateSections = () => {
 
     const handleSubmit = async () => {
         if (!formData.classId || !formData.name.trim()) {
-            setError('Class aur section name dono zaroori hain.');
+            setError('جماعت اور سیکشن کا نام دونوں درج کرنا ضروری ہیں۔');
             return;
         }
 
@@ -98,16 +100,16 @@ export const CreateSections = () => {
 
             if (editMode) {
                 await updateSection(editMode, payload);
-                setSuccess('Section update ho گیا.');
+                setSuccess('سیکشن کامیابی سے اپڈیٹ ہو گیا۔');
             } else {
                 await createSection(payload);
-                setSuccess('Section create ho گیا.');
+                setSuccess('سیکشن کامیابی سے شامل ہو گیا۔');
             }
 
             resetForm();
             await loadDependencies();
         } catch (saveError) {
-            setError(saveError.message || 'Section save nahi ho saki.');
+            setError(saveError.message || 'سیکشن محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -119,10 +121,10 @@ export const CreateSections = () => {
 
         try {
             await deactivateSection(sectionId);
-            setSuccess('Section inactive kar di gayi.');
+            setSuccess('سیکشن غیر فعال کر دیا گیا۔');
             await loadDependencies();
         } catch (actionError) {
-            setError(actionError.message || 'Section inactive nahi ho saki.');
+            setError(actionError.message || 'سیکشن غیر فعال نہیں ہو سکا۔');
         }
     };
 
@@ -252,9 +254,6 @@ export const CreateSections = () => {
                         </div>
                     </div>
 
-                    {error ? <MessageBox tone="error" message={error} /> : null}
-                    {success ? <MessageBox tone="success" message={success} /> : null}
-
                     <div className="mt-8 flex justify-end gap-3">
                         {editMode ? (
                             <button onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">
@@ -273,9 +272,6 @@ export const CreateSections = () => {
                 </div>
             ) : null}
 
-            {error && !isFormOpen ? <MessageBox tone="error" message={error} /> : null}
-            {success && !isFormOpen ? <MessageBox tone="success" message={success} /> : null}
-
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
@@ -292,7 +288,7 @@ export const CreateSections = () => {
                             {isLoading ? (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Sections load ho rahi hain...
+                                        سیکشنز کی فہرست لوڈ ہو رہی ہے...
                                     </td>
                                 </tr>
                             ) : filteredSections.length ? (
@@ -332,7 +328,7 @@ export const CreateSections = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Koi section record nahi mila.
+                                        کوئی سیکشن ریکارڈ نہیں ملا۔
                                     </td>
                                 </tr>
                             )}
@@ -343,9 +339,3 @@ export const CreateSections = () => {
         </div>
     );
 };
-
-const MessageBox = ({ tone, message }) => (
-    <div className={`mt-6 rounded-2xl px-4 py-3 text-sm font-bold ${tone === 'error' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'}`}>
-        {message}
-    </div>
-);

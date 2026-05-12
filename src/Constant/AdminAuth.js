@@ -1,4 +1,4 @@
-import { apiRequest } from './Api';
+import { API_BASE_URL, apiRequest } from './Api';
 
 const AUTH_KEY = 'madarsa_admin_auth';
 
@@ -62,7 +62,7 @@ export const fetchCurrentAdminProfile = async () => {
   const token = getAdminToken();
 
   if (!token) {
-    throw new Error('Admin session not found.');
+    throw new Error('ایڈمن سیشن نہیں ملا۔ براہ کرم دوبارہ لاگ اِن کریں۔');
   }
 
   const result = await apiRequest('/auth/me', {
@@ -83,11 +83,59 @@ export const fetchCurrentAdminProfile = async () => {
   return result?.data || null;
 };
 
+export const fetchMadrassaProfile = async () => {
+  const token = getAdminToken();
+
+  if (!token) {
+    throw new Error('ایڈمن سیشن نہیں ملا۔ براہ کرم دوبارہ لاگ اِن کریں۔');
+  }
+
+  const result = await apiRequest('/auth/profile', {
+    method: 'GET',
+    token,
+  });
+
+  return result?.data || null;
+};
+
+export const getApiAssetUrl = (assetPath) => {
+  if (!assetPath) return '';
+  if (/^https?:\/\//i.test(assetPath)) return assetPath;
+
+  const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
+  return `${apiOrigin}${assetPath.startsWith('/') ? assetPath : `/${assetPath}`}`;
+};
+
+export const updateMadrassaProfile = async (profileData) => {
+  const token = getAdminToken();
+
+  if (!token) {
+    throw new Error('ایڈمن سیشن نہیں ملا۔ براہ کرم دوبارہ لاگ اِن کریں۔');
+  }
+
+  const isFormData = typeof FormData !== 'undefined' && profileData instanceof FormData;
+
+  const result = await apiRequest('/auth/profile', isFormData ? {
+    method: 'PUT',
+    token,
+    body: profileData,
+  } : {
+    method: 'PUT',
+    token,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(profileData),
+  });
+
+  return result?.data || null;
+};
+
 export const changeAdminPassword = async ({ currentPassword, newPassword }) => {
   const token = getAdminToken();
 
   if (!token) {
-    return { success: false, message: 'Admin session not found.' };
+    return { success: false, message: 'ایڈمن سیشن نہیں ملا۔ براہ کرم دوبارہ لاگ اِن کریں۔' };
   }
 
   try {
@@ -108,7 +156,7 @@ export const changeAdminPassword = async ({ currentPassword, newPassword }) => {
   } catch (error) {
     return {
       success: false,
-      message: error.message || 'Password update failed.',
+      message: error.message || 'پاس ورڈ اپڈیٹ نہیں ہو سکا۔',
     };
   }
 };

@@ -1,31 +1,82 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import {
     Building2, Mail, Phone, MapPin,
     Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
+import { fetchMadrassaProfile, getApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 export const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
     const [citySearch, setCitySearch] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [logoPreview, setLogoPreview] = useState(AppImages.logo);
     const dropdownRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const notify = useNotifier();
 
-    const allCities = ["کراچی", "لاہور", "اسلام آباد", "راولپنڈی", "فیصل آباد", "ملتان", "پشاور", "کوئٹہ"];
+    const allCities = ['کراچی', 'لاہور', 'اسلام آباد', 'راولپنڈی', 'فیصل آباد', 'ملتان', 'پشاور', 'کوئٹہ'];
 
     const [madrassaData, setMadrassaData] = useState({
-        name: "جامعہ انوار القران",
-        email: "info@anwarulquran.com",
-        phone1: "0300-1234567",
-        phone2: "0321-7654321",
-        address: "گلشن اقبال، بلاک 13-C، کراچی",
-        branch: "مین کیمپس",
-        city: "کراچی",
-        familyNoSeq: "FAM-2026-001",
-        regNo: "REG-QA-9921"
+        name: 'جامعہ انوار القرآن',
+        email: 'info@anwarulquran.com',
+        phone1: '0300-1234567',
+        phone2: '0321-7654321',
+        address: 'گلشن اقبال، بلاک 13-C، کراچی',
+        branch: 'مین کیمپس',
+        city: 'کراچی',
+        familyNoSeq: 'FAM-2026-001',
+        regNo: 'REG-QA-9921'
     });
 
-    const [tempData, setTempData] = useState({ ...madrassaData });
+    const [tempData, setTempData] = useState({ ...madrassaData, logoUrl: '' });
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadProfile = async () => {
+            try {
+                setIsLoading(true);
+                const profile = await fetchMadrassaProfile();
+                if (!profile || !isMounted) return;
+
+                const nextData = {
+                    name: profile.name || '',
+                    email: profile.email || '',
+                    phone1: profile.phone1 || '',
+                    phone2: profile.phone2 || '',
+                    address: profile.address || '',
+                    branch: profile.branch || '',
+                    city: profile.city || '',
+                    familyNoSeq: profile.familyNoSeq || '',
+                    regNo: profile.regNo || '',
+                    logoUrl: profile.logoUrl || '',
+                };
+
+                setMadrassaData(nextData);
+                setTempData(nextData);
+                setLogoPreview(profile.logoUrl ? getApiAssetUrl(profile.logoUrl) : AppImages.logo);
+            } catch (loadError) {
+                if (isMounted) {
+                    const message = loadError?.message || 'پروفائل لوڈ نہیں ہو سکی۔';
+                    notify.error(message, 'لوڈنگ میں مسئلہ پیش آیا');
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        loadProfile();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [notify]);
 
     useEffect(() => {
         const handleClick = (e) => {
@@ -37,27 +88,123 @@ export const Profile = () => {
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
 
-    const handleSave = () => {
-        setMadrassaData({ ...tempData });
-        setIsEditing(false);
+    useEffect(() => () => {
+        if (logoPreview?.startsWith('blob:')) {
+            URL.revokeObjectURL(logoPreview);
+        }
+    }, [logoPreview]);
+
+    const handleLogoPick = () => {
+        fileInputRef.current?.click();
     };
 
-    const filteredCities = allCities.filter(c => c.includes(citySearch));
+    const handleLogoChange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            notify.error('صرف تصویر والی فائل منتخب کریں۔', 'غلط فائل');
+            event.target.value = '';
+            return;
+        }
+
+        if (logoPreview?.startsWith('blob:')) {
+            URL.revokeObjectURL(logoPreview);
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+        setTempData((prev) => ({ ...prev, logoFile: file }));
+        setLogoPreview(previewUrl);
+        notify.success(file.name, 'تصویر منتخب ہو گئی');
+    };
+
+    const resetEditingState = () => {
+        if (logoPreview?.startsWith('blob:')) {
+            URL.revokeObjectURL(logoPreview);
+        }
+
+        setTempData({ ...madrassaData });
+        setLogoPreview(madrassaData.logoUrl ? getApiAssetUrl(madrassaData.logoUrl) : AppImages.logo);
+        setIsEditing(false);
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+
+            const formData = new FormData();
+            formData.append('name', tempData.name || '');
+            formData.append('email', tempData.email || '');
+            formData.append('phone1', tempData.phone1 || '');
+            formData.append('phone2', tempData.phone2 || '');
+            formData.append('address', tempData.address || '');
+            formData.append('branch', tempData.branch || '');
+            formData.append('city', tempData.city || '');
+            formData.append('familyNoSeq', tempData.familyNoSeq || '');
+            formData.append('regNo', tempData.regNo || '');
+            formData.append('logoUrl', tempData.logoUrl || '');
+            formData.append('status', tempData.status || 'active');
+
+            if (tempData.logoFile) {
+                formData.append('logo', tempData.logoFile);
+            }
+
+            const savedProfile = await updateMadrassaProfile(formData);
+            const nextData = {
+                name: savedProfile.name || '',
+                email: savedProfile.email || '',
+                phone1: savedProfile.phone1 || '',
+                phone2: savedProfile.phone2 || '',
+                address: savedProfile.address || '',
+                branch: savedProfile.branch || '',
+                city: savedProfile.city || '',
+                familyNoSeq: savedProfile.familyNoSeq || '',
+                regNo: savedProfile.regNo || '',
+                logoUrl: savedProfile.logoUrl || '',
+            };
+
+            setMadrassaData(nextData);
+            setTempData(nextData);
+            setIsEditing(false);
+            setLogoPreview(savedProfile.logoUrl ? getApiAssetUrl(savedProfile.logoUrl) : AppImages.logo);
+            notify.success('تمام تبدیلیاں محفوظ ہو گئی ہیں۔', 'پروفائل اپڈیٹ ہو گئی');
+        } catch (saveError) {
+            const message = saveError?.message || 'پروفائل محفوظ نہیں ہو سکی۔';
+            notify.error(message, 'محفوظ کرنے میں مسئلہ پیش آیا');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const filteredCities = allCities.filter((c) => c.includes(citySearch));
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10 px-4" dir="rtl">
-
-            {/* --- HEADER SECTION --- */}
             <div className="relative bg-gradient-to-br from-[#004d61] to-[#002a33] rounded-[3rem] p-8 text-white shadow-2xl overflow-hidden border border-white/10">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#00d094]/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                
+
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                     <div className="relative group">
                         <div className="w-32 h-32 bg-white rounded-[2.5rem] p-2 shadow-2xl transition-all group-hover:scale-105 duration-500 border-4 border-white/20">
-                            <img src={AppImages.logo} alt="Logo" className="w-full h-full object-contain rounded-[2rem]" />
+                            <img src={logoPreview || AppImages.logo} alt="Logo" className="w-full h-full object-contain rounded-[2rem]" />
                         </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            className="hidden"
+                        />
                         {isEditing && (
-                            <button className="absolute -bottom-2 -right-2 bg-[#00d094] p-3 rounded-2xl shadow-lg hover:scale-110 transition-all text-white border-4 border-[#002a33] hover:rotate-12">
+                            <button
+                                type="button"
+                                onClick={handleLogoPick}
+                                className="absolute -bottom-2 -right-2 bg-[#00d094] p-3 rounded-2xl shadow-lg hover:scale-110 transition-all text-white border-4 border-[#002a33] hover:rotate-12"
+                            >
                                 <Camera size={20} />
                             </button>
                         )}
@@ -85,51 +232,54 @@ export const Profile = () => {
 
                     <div className="flex gap-3 mt-4 md:mt-0">
                         {isEditing && (
-                            <button onClick={() => setIsEditing(false)} className="p-4 bg-rose-500/20 text-rose-200 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/30">
+                            <button onClick={resetEditingState} className="p-4 bg-rose-500/20 text-rose-200 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/30">
                                 <X size={20} />
                             </button>
                         )}
                         <button
                             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                            disabled={isSaving || isLoading}
                             className={`px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-3 transition-all active:scale-95 shadow-xl ${
                                 isEditing ? 'bg-[#00d094] text-white hover:bg-[#00b07d]' : 'bg-white text-[#002a33] hover:bg-emerald-50'
-                            }`}
+                            } ${(isSaving || isLoading) ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                            {isEditing ? <><Save size={20} /> محفوظ کریں</> : <><Edit3 size={20} /> ایڈٹ کریں</>}
+                            {isEditing ? <><Save size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</> : <><Edit3 size={20} /> ایڈٹ کریں</>}
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* --- INFO GRID --- */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {isLoading ? (
+                <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-5 text-right text-sm font-bold text-[var(--color-text-muted)]">
+                    پروفائل لوڈ ہو رہی ہے...
+                </div>
+            ) : null}
 
-                {/* Registration Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6 md:col-span-2">
                     <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">انتظامی معلومات</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <InfoField 
-                            label="رجسٹریشن نمبر" 
+                        <InfoField
+                            label="رجسٹریشن نمبر"
                             icon={<ClipboardList size={16} />}
-                            value={madrassaData.regNo} 
-                            isEditing={isEditing} 
-                            tempValue={tempData.regNo} 
-                            onChange={(v) => setTempData({ ...tempData, regNo: v })} 
+                            value={madrassaData.regNo}
+                            isEditing={isEditing}
+                            tempValue={tempData.regNo}
+                            onChange={(v) => setTempData({ ...tempData, regNo: v })}
                         />
-                        <InfoField 
-                            label="فیملی نمبر سیکوینس" 
+                        <InfoField
+                            label="فیملی نمبر سیکوینس"
                             icon={<Users2 size={16} />}
-                            value={madrassaData.familyNoSeq} 
-                            isEditing={isEditing} 
-                            tempValue={tempData.familyNoSeq} 
-                            onChange={(v) => setTempData({ ...tempData, familyNoSeq: v })} 
+                            value={madrassaData.familyNoSeq}
+                            isEditing={isEditing}
+                            tempValue={tempData.familyNoSeq}
+                            onChange={(v) => setTempData({ ...tempData, familyNoSeq: v })}
                         />
                     </div>
                 </div>
 
-                {/* Contact Info */}
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6">
-                    <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">رابطہ کی تفصیلات</h3>
+                    <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">رابطے کی تفصیلات</h3>
                     <InfoField label="ای میل" icon={<Mail size={16} />} value={madrassaData.email} isEditing={isEditing} tempValue={tempData.email} onChange={(v) => setTempData({ ...tempData, email: v })} />
                     <div className="grid grid-cols-2 gap-6">
                         <InfoField label="فون 1" icon={<Phone size={16} />} value={madrassaData.phone1} isEditing={isEditing} tempValue={tempData.phone1} onChange={(v) => setTempData({ ...tempData, phone1: v })} />
@@ -137,7 +287,6 @@ export const Profile = () => {
                     </div>
                 </div>
 
-                {/* Location Info */}
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6">
                     <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">مقام اور برانچ</h3>
                     <div className="grid grid-cols-2 gap-6">
@@ -168,11 +317,11 @@ export const Profile = () => {
                                                 />
                                             </div>
                                             <div className="overflow-y-auto max-h-48 p-2 custom-scrollbar">
-                                                {filteredCities.map(city => (
+                                                {filteredCities.map((city) => (
                                                     <div
                                                         key={city}
                                                         onClick={() => {
-                                                            setTempData({ ...tempData, city: city });
+                                                            setTempData({ ...tempData, city });
                                                             setIsCityDropdownOpen(false);
                                                         }}
                                                         className={`p-3 rounded-xl cursor-pointer font-bold text-sm flex justify-between items-center transition-all mb-1 ${
@@ -207,15 +356,15 @@ const InfoField = ({ label, value, isEditing, tempValue, onChange, icon }) => (
             {icon && <span className="text-[#00d094]">{icon}</span>} {label}
         </label>
         <div className={`p-4 rounded-2xl border transition-all duration-300 ${
-            isEditing 
-            ? 'bg-[var(--color-bg)] border-[#00d094]/50 shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)]' 
-            : 'bg-[var(--color-bg)] border-transparent'
+            isEditing
+                ? 'bg-[var(--color-bg)] border-[#00d094]/50 shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)]'
+                : 'bg-[var(--color-bg)] border-transparent'
         }`}>
             {isEditing ? (
-                <input 
-                    value={tempValue} 
-                    onChange={(e) => onChange(e.target.value)} 
-                    className="bg-transparent w-full outline-none font-bold text-[var(--color-text)] focus:text-[#00d094] transition-colors" 
+                <input
+                    value={tempValue}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="bg-transparent w-full outline-none font-bold text-[var(--color-text)] focus:text-[#00d094] transition-colors"
                 />
             ) : (
                 <span className="font-bold text-[var(--color-text)]">{value}</span>

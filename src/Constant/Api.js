@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002/api';
 
 const buildHeaders = (headers = {}, token) => {
   const nextHeaders = { ...headers };
@@ -21,7 +21,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   const result = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(result?.message || 'Request failed.');
+    throw new Error(result?.message || 'درخواست مکمل نہیں ہو سکی۔');
   }
 
   return result;

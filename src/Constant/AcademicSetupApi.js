@@ -94,3 +94,23 @@ export const deactivateSession = async (id) => {
   const result = await apiRequest(`/sessions/${id}/deactivate`, withToken({ method: 'PATCH' }));
   return result?.data;
 };
+
+export const getSubjects = async (query = '') => {
+  const result = await apiRequest(`/subjects${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const createSubject = async (payload) => {
+  const result = await apiRequest('/subjects', withJson('POST', payload));
+  return result?.data;
+};
+
+export const updateSubject = async (id, payload) => {
+  const result = await apiRequest(`/subjects/${id}`, withJson('PATCH', payload));
+  return result?.data;
+};
+
+export const deactivateSubject = async (id) => {
+  const result = await apiRequest(`/subjects/${id}/deactivate`, withToken({ method: 'PATCH' }));
+  return result?.data;
+};

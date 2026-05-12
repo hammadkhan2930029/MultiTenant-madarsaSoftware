@@ -3,12 +3,14 @@ import { Edit2, Eye, Search, UserPlus } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNavigate } from 'react-router-dom';
 import { getTeachers, updateTeacherStatus } from '../../../Constant/TeachersApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 export const TeachersList = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [teachers, setTeachers] = useState([]);
     const [error, setError] = useState('');
+    useNotificationBridge({ error });
 
     const loadTeachers = async () => {
         try {
@@ -74,8 +76,6 @@ export const TeachersList = () => {
                     </div>
                 </div>
             </div>
-
-            {error ? <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
 
             <div className="grid grid-cols-1 gap-4 lg:hidden">
                 {filteredTeachers.length > 0 ? (

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, Edit2, Hash, MapPin, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createBranch, deactivateBranch, getBranches, updateBranch } from '../../Constant/AcademicSetupApi';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
     name: '',
@@ -18,6 +19,7 @@ export const CreateBranch = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const totalActiveBranches = useMemo(
         () => branches.filter((branch) => branch.status === 'active').length,
@@ -181,9 +183,6 @@ export const CreateBranch = () => {
                         />
                     </div>
 
-                    {error ? <MessageBox tone="error" message={error} /> : null}
-                    {success ? <MessageBox tone="success" message={success} /> : null}
-
                     <div className="mt-8 flex justify-end gap-3">
                         {editMode ? (
                             <button onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">
@@ -201,9 +200,6 @@ export const CreateBranch = () => {
                     </div>
                 </div>
             ) : null}
-
-            {error && !isFormOpen ? <MessageBox tone="error" message={error} /> : null}
-            {success && !isFormOpen ? <MessageBox tone="success" message={success} /> : null}
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
@@ -284,11 +280,5 @@ const Field = ({ label, value, onChange, placeholder, icon }) => (
                 className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
             />
         </div>
-    </div>
-);
-
-const MessageBox = ({ tone, message }) => (
-    <div className={`mt-6 rounded-2xl px-4 py-3 text-sm font-bold ${tone === 'error' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'}`}>
-        {message}
     </div>
 );

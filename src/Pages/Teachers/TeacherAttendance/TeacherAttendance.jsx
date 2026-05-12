@@ -5,6 +5,7 @@ import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicke
 import { getBranches } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const STATUS_OPTIONS = [
     { value: 'Present', label: 'حاضر' },
@@ -29,6 +30,7 @@ export const TeacherAttendance = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    useNotificationBridge({ error, success: successMessage });
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -206,8 +208,6 @@ export const TeacherAttendance = () => {
                         </button>
                     </div>
 
-                    {error ? <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">{error}</div> : null}
-                    {successMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">{successMessage}</div> : null}
                     {isLoading ? <div className="text-sm font-bold text-[var(--color-text-muted)]">Attendance load ho rahi hai...</div> : null}
                 </div>
 

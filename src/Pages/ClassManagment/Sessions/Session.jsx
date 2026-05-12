@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSession, deactivateSession, getSessions, updateSession } from '../../../Constant/AcademicSetupApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
     name: '',
@@ -25,6 +26,7 @@ export const CreateSessions = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const totalSessions = useMemo(() => sessions.length, [sessions]);
 
@@ -36,7 +38,7 @@ export const CreateSessions = () => {
             const result = await getSessions('page=1&limit=100');
             setSessions(result.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'Sessions load nahi ho sakin.');
+            setError(loadError.message || 'سیشنز کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
@@ -66,7 +68,7 @@ export const CreateSessions = () => {
 
     const handleSubmit = async () => {
         if (!formData.name.trim() || !formData.startDate || !formData.endDate) {
-            setError('Session name, start date, aur end date zaroori hain.');
+            setError('سیشن کا نام، شروع کی تاریخ اور اختتامی تاریخ درج کرنا ضروری ہیں۔');
             return;
         }
 
@@ -83,16 +85,16 @@ export const CreateSessions = () => {
 
             if (editMode) {
                 await updateSession(editMode, payload);
-                setSuccess('Session update ho gaya.');
+                setSuccess('سیشن کامیابی سے اپڈیٹ ہو گیا۔');
             } else {
                 await createSession(payload);
-                setSuccess('Session create ho gaya.');
+                setSuccess('سیشن کامیابی سے شامل ہو گیا۔');
             }
 
             resetForm();
             await loadSessions();
         } catch (saveError) {
-            setError(saveError.message || 'Session save nahi ho saka.');
+            setError(saveError.message || 'سیشن محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -104,10 +106,10 @@ export const CreateSessions = () => {
 
         try {
             await deactivateSession(sessionId);
-            setSuccess('Session inactive kar diya gaya.');
+            setSuccess('سیشن غیر فعال کر دیا گیا۔');
             await loadSessions();
         } catch (actionError) {
-            setError(actionError.message || 'Session inactive nahi ho saka.');
+            setError(actionError.message || 'سیشن غیر فعال نہیں ہو سکا۔');
         }
     };
 
@@ -193,9 +195,6 @@ export const CreateSessions = () => {
                         </div>
                     </div>
 
-                    {error ? <MessageBox tone="error" message={error} /> : null}
-                    {success ? <MessageBox tone="success" message={success} /> : null}
-
                     <div className="mt-8 flex justify-end gap-3">
                         {editMode ? (
                             <button onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">
@@ -214,9 +213,6 @@ export const CreateSessions = () => {
                 </div>
             ) : null}
 
-            {error && !isFormOpen ? <MessageBox tone="error" message={error} /> : null}
-            {success && !isFormOpen ? <MessageBox tone="success" message={success} /> : null}
-
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
@@ -233,7 +229,7 @@ export const CreateSessions = () => {
                             {isLoading ? (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Sessions load ho rahe hain...
+                                        سیشنز کی فہرست لوڈ ہو رہی ہے...
                                     </td>
                                 </tr>
                             ) : filteredSessions.length ? (
@@ -269,7 +265,7 @@ export const CreateSessions = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Koi session record nahi mila.
+                                        کوئی سیشن ریکارڈ نہیں ملا۔
                                     </td>
                                 </tr>
                             )}
@@ -280,9 +276,3 @@ export const CreateSessions = () => {
         </div>
     );
 };
-
-const MessageBox = ({ tone, message }) => (
-    <div className={`mt-6 rounded-2xl px-4 py-3 text-sm font-bold ${tone === 'error' ? 'border border-red-500/20 bg-red-500/10 text-red-400' : 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-400'}`}>
-        {message}
-    </div>
-);

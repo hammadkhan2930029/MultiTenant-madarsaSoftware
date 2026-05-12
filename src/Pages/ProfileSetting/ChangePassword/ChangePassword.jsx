@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CheckCircle2, KeyRound, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { KeyRound, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { changeAdminPassword, getAdminSession } from '../../../Constant/AdminAuth';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 export const ChangePassword = () => {
     const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ export const ChangePassword = () => {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const username = getAdminSession()?.admin?.username || 'admin';
 
@@ -159,19 +161,6 @@ export const ChangePassword = () => {
                                 />
                             </div>
                         </div>
-
-                        {error ? (
-                            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-400">
-                                {error}
-                            </div>
-                        ) : null}
-
-                        {success ? (
-                            <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-400">
-                                <CheckCircle2 size={18} />
-                                {success}
-                            </div>
-                        ) : null}
 
                         <button
                             type="submit"
