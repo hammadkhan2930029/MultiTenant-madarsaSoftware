@@ -26,6 +26,7 @@ const formatDateValue = (date) => {
 
 const parseDateValue = (value) => {
   if (!value) return null;
+  if (typeof value !== 'string') return null;
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return null;
   return new Date(year, month - 1, day);
@@ -61,6 +62,14 @@ export const ThemedDatePicker = ({
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => selectedDate || new Date());
   const [panelStyle, setPanelStyle] = useState({ right: 0 });
+  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(() => {
+    const years = [];
+    for (let year = currentYear + 10; year >= currentYear - 100; year -= 1) {
+      years.push(year);
+    }
+    return years;
+  }, [currentYear]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -93,12 +102,7 @@ export const ThemedDatePicker = ({
 
   const emitChange = (nextValue) => {
     if (onChange) {
-      onChange({
-        target: {
-          name,
-          value: nextValue,
-        },
-      });
+      onChange(nextValue);
     }
   };
 
@@ -106,6 +110,16 @@ export const ThemedDatePicker = ({
     if (isDateBlocked(date, min, max)) return;
     emitChange(formatDateValue(date));
     setIsOpen(false);
+  };
+
+  const handleMonthChange = (event) => {
+    const nextMonth = Number(event.target.value);
+    setViewDate(new Date(viewDate.getFullYear(), nextMonth, 1));
+  };
+
+  const handleYearChange = (event) => {
+    const nextYear = Number(event.target.value);
+    setViewDate(new Date(nextYear, viewDate.getMonth(), 1));
   };
 
   const openCalendar = () => {
@@ -204,6 +218,32 @@ export const ThemedDatePicker = ({
             >
               <ChevronLeft size={18} />
             </button>
+          </div>
+
+          <div className="mb-4 grid grid-cols-2 gap-2">
+            <select
+              value={viewDate.getMonth()}
+              onChange={handleMonthChange}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm font-bold text-[var(--color-text-main)] outline-none"
+            >
+              {MONTHS.map((month, index) => (
+                <option key={month} value={index}>
+                  {month}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={viewDate.getFullYear()}
+              onChange={handleYearChange}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm font-bold text-[var(--color-text-main)] outline-none"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div dir="rtl" className="grid grid-cols-7 gap-2 text-center mb-3">

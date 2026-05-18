@@ -15,7 +15,11 @@ const mapStudentsForList = (items) =>
             campus: activeAssignment?.branch?.name || '---',
             className: activeAssignment?.class?.name || '---',
             section: activeAssignment?.section?.name || '---',
-            familyNo: student.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.phone || student.phone || '---',
+            familyNo:
+                student.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.familyNumber ||
+                student.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.phone ||
+                student.phone ||
+                '---',
         };
     });
 

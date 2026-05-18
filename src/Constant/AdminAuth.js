@@ -95,15 +95,86 @@ export const fetchMadrassaProfile = async () => {
     token,
   });
 
-  return result?.data || null;
+  const profile = result?.data || null;
+  const currentSession = readSession();
+
+  if (currentSession) {
+    writeSession({
+      ...currentSession,
+      madrassaProfile: profile,
+    });
+  }
+
+  return profile;
 };
 
 export const getApiAssetUrl = (assetPath) => {
   if (!assetPath) return '';
   if (/^https?:\/\//i.test(assetPath)) return assetPath;
 
-  const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
-  return `${apiOrigin}${assetPath.startsWith('/') ? assetPath : `/${assetPath}`}`;
+  const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+
+  try {
+    const apiUrl = new URL(API_BASE_URL);
+
+    if (typeof window !== 'undefined') {
+      const currentHostName = window.location.hostname;
+      const isLocalApiHost = ['localhost', '127.0.0.1'].includes(apiUrl.hostname);
+
+      if (isLocalApiHost && currentHostName && !['localhost', '127.0.0.1'].includes(currentHostName)) {
+        return `${window.location.protocol}//${currentHostName}:${apiUrl.port}${normalizedAssetPath}`;
+      }
+    }
+
+    return new URL(normalizedAssetPath, `${apiUrl.origin}/`).toString();
+  } catch {
+    const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
+    return `${apiOrigin}${normalizedAssetPath}`;
+  }
+};
+
+const buildAssetCandidates = (assetPath) => {
+  if (!assetPath) return [];
+  if (/^https?:\/\//i.test(assetPath)) return [assetPath];
+
+  const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
+  const candidates = new Set();
+
+  try {
+    const apiUrl = new URL(API_BASE_URL);
+    candidates.add(new URL(normalizedAssetPath, `${apiUrl.origin}/`).toString());
+
+    if (['localhost', '127.0.0.1'].includes(apiUrl.hostname)) {
+      candidates.add(`http://localhost:${apiUrl.port}${normalizedAssetPath}`);
+      candidates.add(`http://127.0.0.1:${apiUrl.port}${normalizedAssetPath}`);
+    }
+  } catch {
+    candidates.add(getApiAssetUrl(normalizedAssetPath));
+  }
+
+  if (typeof window !== 'undefined') {
+    candidates.add(`${window.location.origin}${normalizedAssetPath}`);
+  }
+
+  return Array.from(candidates).filter(Boolean);
+};
+
+export const resolveApiAssetUrl = async (assetPath) => {
+  const candidates = buildAssetCandidates(assetPath);
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, { method: 'GET' });
+      if (response.ok) {
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+      }
+    } catch {
+      // Try next candidate URL.
+    }
+  }
+
+  return getApiAssetUrl(assetPath);
 };
 
 export const updateMadrassaProfile = async (profileData) => {
@@ -128,7 +199,17 @@ export const updateMadrassaProfile = async (profileData) => {
     body: JSON.stringify(profileData),
   });
 
-  return result?.data || null;
+  const profile = result?.data || null;
+  const currentSession = readSession();
+
+  if (currentSession) {
+    writeSession({
+      ...currentSession,
+      madrassaProfile: profile,
+    });
+  }
+
+  return profile;
 };
 
 export const changeAdminPassword = async ({ currentPassword, newPassword }) => {

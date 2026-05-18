@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, Edit2, Hash, MapPin, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createBranch, deactivateBranch, getBranches, updateBranch } from '../../Constant/AcademicSetupApi';
+import { createBranch, deleteBranch, getBranches, updateBranch } from '../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
@@ -17,14 +17,15 @@ export const CreateBranch = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
     useNotificationBridge({ error, success });
 
-    const totalActiveBranches = useMemo(
-        () => branches.filter((branch) => branch.status === 'active').length,
-        [branches],
-    );
+    const totalBranches = useMemo(() => branches.length, [branches]);
+    const isDefaultBranch = (branch) => branch?.name?.trim().toLowerCase() === 'main campus';
 
     const loadBranches = async () => {
         setIsLoading(true);
@@ -34,7 +35,7 @@ export const CreateBranch = () => {
             const result = await getBranches('page=1&limit=100');
             setBranches(result.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'Branches load nahi ho sakin.');
+            setError(loadError.message || 'برانچز لوڈ نہیں ہو سکیں۔');
         } finally {
             setIsLoading(false);
         }
@@ -64,7 +65,7 @@ export const CreateBranch = () => {
 
     const handleSubmit = async () => {
         if (!formData.name.trim()) {
-            setError('Branch name zaroori hai.');
+            setError('برانچ کا نام ضروری ہے۔');
             return;
         }
 
@@ -81,31 +82,39 @@ export const CreateBranch = () => {
 
             if (editMode) {
                 await updateBranch(editMode, payload);
-                setSuccess('Branch update ho gayi.');
+                setSuccess('برانچ کامیابی سے اپڈیٹ ہو گئی۔');
             } else {
                 await createBranch(payload);
-                setSuccess('Branch create ho gayi.');
+                setSuccess('نئی برانچ کامیابی سے شامل ہو گئی۔');
             }
 
+            window.dispatchEvent(new Event('branches:updated'));
             resetForm();
             await loadBranches();
         } catch (saveError) {
-            setError(saveError.message || 'Branch save nahi ho saki.');
+            setError(saveError.message || 'برانچ محفوظ نہیں ہو سکی۔');
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleDeactivate = async (branchId) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+
         setError('');
         setSuccess('');
+        setIsDeleting(true);
 
         try {
-            await deactivateBranch(branchId);
-            setSuccess('Branch inactive kar di gayi.');
+            await deleteBranch(deleteTarget.id);
+            setSuccess('برانچ کامیابی سے حذف کر دی گئی۔');
+            setDeleteTarget(null);
+            window.dispatchEvent(new Event('branches:updated'));
             await loadBranches();
-        } catch (actionError) {
-            setError(actionError.message || 'Branch inactive nahi ho saki.');
+        } catch (deleteError) {
+            setError(deleteError.message || 'برانچ حذف نہیں ہو سکی۔');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -123,7 +132,7 @@ export const CreateBranch = () => {
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">برانچ مینجمنٹ</h2>
-                    <p className="mt-3 text-sm font-medium text-[var(--color-text-muted)]">کل فعال برانچز: {totalActiveBranches}</p>
+                    <p className="mt-3 text-sm font-medium text-[var(--color-text-muted)]">کل برانچز: {totalBranches}</p>
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
@@ -209,15 +218,14 @@ export const CreateBranch = () => {
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کوڈ</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">پتہ</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Branches load ho rahi hain...
+                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                        برانچز لوڈ ہو رہی ہیں...
                                     </td>
                                 </tr>
                             ) : filteredBranches.length ? (
@@ -227,33 +235,31 @@ export const CreateBranch = () => {
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{branch.code || '-'}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{branch.address || '-'}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${branch.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                                {branch.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
                                             <div className="flex items-center justify-start gap-2">
                                                 <button
                                                     onClick={() => handleEdit(branch)}
                                                     className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                                                    title="برانچ ایڈٹ کریں"
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDeactivate(branch.id)}
-                                                    disabled={branch.status === 'inactive'}
-                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {!isDefaultBranch(branch) ? (
+                                                    <button
+                                                        onClick={() => setDeleteTarget(branch)}
+                                                        className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white"
+                                                        title="برانچ حذف کریں"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                ) : null}
                                             </div>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                                        Koi branch record nahi mila.
+                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                        کوئی برانچ ریکارڈ نہیں ملا۔
                                     </td>
                                 </tr>
                             )}
@@ -261,6 +267,48 @@ export const CreateBranch = () => {
                     </table>
                 </div>
             </div>
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="text-right">
+                                <h3 className="text-xl font-black text-[var(--color-text)]">برانچ حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کو حذف کرنا چاہتے ہیں؟
+                                    یہ عمل واپس نہیں ہو گا۔
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => !isDeleting && setDeleteTarget(null)}
+                                className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                منسوخ کریں
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isDeleting ? 'حذف ہو رہی ہے...' : 'تصدیق کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };

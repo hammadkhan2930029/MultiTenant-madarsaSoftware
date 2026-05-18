@@ -41,9 +41,7 @@ export const AppRoutes = () => {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="branch-management/create-branch" element={<CreateBranch />} />
-        <Route path="branch-management/campus-1" element={<CreateBranch />} />
-        <Route path="branch-management/campus-2" element={<CreateBranch />} />
-        <Route path="branch-management/campus-3" element={<CreateBranch />} />
+        <Route path="branch-management/:branchId" element={<CreateBranch />} />
         <Route path="HRManagement" element={<HRManagement />} />
         <Route path="finance/*" element={<FinanceRoutes />} />
         <Route path="hifz/*" element={<HifzRoutes />} />

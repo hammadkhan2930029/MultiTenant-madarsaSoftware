@@ -35,7 +35,7 @@ export const ParentProfile = () => {
     }, [parent, searchTerm]);
 
     if (error) {
-        return <div className="max-w-5xl mx-auto p-6 text-red-400 font-bold">{error}</div>;
+        return <div className="max-w-5xl mx-auto p-6 font-bold text-red-400">{error}</div>;
     }
 
     if (!parent) {
@@ -43,27 +43,28 @@ export const ParentProfile = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto p-3 sm:p-4 md:p-6 space-y-5 md:space-y-6 bg-[var(--color-bg)] min-h-screen" dir="rtl">
-            <div className="bg-[var(--color-surface)] rounded-[2rem] md:rounded-[2.8rem] border border-[var(--color-border)] p-5 sm:p-6 md:p-8 shadow-sm">
-                <div className="flex flex-col md:flex-row gap-5 md:gap-6 items-center md:items-start">
-                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[1.8rem] md:rounded-[2rem] bg-[var(--color-primary)]/10 border-4 border-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] shrink-0">
-                        <Users size={36} className="sm:w-[42px] sm:h-[42px]" />
+        <div className="min-h-screen max-w-7xl mx-auto space-y-5 bg-[var(--color-bg)] p-3 sm:p-4 md:space-y-6 md:p-6" dir="rtl">
+            <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:rounded-[2.8rem] md:p-8">
+                <div className="flex flex-col items-center gap-5 md:flex-row md:items-start md:gap-6">
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[1.8rem] border-4 border-[var(--color-primary)]/20 bg-[var(--color-primary)]/10 text-[var(--color-primary)] sm:h-28 sm:w-28 md:rounded-[2rem]">
+                        <Users size={36} className="sm:h-[42px] sm:w-[42px]" />
                     </div>
 
-                    <div className="flex-1 w-full min-w-0 text-center md:text-right space-y-4">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="w-full min-w-0 flex-1 space-y-4 text-center md:text-right">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="min-w-0">
-                                <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.25em]">Parent Profile</p>
-                                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[var(--color-text-main)] mt-2 break-words">{parent.fullName}</h1>
+                                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[var(--color-text-muted)]">Parent Profile</p>
+                                <h1 className="mt-2 break-words text-2xl font-black text-[var(--color-text-main)] sm:text-3xl md:text-4xl">{parent.fullName}</h1>
                             </div>
 
-                            <button onClick={() => navigate(-1)} className="w-full md:w-auto self-stretch md:self-start flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] font-bold transition-colors hover:bg-[var(--color-input)]">
+                            <button onClick={() => navigate(-1)} className="flex w-full items-center justify-center gap-2 self-stretch rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-bold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-input)] md:w-auto md:self-start">
                                 <ArrowRight size={18} /> واپس
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+                        <div className="grid grid-cols-1 gap-4 pt-1 sm:grid-cols-2 lg:grid-cols-4">
                             <InfoCard label="فون نمبر" value={parent.phone || '---'} icon={<Phone size={14} className="text-[var(--color-primary)]" />} />
+                            <InfoCard label="فیملی نمبر" value={parent.familyNumber || '---'} />
                             <InfoCard label="ای میل" value={parent.email || '---'} />
                             <InfoCard label="پیشہ" value={parent.occupation || '---'} />
                             <InfoCard label="کل بچے" value={String(parent.students?.length || 0)} icon={<Users size={14} className="text-[var(--color-primary)]" />} />
@@ -75,43 +76,47 @@ export const ParentProfile = () => {
             </div>
 
             <div className="flex items-center justify-between px-2">
-                <h3 className="text-lg md:text-xl font-black text-[var(--color-text-main)] flex items-center gap-3">
+                <h3 className="flex items-center gap-3 text-lg font-black text-[var(--color-text-main)] md:text-xl">
                     <GraduationCap className="text-[var(--color-primary)]" />
                     منسلک طلباء
                 </h3>
-                <div className="relative group hidden sm:block">
+                <div className="group relative hidden sm:block">
                     <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)]" />
                     <input
                         type="text"
                         placeholder="طالب علم تلاش کریں..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl py-2 pr-10 pl-4 text-xs font-bold outline-none focus:border-[var(--color-primary)]/50"
+                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] py-2 pr-10 pl-4 text-xs font-bold outline-none focus:border-[var(--color-primary)]/50"
                     />
                 </div>
             </div>
 
-            <div className="hidden md:block bg-[var(--color-surface)] rounded-[3rem] border border-[var(--color-border)] shadow-sm overflow-hidden">
+            <div className="hidden overflow-hidden rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm md:block">
                 <table className="w-full text-right">
-                    <thead className="bg-[var(--color-input)]/50 border-b border-white/5">
+                    <thead className="border-b border-white/5 bg-[var(--color-input)]/50">
                         <tr>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">آئی ڈی</th>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">طالب علم</th>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">رشتہ</th>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">ایکشن</th>
+                            <th className="p-6 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">آئی ڈی</th>
+                            <th className="p-6 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">طالب علم</th>
+                            <th className="p-6 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">رشتہ</th>
+                            <th className="p-6 text-center text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ایکشن</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
                         {filteredChildren.map((item) => (
-                            <tr key={item.student.id} className="hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                                <td className="p-6"><span className="bg-[var(--color-input)] text-[var(--color-text)]/70 px-4 py-2 rounded-2xl font-black text-[12px] border border-[var(--color-border)]">{item.student.admissionNumber}</span></td>
+                            <tr key={item.student.id} className="group cursor-pointer transition-colors hover:bg-white/[0.02]">
                                 <td className="p-6">
-                                    <div className="font-black text-[var(--color-text)] text-base">{item.student.fullName}</div>
-                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">{item.isPrimary ? 'Primary Parent' : 'Linked Parent'}</div>
+                                    <span className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2 text-[12px] font-black text-[var(--color-text)]/70">
+                                        {item.student.admissionNumber}
+                                    </span>
+                                </td>
+                                <td className="p-6">
+                                    <div className="text-base font-black text-[var(--color-text)]">{item.student.fullName}</div>
+                                    <div className="mt-1 text-[11px] font-bold text-[var(--color-text-muted)]">{item.isPrimary ? 'Primary Parent' : 'Linked Parent'}</div>
                                 </td>
                                 <td className="p-6 text-sm font-bold text-[var(--color-text-muted)]">{item.relationship}</td>
                                 <td className="p-6 text-center">
-                                    <button onClick={() => navigate(`/students/profile/${item.student.id}`)} className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/5">
+                                    <button onClick={() => navigate(`/students/profile/${item.student.id}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-400 shadow-lg shadow-emerald-500/5 transition-all hover:bg-emerald-500 hover:text-white">
                                         <Eye size={16} />
                                     </button>
                                 </td>
@@ -125,11 +130,11 @@ export const ParentProfile = () => {
 };
 
 const InfoCard = ({ label, value, icon = null }) => (
-    <div className="bg-[var(--color-bg)] rounded-[1.6rem] md:rounded-[1.8rem] p-4 border border-[var(--color-border)]">
-        <div className="flex items-center gap-2 mb-2">
+    <div className="rounded-[1.6rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-4 md:rounded-[1.8rem]">
+        <div className="mb-2 flex items-center gap-2">
             {icon}
-            <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase">{label}</p>
+            <p className="text-[10px] font-black uppercase text-[var(--color-text-muted)]">{label}</p>
         </div>
-        <p className="text-base md:text-lg font-black text-[var(--color-text-main)] break-words">{value}</p>
+        <p className="break-words text-base font-black text-[var(--color-text-main)] md:text-lg">{value}</p>
     </div>
 );

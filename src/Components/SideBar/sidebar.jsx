@@ -9,7 +9,8 @@ import {
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
-import { fetchCurrentAdminProfile, getAdminSession, logoutAdmin } from '../../Constant/AdminAuth'
+import { fetchCurrentAdminProfile, fetchMadrassaProfile, getAdminSession, resolveApiAssetUrl, logoutAdmin } from '../../Constant/AdminAuth'
+import { getBranches } from '../../Constant/AcademicSetupApi';
 
 
 export const SideBar = () => {
@@ -23,6 +24,9 @@ export const SideBar = () => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isDark] = useState(() => localStorage.getItem('theme') === 'dark');
     const [adminProfile, setAdminProfile] = useState(() => getAdminSession()?.admin || null);
+    const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
+    const [avatarSrc, setAvatarSrc] = useState('');
+    const [branchItems, setBranchItems] = useState([]);
     //--------------------------------------------------------------------
 
     useEffect(() => {
@@ -31,14 +35,63 @@ export const SideBar = () => {
         }
     }, [isDark]);
 
+    useEffect(() => () => {
+        if (avatarSrc?.startsWith('blob:')) {
+            URL.revokeObjectURL(avatarSrc);
+        }
+    }, [avatarSrc]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadBranchItems = async () => {
+            try {
+                const branchesResult = await getBranches('page=1&limit=100');
+                if (!isMounted) return;
+
+                setBranchItems(
+                    (branchesResult?.items || []).map((branch) => ({
+                        id: `branch_${branch.id}`,
+                        label: branch.name,
+                        path: `/branch-management/${branch.id}`,
+                    }))
+                );
+            } catch {
+                if (isMounted) {
+                    setBranchItems([]);
+                }
+            }
+        };
+
+        loadBranchItems();
+        window.addEventListener('branches:updated', loadBranchItems);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener('branches:updated', loadBranchItems);
+        };
+    }, []);
+
     useEffect(() => {
         let isMounted = true;
 
         const syncAdminProfile = async () => {
             try {
-                const profile = await fetchCurrentAdminProfile();
+                const [profile, madrassa] = await Promise.all([
+                    fetchCurrentAdminProfile(),
+                    fetchMadrassaProfile(),
+                ]);
                 if (isMounted) {
                     setAdminProfile(profile);
+                    setMadrassaProfile(madrassa);
+                    if (madrassa?.logoUrl) {
+                        const resolvedLogoUrl = await resolveApiAssetUrl(madrassa.logoUrl);
+                        if (isMounted) {
+                            setAvatarSrc(resolvedLogoUrl || '');
+                        }
+                    } else {
+                        setAvatarSrc('');
+                    }
                 }
             } catch (error) {
                 const message = error?.message?.toLowerCase() || '';
@@ -63,6 +116,10 @@ export const SideBar = () => {
     }, [navigate]);
 
     const isActive = (path) => path && location.pathname === path;
+    const sidebarTitle = madrassaProfile?.name?.trim() || 'Madarsa Management';
+    const profileName = madrassaProfile?.name?.trim() || adminProfile?.name || 'Admin';
+    const sidebarBadge = madrassaProfile?.city?.trim() || madrassaProfile?.branch?.trim() || 'Premium Hub';
+    const hasMadrassaLogo = Boolean(avatarSrc);
     const handleLogout = () => {
         logoutAdmin();
         setIsProfileOpen(false);
@@ -333,6 +390,9 @@ export const SideBar = () => {
             path: '/store'
         },
     ];
+    menuItems[0].subMenu = branchItems.length
+        ? branchItems
+        : [{ id: 'main_campus_fallback', label: 'Main Campus', path: '/branch-management/create-branch' }];
     //--------------------------------------------------------------------
     const profileMenuItems = [
         { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
@@ -394,12 +454,16 @@ export const SideBar = () => {
                 </button>
 
                 <div className="flex items-center gap-3 mb-8 px-2 py-4">
-                    <div className="bg-white/10 backdrop-blur-md p-2 rounded-2xl">
-                        <GraduationCap className="text-[#00d094]" size={26} />
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/10 shadow-lg shrink-0 flex items-center justify-center">
+                        {hasMadrassaLogo ? (
+                            <img src={avatarSrc} alt={sidebarTitle} className="w-full h-full object-cover" />
+                        ) : (
+                            <GraduationCap className="text-[#00d094]" size={26} />
+                        )}
                     </div>
-                    <div>
-                        <h1 className="text-white font-black text-base leading-tight">مدرسہ انتظامیہ</h1>
-                        <p className="text-[9px] text-[#00d094] font-bold tracking-[0.2em] uppercase">Premium Hub</p>
+                    <div className="min-w-0 flex-1">
+                        <h1 className="text-white font-black text-base leading-tight break-words" title={sidebarTitle}>{sidebarTitle}</h1>
+                        <p className="text-[9px] text-[#00d094] font-bold tracking-[0.16em] uppercase truncate" title={sidebarBadge}>{sidebarBadge}</p>
                     </div>
                 </div>
                 {/* //--------------------------------------------------------------// */}
@@ -544,13 +608,13 @@ export const SideBar = () => {
                             <div className="flex items-center gap-5 cursor-pointer" onClick={() => setIsProfileOpen(!isProfileOpen)}>
                                 <div className="relative group/avatar">
                                     <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#00d094] border-2 border-themeSurface rounded-full z-10 animate-pulse" />
-                                    <Avatar src="https://i.pravatar.cc/150?u=a" className="w-11 h-11 border-2 border-emerald-100 shadow-sm" />
+                                    <Avatar src={avatarSrc} alt={profileName} className="w-11 h-11 border-2 border-emerald-100 shadow-sm" />
                                 </div>
-                                <div className="hidden sm:block text-right leading-tight">
-                                    <p className="font-black text-sm text-themeText">{adminProfile?.name || 'Admin'}</p>
-                                    <div className="flex items-center justify-end gap-1">
+                                <div className="hidden sm:flex flex-col items-end text-right leading-none min-w-0 max-w-[11rem]">
+                                    <p className="font-black text-sm text-themeText max-w-full truncate p-1" title={profileName}>{profileName}</p>
+                                    <div className="flex items-center justify-end gap-1.5 text-[10px] leading-none">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        <p className="text-[10px] text-themeMuted font-bold uppercase">{adminProfile?.role || 'Admin'}</p>
+                                        <p className="text-themeMuted font-bold uppercase tracking-[0.12em]">{adminProfile?.role || 'Admin'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -646,3 +710,4 @@ export const SideBar = () => {
         </div>
     );
 };
+

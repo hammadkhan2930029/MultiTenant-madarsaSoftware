@@ -4,7 +4,7 @@ import {
     Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
-import { fetchMadrassaProfile, getApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
+import { fetchMadrassaProfile, resolveApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 export const Profile = () => {
@@ -58,7 +58,15 @@ export const Profile = () => {
 
                 setMadrassaData(nextData);
                 setTempData(nextData);
-                setLogoPreview(profile.logoUrl ? getApiAssetUrl(profile.logoUrl) : AppImages.logo);
+
+                if (profile.logoUrl) {
+                    const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl);
+                    if (isMounted) {
+                        setLogoPreview(resolvedLogoUrl || AppImages.logo);
+                    }
+                } else if (isMounted) {
+                    setLogoPreview(AppImages.logo);
+                }
             } catch (loadError) {
                 if (isMounted) {
                     const message = loadError?.message || 'پروفائل لوڈ نہیں ہو سکی۔';
@@ -124,7 +132,13 @@ export const Profile = () => {
         }
 
         setTempData({ ...madrassaData });
-        setLogoPreview(madrassaData.logoUrl ? getApiAssetUrl(madrassaData.logoUrl) : AppImages.logo);
+        if (madrassaData.logoUrl) {
+            resolveApiAssetUrl(madrassaData.logoUrl).then((resolvedLogoUrl) => {
+                setLogoPreview(resolvedLogoUrl || AppImages.logo);
+            });
+        } else {
+            setLogoPreview(AppImages.logo);
+        }
         setIsEditing(false);
 
         if (fileInputRef.current) {
@@ -170,7 +184,13 @@ export const Profile = () => {
             setMadrassaData(nextData);
             setTempData(nextData);
             setIsEditing(false);
-            setLogoPreview(savedProfile.logoUrl ? getApiAssetUrl(savedProfile.logoUrl) : AppImages.logo);
+
+            if (savedProfile.logoUrl) {
+                const resolvedLogoUrl = await resolveApiAssetUrl(savedProfile.logoUrl);
+                setLogoPreview(resolvedLogoUrl || AppImages.logo);
+            } else {
+                setLogoPreview(AppImages.logo);
+            }
             notify.success('تمام تبدیلیاں محفوظ ہو گئی ہیں۔', 'پروفائل اپڈیٹ ہو گئی');
         } catch (saveError) {
             const message = saveError?.message || 'پروفائل محفوظ نہیں ہو سکی۔';
@@ -190,7 +210,12 @@ export const Profile = () => {
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                     <div className="relative group">
                         <div className="w-32 h-32 bg-white rounded-[2.5rem] p-2 shadow-2xl transition-all group-hover:scale-105 duration-500 border-4 border-white/20">
-                            <img src={logoPreview || AppImages.logo} alt="Logo" className="w-full h-full object-contain rounded-[2rem]" />
+                            <img
+                                src={logoPreview || AppImages.logo}
+                                alt="Logo"
+                                onError={() => setLogoPreview(AppImages.logo)}
+                                className="w-full h-full object-contain rounded-[2rem]"
+                            />
                         </div>
                         <input
                             ref={fileInputRef}
@@ -210,19 +235,21 @@ export const Profile = () => {
                         )}
                     </div>
 
-                    <div className="flex-1 text-center md:text-right">
+                    <div className="flex-1 min-w-0 w-full text-center md:text-right">
                         {isEditing ? (
-                            <div className="space-y-2">
+                            <div className="space-y-2 w-full">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#00d094] mr-2">ادارے کا نام</label>
-                                <input
+                                <textarea
                                     value={tempData.name}
                                     onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
-                                    className="bg-white/10 border border-white/20 rounded-2xl px-6 py-3 text-xl font-black w-full outline-none focus:bg-white/20 focus:border-[#00d094] text-white transition-all shadow-inner"
+                                    rows={2}
+                                    dir="rtl"
+                                    className="bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-xl font-black w-full min-w-0 outline-none focus:bg-white/20 focus:border-[#00d094] text-white transition-all shadow-inner resize-none text-right leading-relaxed overflow-y-hidden"
                                 />
                             </div>
                         ) : (
                             <>
-                                <h1 className="text-3xl md:text-5xl font-black mb-2 drop-shadow-md">{madrassaData.name}</h1>
+                                <h1 className="text-3xl md:text-5xl font-black mb-2 drop-shadow-md break-words">{madrassaData.name}</h1>
                                 <p className="text-emerald-400 font-bold flex items-center justify-center md:justify-start gap-2 pt-2">
                                     <CheckCircle2 size={18} className="animate-pulse" /> تصدیق شدہ تعلیمی ادارہ
                                 </p>
@@ -230,7 +257,7 @@ export const Profile = () => {
                         )}
                     </div>
 
-                    <div className="flex gap-3 mt-4 md:mt-0">
+                    <div className="flex gap-3 mt-4 md:mt-0 shrink-0 self-center md:self-start">
                         {isEditing && (
                             <button onClick={resetEditingState} className="p-4 bg-rose-500/20 text-rose-200 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/30">
                                 <X size={20} />
@@ -240,7 +267,7 @@ export const Profile = () => {
                             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                             disabled={isSaving || isLoading}
                             className={`px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-3 transition-all active:scale-95 shadow-xl ${
-                                isEditing ? 'bg-[#00d094] text-white hover:bg-[#00b07d]' : 'bg-white text-[#002a33] hover:bg-emerald-50'
+                                isEditing ? 'bg-[#00d094] text-white hover:bg-[#00b07d]' : 'bg-[#00d094] text-white hover:bg-[#00b07d] shadow-[#00d094]/30'
                             } ${(isSaving || isLoading) ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {isEditing ? <><Save size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</> : <><Edit3 size={20} /> ایڈٹ کریں</>}
@@ -364,10 +391,10 @@ const InfoField = ({ label, value, isEditing, tempValue, onChange, icon }) => (
                 <input
                     value={tempValue}
                     onChange={(e) => onChange(e.target.value)}
-                    className="bg-transparent w-full outline-none font-bold text-[var(--color-text)] focus:text-[#00d094] transition-colors"
+                    className="bg-transparent w-full min-w-0 outline-none font-bold text-[var(--color-text)] focus:text-[#00d094] transition-colors"
                 />
             ) : (
-                <span className="font-bold text-[var(--color-text)]">{value}</span>
+                <span className="font-bold text-[var(--color-text)] break-words">{value}</span>
             )}
         </div>
     </div>

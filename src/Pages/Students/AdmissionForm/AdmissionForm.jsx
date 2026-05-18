@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     BookOpen,
     Camera,
     CheckCircle,
+    ChevronDown,
     HeartPulse,
     MapPin,
     Phone,
@@ -16,6 +17,8 @@ import { Field, Form, Formik } from 'formik';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
 import { createStudent, getParents } from '../../../Constant/StudentsApi';
+import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
+import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const INITIAL_VALUES = {
@@ -69,11 +72,18 @@ export const AdmissionForm = () => {
     const [showModal, setShowModal] = useState(false);
     const [savedProfile, setSavedProfile] = useState(null);
     const [submitError, setSubmitError] = useState('');
+
     const [parentSearch, setParentSearch] = useState('');
     const [parentResults, setParentResults] = useState([]);
     const [isParentSearching, setIsParentSearching] = useState(false);
     const [parentSearchError, setParentSearchError] = useState('');
     const [selectedParentId, setSelectedParentId] = useState(null);
+    const [isParentDropdownOpen, setIsParentDropdownOpen] = useState(false);
+
+    const [classOptions, setClassOptions] = useState([]);
+    const [sectionOptions, setSectionOptions] = useState([]);
+    const [teacherOptions, setTeacherOptions] = useState([]);
+    const [selectedRequiredClassId, setSelectedRequiredClassId] = useState(null);
 
     useNotificationBridge({ error: submitError });
     useNotificationBridge({ error: parentSearchError });
@@ -83,12 +93,35 @@ export const AdmissionForm = () => {
     }, []);
 
     useEffect(() => {
+        const loadDropdownOptions = async () => {
+            try {
+                const [classesResponse, sectionsResponse, teachersResponse] = await Promise.all([
+                    getClasses('page=1&limit=100'),
+                    getSections('page=1&limit=100'),
+                    getTeachers('page=1&limit=100'),
+                ]);
+
+                setClassOptions((classesResponse?.items || []).filter((item) => item.status === 'active'));
+                setSectionOptions((sectionsResponse?.items || []).filter((item) => item.status === 'active'));
+                setTeacherOptions((teachersResponse?.items || []).filter((item) => item.status === 'active'));
+            } catch {
+                setClassOptions([]);
+                setSectionOptions([]);
+                setTeacherOptions([]);
+            }
+        };
+
+        loadDropdownOptions();
+    }, []);
+
+    useEffect(() => {
         const trimmedQuery = parentSearch.trim();
 
         if (trimmedQuery.length < 2) {
             setParentResults([]);
             setIsParentSearching(false);
             setParentSearchError('');
+            setIsParentDropdownOpen(false);
             return undefined;
         }
 
@@ -99,8 +132,10 @@ export const AdmissionForm = () => {
             try {
                 const response = await getParents(`search=${encodeURIComponent(trimmedQuery)}&limit=6&status=active`);
                 setParentResults(response?.items || []);
+                setIsParentDropdownOpen(true);
             } catch (error) {
                 setParentResults([]);
+                setIsParentDropdownOpen(true);
                 setParentSearchError(error.message || 'والدین کا ریکارڈ حاصل نہیں ہو سکا۔');
             } finally {
                 setIsParentSearching(false);
@@ -110,10 +145,23 @@ export const AdmissionForm = () => {
         return () => clearTimeout(timeoutId);
     }, [parentSearch]);
 
+    const filteredJamaatOptions = useMemo(
+        () =>
+            sectionOptions
+                .filter((item) => !selectedRequiredClassId || item.classId === selectedRequiredClassId)
+                .map((item) => ({
+                    id: item.id,
+                    label: item.name,
+                    meta: item.class?.name || '',
+                })),
+        [sectionOptions, selectedRequiredClassId],
+    );
+
     const handleParentSelect = (parent, setFieldValue) => {
         setSelectedParentId(parent.id);
         setParentSearch(parent.fullName || '');
         setParentResults([]);
+        setIsParentDropdownOpen(false);
 
         setFieldValue('fatherName', parent.fullName || '');
         setFieldValue('mobile', parent.phone || '');
@@ -124,6 +172,7 @@ export const AdmissionForm = () => {
         setFieldValue('cnic', parent.cnic || '');
         setFieldValue('fatherOccupation', parent.occupation || '');
         setFieldValue('currentAddress', parent.address || '');
+        setFieldValue('permanentAddress', parent.address || '');
 
         const primaryStudentLink = parent.students?.find((studentLink) => studentLink?.isPrimary);
         setFieldValue('relation', primaryStudentLink?.relationship || 'father');
@@ -137,6 +186,7 @@ export const AdmissionForm = () => {
 
             if (values.fatherName) {
                 parents.push({
+                    ...(selectedParentId ? { parentId: selectedParentId } : {}),
                     fullName: values.fatherName,
                     relationship: 'father',
                     isPrimary: true,
@@ -149,6 +199,7 @@ export const AdmissionForm = () => {
 
             if (values.guardianName && values.guardianName !== values.fatherName) {
                 parents.push({
+                    ...(selectedParentId ? { parentId: selectedParentId } : {}),
                     fullName: values.guardianName,
                     relationship: values.relation || 'guardian',
                     isPrimary: false,
@@ -198,6 +249,8 @@ export const AdmissionForm = () => {
             setParentSearch('');
             setParentResults([]);
             setSelectedParentId(null);
+            setSelectedRequiredClassId(null);
+            setIsParentDropdownOpen(false);
         } catch (error) {
             setSubmitError(error.message || 'طالب علم کا ریکارڈ محفوظ نہیں ہو سکا۔');
         } finally {
@@ -231,11 +284,7 @@ export const AdmissionForm = () => {
                                         <FormikInputField label="تاریخ داخلہ" name="admissionDate" type="date" />
                                         <div className="flex justify-center">
                                             <label className="w-28 h-34 border-4 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-all overflow-hidden bg-slate-50">
-                                                {imagePreview ? (
-                                                    <img src={imagePreview} className="w-full h-full object-cover" alt="preview" />
-                                                ) : (
-                                                    <Camera className="text-slate-400" />
-                                                )}
+                                                {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="preview" /> : <Camera className="text-slate-400" />}
                                                 <input
                                                     type="file"
                                                     className="hidden"
@@ -245,8 +294,7 @@ export const AdmissionForm = () => {
                                                         if (!file) return;
                                                         const reader = new FileReader();
                                                         reader.onloadend = () => {
-                                                            const nextImage = reader.result;
-                                                            setImagePreview(nextImage);
+                                                            setImagePreview(reader.result);
                                                             setImageFile(file);
                                                             setFieldValue('studentImage', file.name);
                                                         };
@@ -269,12 +317,18 @@ export const AdmissionForm = () => {
                                                     onChange={(event) => {
                                                         setSelectedParentId(null);
                                                         setParentSearch(event.target.value);
+                                                        setIsParentDropdownOpen(Boolean(event.target.value.trim()));
+                                                    }}
+                                                    onFocus={() => {
+                                                        if (parentSearch.trim().length >= 2) {
+                                                            setIsParentDropdownOpen(true);
+                                                        }
                                                     }}
                                                     placeholder="والدین تلاش کریں..."
                                                     className="w-full bg-slate-50 p-4 rounded-l-2xl outline-none text-[#002a33] font-medium text-right focus:bg-white focus:border-emerald-400"
                                                     dir="rtl"
                                                 />
-                                                {(isParentSearching || parentResults.length > 0 || (parentSearch.trim().length >= 2 && !isParentSearching)) && (
+                                                {isParentDropdownOpen && parentSearch.trim().length >= 2 ? (
                                                     <div className="absolute top-full right-0 left-0 mt-2 rounded-2xl border border-slate-200 bg-white shadow-2xl z-20 overflow-hidden">
                                                         {isParentSearching ? (
                                                             <div className="px-4 py-3 text-sm text-slate-500 text-right">والدین کا ریکارڈ تلاش کیا جا رہا ہے...</div>
@@ -289,14 +343,16 @@ export const AdmissionForm = () => {
                                                                     }`}
                                                                 >
                                                                     <div className="font-semibold">{parent.fullName}</div>
-                                                                    <div className="text-xs text-slate-500">{parent.phone || parent.email || parent.cnic || 'مزید معلومات دستیاب نہیں۔'}</div>
+                                                                    <div className="text-xs text-slate-500">
+                                                                        {[parent.familyNumber, parent.phone, parent.email, parent.cnic].filter(Boolean).join(' | ') || 'مزید معلومات دستیاب نہیں۔'}
+                                                                    </div>
                                                                 </button>
                                                             ))
                                                         ) : (
                                                             <div className="px-4 py-3 text-sm text-slate-500 text-right">کوئی والدین ریکارڈ نہیں ملا۔</div>
                                                         )}
                                                     </div>
-                                                )}
+                                                ) : null}
                                             </div>
                                         </div>
                                     </div>
@@ -350,9 +406,57 @@ export const AdmissionForm = () => {
                                             <FormikInputField label="عصری تعلیم" name="secularEdu" />
                                             <FormikInputField label="سابقہ مدرسہ" name="prevMadrassa" />
                                             <FormikInputField label="سابقہ اسکول" name="prevSchool" />
-                                            <FormikInputField label="مطلوبہ درجہ" name="requiredClass" />
-                                            <FormikInputField label="جماعت" name="requiredJamaat" />
-                                            <FormikInputField label="استاد کا نام" name="teacherName" />
+
+                                            <Field name="requiredClass">
+                                                {({ field, form }) => (
+                                                    <SearchableSelectField
+                                                        label="مطلوبہ درجہ"
+                                                        value={field.value || ''}
+                                                        options={classOptions.map((item) => ({
+                                                            id: item.id,
+                                                            label: item.name,
+                                                            meta: item.branch?.name || '',
+                                                        }))}
+                                                        placeholder="درجہ تلاش کریں"
+                                                        onChange={(nextValue) => form.setFieldValue('requiredClass', nextValue)}
+                                                        onSelectOption={(option) => {
+                                                            setSelectedRequiredClassId(option?.id || null);
+                                                            form.setFieldValue('requiredClass', option?.label || '');
+                                                            form.setFieldValue('requiredJamaat', '');
+                                                        }}
+                                                    />
+                                                )}
+                                            </Field>
+
+                                            <Field name="requiredJamaat">
+                                                {({ field, form }) => (
+                                                    <SearchableSelectField
+                                                        label="جماعت"
+                                                        value={field.value || ''}
+                                                        options={filteredJamaatOptions}
+                                                        placeholder="جماعت تلاش کریں"
+                                                        onChange={(nextValue) => form.setFieldValue('requiredJamaat', nextValue)}
+                                                        onSelectOption={(option) => form.setFieldValue('requiredJamaat', option?.label || '')}
+                                                    />
+                                                )}
+                                            </Field>
+
+                                            <Field name="teacherName">
+                                                {({ field, form }) => (
+                                                    <SearchableSelectField
+                                                        label="استاد کا نام"
+                                                        value={field.value || ''}
+                                                        options={teacherOptions.map((item) => ({
+                                                            id: item.id,
+                                                            label: item.fullName,
+                                                            meta: item.subject || item.phone || '',
+                                                        }))}
+                                                        placeholder="استاد تلاش کریں"
+                                                        onChange={(nextValue) => form.setFieldValue('teacherName', nextValue)}
+                                                        onSelectOption={(option) => form.setFieldValue('teacherName', option?.label || '')}
+                                                    />
+                                                )}
+                                            </Field>
                                         </div>
                                     </FormSection>
 
@@ -375,7 +479,7 @@ export const AdmissionForm = () => {
                             </div>
                         </Form>
 
-                        {showModal && (
+                        {showModal ? (
                             <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 print:hidden">
                                 <div className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl scale-in-center">
                                     <div className="bg-[#002a33] p-8 text-center text-white relative">
@@ -408,7 +512,7 @@ export const AdmissionForm = () => {
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        ) : null}
 
                         <div className="hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Noto Nastaliq Urdu' }}>
                             <div className="absolute inset-0 flex items-center justify-center z-0" style={{ pointerEvents: 'none' }}>
@@ -416,10 +520,7 @@ export const AdmissionForm = () => {
                                     src={AppImages.logo}
                                     alt="Jamia Logo Watermark"
                                     className="w-[600px] h-[300px] -mt-40 object-contain"
-                                    style={{
-                                        webkitPrintColorAdjust: 'exact',
-                                        printColorAdjust: 'exact',
-                                    }}
+                                    style={{ webkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
                                 />
                             </div>
 
@@ -431,11 +532,7 @@ export const AdmissionForm = () => {
 
                                 <div className="flex gap-6 mb-8 items-start">
                                     <div className="w-32 h-40 border-2 border-[#00d094] rounded-xl flex-shrink-0 flex items-center justify-center bg-gray-50 z-20">
-                                        {imagePreview ? (
-                                            <img src={imagePreview} className="w-full h-full object-cover rounded-lg" alt="Student" />
-                                        ) : (
-                                            <span className="text-xs">تصویر</span>
-                                        )}
+                                        {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover rounded-lg" alt="Student" /> : <span className="text-xs">تصویر</span>}
                                     </div>
                                     <div className="flex-1 space-y-6 pt-2">
                                         <div className="flex gap-4">
@@ -533,13 +630,7 @@ const FormikInputField = ({ label, name, type = 'text', ...props }) => (
     <Field name={name}>
         {({ field, form }) =>
             type === 'date' ? (
-                <DateField
-                    label={label}
-                    name={name}
-                    value={field.value || ''}
-                    onChange={(nextValue) => form.setFieldValue(name, nextValue)}
-                    {...props}
-                />
+                <DateField label={label} name={name} value={field.value || ''} onChange={(nextValue) => form.setFieldValue(name, nextValue)} {...props} />
             ) : (
                 <InputField label={label} type={type} {...field} {...props} value={field.value || ''} />
             )
@@ -559,6 +650,66 @@ const FormikSelectField = ({ label, name, options }) => (
         )}
     </Field>
 );
+
+const SearchableSelectField = ({ label, value, options, onChange, onSelectOption, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const filteredOptions = useMemo(() => {
+        const query = String(value || '').trim().toLowerCase();
+        if (!query) return options;
+
+        return options.filter((option) =>
+            [option.label, option.meta]
+                .filter(Boolean)
+                .some((item) => String(item).toLowerCase().includes(query)),
+        );
+    }, [options, value]);
+
+    return (
+        <div className="space-y-2 relative">
+            <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">{label}</label>
+            <div className="relative">
+                <input
+                    type="text"
+                    value={value}
+                    onChange={(event) => {
+                        onChange(event.target.value);
+                        setIsOpen(true);
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+                    placeholder={placeholder}
+                    className="w-full p-4 rounded-2xl border outline-none font-bold transition-all bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]"
+                />
+                <ChevronDown size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)] pointer-events-none" />
+
+                {isOpen ? (
+                    <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.slice(0, 12).map((option) => (
+                                <button
+                                    key={`${label}-${option.id}-${option.label}`}
+                                    type="button"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                        onSelectOption(option);
+                                        setIsOpen(false);
+                                    }}
+                                    className="block w-full border-b border-[var(--color-border)] px-4 py-3 text-right transition-colors hover:bg-[var(--color-bg)] last:border-b-0"
+                                >
+                                    <div className="font-bold text-[var(--color-text-main)]">{option.label}</div>
+                                    {option.meta ? <div className="mt-1 text-xs text-[var(--color-text-muted)]">{option.meta}</div> : null}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="px-4 py-3 text-sm text-right text-[var(--color-text-muted)]">کوئی ریکارڈ نہیں ملا۔</div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+};
 
 const PrintLine = ({ label, value, flex = '1' }) => (
     <div style={{ flex }} className="flex items-baseline gap-2">

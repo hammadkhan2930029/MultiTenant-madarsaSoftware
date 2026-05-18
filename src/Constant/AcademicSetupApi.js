@@ -30,8 +30,8 @@ export const updateBranch = async (id, payload) => {
   return result?.data;
 };
 
-export const deactivateBranch = async (id) => {
-  const result = await apiRequest(`/branches/${id}/deactivate`, withToken({ method: 'PATCH' }));
+export const deleteBranch = async (id) => {
+  const result = await apiRequest(`/branches/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };
 
@@ -50,8 +50,8 @@ export const updateClass = async (id, payload) => {
   return result?.data;
 };
 
-export const deactivateClass = async (id) => {
-  const result = await apiRequest(`/classes/${id}/deactivate`, withToken({ method: 'PATCH' }));
+export const deleteClass = async (id) => {
+  const result = await apiRequest(`/classes/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };
 
@@ -70,8 +70,8 @@ export const updateSection = async (id, payload) => {
   return result?.data;
 };
 
-export const deactivateSection = async (id) => {
-  const result = await apiRequest(`/sections/${id}/deactivate`, withToken({ method: 'PATCH' }));
+export const deleteSection = async (id) => {
+  const result = await apiRequest(`/sections/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };
 
@@ -90,8 +90,8 @@ export const updateSession = async (id, payload) => {
   return result?.data;
 };
 
-export const deactivateSession = async (id) => {
-  const result = await apiRequest(`/sessions/${id}/deactivate`, withToken({ method: 'PATCH' }));
+export const deleteSession = async (id) => {
+  const result = await apiRequest(`/sessions/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };
 
@@ -110,7 +110,7 @@ export const updateSubject = async (id, payload) => {
   return result?.data;
 };
 
-export const deactivateSubject = async (id) => {
-  const result = await apiRequest(`/subjects/${id}/deactivate`, withToken({ method: 'PATCH' }));
+export const deleteSubject = async (id) => {
+  const result = await apiRequest(`/subjects/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };

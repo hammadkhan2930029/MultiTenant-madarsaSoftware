@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createSection, deactivateSection, getBranches, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
+import { createSection, deleteSection, getBranches, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
@@ -21,6 +21,8 @@ export const CreateSections = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
@@ -115,16 +117,25 @@ export const CreateSections = () => {
         }
     };
 
-    const handleDeactivate = async (sectionId) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+
         setError('');
         setSuccess('');
+        setIsDeleting(true);
 
         try {
-            await deactivateSection(sectionId);
-            setSuccess('سیکشن غیر فعال کر دیا گیا۔');
+            await deleteSection(deleteTarget.id);
+            setSuccess('سیکشن کامیابی سے حذف کر دیا گیا۔');
+            if (editMode === deleteTarget.id) {
+                resetForm();
+            }
+            setDeleteTarget(null);
             await loadDependencies();
         } catch (actionError) {
-            setError(actionError.message || 'سیکشن غیر فعال نہیں ہو سکا۔');
+            setError(actionError.message || 'سیکشن حذف نہیں ہو سکا۔');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -315,9 +326,8 @@ export const CreateSections = () => {
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDeactivate(section.id)}
-                                                    disabled={section.status === 'inactive'}
-                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                                                    onClick={() => setDeleteTarget(section)}
+                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -336,6 +346,48 @@ export const CreateSections = () => {
                     </table>
                 </div>
             </div>
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="text-right">
+                                <h3 className="text-xl font-black text-[var(--color-text)]">سیکشن حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کو حذف کرنا چاہتے ہیں؟
+                                    یہ عمل واپس نہیں ہو گا۔
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => !isDeleting && setDeleteTarget(null)}
+                                className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                منسوخ کریں
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isDeleting ? 'حذف ہو رہی ہے...' : 'تصدیق کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };
