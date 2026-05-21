@@ -20,6 +20,18 @@ export const getBranches = async (query = '') => {
   return result?.data || { items: [], meta: null };
 };
 
+export const getDefaultBranch = async () => {
+  const result = await getBranches('page=1&limit=100');
+  const branches = result.items || [];
+  const activeBranches = branches.filter((branch) => branch.status === 'active');
+  return (
+    activeBranches.find((branch) => String(branch.name || '').trim().toLowerCase() === 'main campus') ||
+    activeBranches[0] ||
+    branches[0] ||
+    null
+  );
+};
+
 export const createBranch = async (payload) => {
   const result = await apiRequest('/branches', withJson('POST', payload));
   return result?.data;

@@ -12,7 +12,6 @@ export const mapStudentsForHifz = (items = []) =>
       fullName: student.fullName,
       fatherName: student.fatherName,
       admissionNumber: student.admissionNumber,
-      branchName: assignment?.branch?.name || '',
       className: assignment?.class?.name || '',
       sectionName: assignment?.section?.name || '',
       sessionName: assignment?.session?.name || '',

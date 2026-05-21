@@ -119,7 +119,6 @@ export const ParaJaizaEntry = () => {
             className: selectedStudent.classInfo?.className || '',
             section: selectedStudent.classInfo?.section || '',
             teacher: selectedStudent.education?.teacherName || '',
-            campus: selectedStudent.classInfo?.campus || '',
             admissionDate: selectedStudent.admission?.admissionDate || '',
             rows: formData.rows,
         };
@@ -208,10 +207,6 @@ export const ParaJaizaEntry = () => {
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 h-14 flex items-center justify-between text-sm font-bold">
                             <span>سیکشن:</span>
                             <span>{selectedStudent?.classInfo?.section || '____________'}</span>
-                        </div>
-                        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 h-14 flex items-center justify-between text-sm font-bold">
-                            <span>کیمپس:</span>
-                            <span>{selectedStudent?.classInfo?.campus || '____________'}</span>
                         </div>
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 h-14 flex items-center justify-between text-sm font-bold">
                             <span>رول نمبر:</span>

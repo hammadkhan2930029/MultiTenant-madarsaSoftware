@@ -76,6 +76,11 @@ export const assignStudentClass = async (id, payload) => {
   return result?.data;
 };
 
+export const removeStudentClassAssignment = async (assignmentId) => {
+  const result = await apiRequest(`/students/class-assignments/${assignmentId}/remove`, withToken({ method: 'PATCH' }));
+  return result?.data;
+};
+
 export const getParents = async (query = '') => {
   const result = await apiRequest(`/parents${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
   return result?.data || { items: [], meta: null };

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, GraduationCap, Phone, School, Search, UserPlus, Users } from 'lucide-react';
+import { Eye, GraduationCap, Phone, Search, UserPlus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -12,7 +12,6 @@ const mapStudentsForList = (items) =>
             idNo: student.admissionNumber,
             name: student.fullName,
             fatherName: student.fatherName,
-            campus: activeAssignment?.branch?.name || '---',
             className: activeAssignment?.class?.name || '---',
             section: activeAssignment?.section?.name || '---',
             familyNo:
@@ -112,11 +111,7 @@ export const StudentList = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 py-4 border-y border-[var(--color-border)]">
-                            <div className="flex items-center gap-2">
-                                <School size={16} className="text-[var(--color-primary)]" />
-                                <span className="text-[12px] font-bold text-themeText/80">{student.campus}</span>
-                            </div>
+                        <div className="py-4 border-y border-[var(--color-border)]">
                             <div className="flex items-center gap-2 justify-end">
                                 <Users size={16} className="text-[var(--color-primary)]" />
                                 <span className="text-[12px] font-bold text-[var(--color-text)]/80">{student.className} ({student.section})</span>
@@ -148,7 +143,7 @@ export const StudentList = () => {
                         <tr>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">آئی ڈی</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">طالب علم کی تفصیلات</th>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">کیمپس و کلاس</th>
+                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">کلاس</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">ایکشن</th>
                         </tr>
                     </thead>
@@ -170,9 +165,8 @@ export const StudentList = () => {
                                 </td>
                                 <td className="p-6">
                                     <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
-                                        {student.campus}
+                                        {student.className} ({student.section})
                                     </span>
-                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-2 pr-1">{student.className} ({student.section})</div>
                                 </td>
                                 <td className="p-6 text-center">
                                     <button

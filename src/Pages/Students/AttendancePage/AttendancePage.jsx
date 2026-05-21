@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Save } from 'lucide-react';
 import { SelectField, DateField } from '../../../Components/HR/FormElements';
-import { getBranches, getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
+import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { getStudentAttendance, saveStudentAttendance } from '../../../Constant/AttendanceApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -36,13 +36,11 @@ const getStatusColor = (status) => {
 export const AttendancePage = () => {
     const today = new Date().toISOString().split('T')[0];
     const [searchFilters, setSearchFilters] = useState({
-        branchId: '',
         sessionId: '',
         classId: '',
         sectionId: '',
         date: today,
     });
-    const [branches, setBranches] = useState([]);
     const [sessions, setSessions] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
@@ -59,38 +57,20 @@ export const AttendancePage = () => {
 
         const loadBaseData = async () => {
             try {
-                const [branchResult, sessionResult] = await Promise.all([
-                    getBranches('page=1&limit=100'),
+                const [sessionResult, classesResult] = await Promise.all([
                     getSessions('page=1&limit=100'),
+                    getClasses('page=1&limit=100'),
                 ]);
 
-                setBranches(branchResult.items || []);
                 setSessions(sessionResult.items || []);
+                setClasses(classesResult.items || []);
             } catch (loadError) {
-                setError(loadError.message || 'Attendance filters load nahi ho sake.');
+                setError(loadError.message || 'حاضری کے فلٹرز لوڈ نہیں ہو سکے۔');
             }
         };
 
         loadBaseData();
     }, []);
-
-    useEffect(() => {
-        const loadClasses = async () => {
-            if (!searchFilters.branchId) {
-                setClasses([]);
-                return;
-            }
-
-            try {
-                const result = await getClasses(`page=1&limit=100&branchId=${searchFilters.branchId}`);
-                setClasses(result.items || []);
-            } catch (loadError) {
-                setError(loadError.message || 'Classes load nahi ho sakin.');
-            }
-        };
-
-        loadClasses();
-    }, [searchFilters.branchId]);
 
     useEffect(() => {
         const loadSections = async () => {
@@ -103,7 +83,7 @@ export const AttendancePage = () => {
                 const result = await getSections(`page=1&limit=100&classId=${searchFilters.classId}`);
                 setSections(result.items || []);
             } catch (loadError) {
-                setError(loadError.message || 'Sections load nahi ho sakin.');
+                setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
             }
         };
 
@@ -117,11 +97,6 @@ export const AttendancePage = () => {
         setSearchFilters((prev) => {
             const next = { ...prev, [key]: value };
 
-            if (key === 'branchId') {
-                next.classId = '';
-                next.sectionId = '';
-            }
-
             if (key === 'classId') {
                 next.sectionId = '';
             }
@@ -134,8 +109,10 @@ export const AttendancePage = () => {
         setError('');
         setSuccessMessage('');
 
-        if (!searchFilters.branchId || !searchFilters.classId || !searchFilters.sectionId || !searchFilters.sessionId) {
-            setError('Branch, session, class aur section select karna zaroori hai.');
+        const selectedClass = classes.find((item) => String(item.id) === String(searchFilters.classId));
+
+        if (!searchFilters.classId || !searchFilters.sectionId || !searchFilters.sessionId || !selectedClass?.branchId) {
+            setError('براہ کرم سیشن، کلاس اور سیکشن منتخب کریں۔');
             return;
         }
 
@@ -144,8 +121,7 @@ export const AttendancePage = () => {
         try {
             const studentQuery = new URLSearchParams({
                 page: '1',
-                limit: '200',
-                branchId: searchFilters.branchId,
+                limit: '100',
                 classId: searchFilters.classId,
                 sectionId: searchFilters.sectionId,
                 sessionId: searchFilters.sessionId,
@@ -153,8 +129,8 @@ export const AttendancePage = () => {
 
             const attendanceQuery = new URLSearchParams({
                 page: '1',
-                limit: '200',
-                branchId: searchFilters.branchId,
+                limit: '100',
+                branchId: String(selectedClass.branchId),
                 classId: searchFilters.classId,
                 sectionId: searchFilters.sectionId,
                 date: searchFilters.date,
@@ -185,7 +161,7 @@ export const AttendancePage = () => {
                         name: student.fullName,
                         status: existingAttendance?.status || 'Present',
                         remarks: existingAttendance?.remarks || '',
-                        branchId: activeAssignment.branchId || Number(searchFilters.branchId),
+                        branchId: activeAssignment.branchId || Number(selectedClass.branchId),
                         classId: activeAssignment.classId || Number(searchFilters.classId),
                         sectionId: activeAssignment.sectionId || Number(searchFilters.sectionId),
                     };
@@ -196,10 +172,10 @@ export const AttendancePage = () => {
             setIsSearched(true);
 
             if (!rows.length) {
-                setError('Is filter ke liye koi student nahi mila.');
+                setError('اس فلٹر کے لیے کوئی طالب علم نہیں ملا۔');
             }
         } catch (loadError) {
-            setError(loadError.message || 'Attendance list load nahi ho saki.');
+            setError(loadError.message || 'حاضری کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
@@ -207,7 +183,7 @@ export const AttendancePage = () => {
 
     const handleSave = async () => {
         if (!students.length) {
-            setError('Save karne ke liye pehle attendance list load karein.');
+            setError('محفوظ کرنے سے پہلے حاضری کی فہرست لوڈ کریں۔');
             return;
         }
 
@@ -230,9 +206,9 @@ export const AttendancePage = () => {
                 ),
             );
 
-            setSuccessMessage('Student attendance backend me save ho gayi.');
+            setSuccessMessage('طلباء کی حاضری کامیابی سے محفوظ ہو گئی۔');
         } catch (saveError) {
-            setError(saveError.message || 'Attendance save nahi ho saki.');
+            setError(saveError.message || 'حاضری محفوظ نہیں ہو سکی۔');
         } finally {
             setIsSaving(false);
         }
@@ -240,6 +216,14 @@ export const AttendancePage = () => {
 
     const updateStatus = (id, newStatus) => {
         setStudents((prev) => prev.map((student) => (student.id === id ? { ...student, status: newStatus } : student)));
+    };
+
+    const updateRemarks = (id, remarks) => {
+        setStudents((prev) => prev.map((student) => (student.id === id ? { ...student, remarks } : student)));
+    };
+
+    const markAllStudents = (status) => {
+        setStudents((prev) => prev.map((student) => ({ ...student, status })));
     };
 
     const counts = useMemo(
@@ -257,26 +241,20 @@ export const AttendancePage = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-surface)] p-6 rounded-[2rem] shadow-sm border border-[var(--color-border)]">
                 <div>
                     <h2 className="text-4xl font-black text-[var(--color-text)]">روزانہ حاضری</h2>
-                    <p className="text-xs text-[var(--color-text-muted)] font-bold mt-4">طلباء کی روزانہ حاضری backend ke saath</p>
+                    <p className="text-xs text-[var(--color-text-muted)] font-bold mt-4">طلباء کی روزانہ حاضری</p>
                 </div>
 
                 <div className="w-full md:w-64 bg-[var(--color-input)] p-1 rounded-2xl border border-[var(--color-border)]">
                     <DateField
                         label="تاریخ"
                         value={searchFilters.date}
-                        onChange={(e) => handleFilterChange('date', e.target.value)}
+                        onChange={(nextValue) => handleFilterChange('date', nextValue)}
                     />
                 </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 bg-[var(--color-surface)] p-5 rounded-[2rem] shadow-sm border border-[var(--color-border)]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    <SelectField
-                        label="برانچ"
-                        value={searchFilters.branchId}
-                        onChange={(e) => handleFilterChange('branchId', e.target.value)}
-                        options={formatOptions(branches, 'برانچ منتخب کریں')}
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     <SelectField
                         label="سیشن"
                         value={searchFilters.sessionId}
@@ -309,12 +287,28 @@ export const AttendancePage = () => {
             {isSearched && (
                 <div className="bg-[var(--color-surface)] rounded-[2.5rem] shadow-sm border border-[var(--color-border)] overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
-                        <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase text-center">کل طلباء: {students.length}</p>
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">کل طلباء: {students.length}</p>
+                            {students.length ? (
+                                <div className="grid grid-cols-2 gap-2 md:flex">
+                                    {STATUS_OPTIONS.map((status) => (
+                                        <button
+                                            key={status.value}
+                                            type="button"
+                                            onClick={() => markAllStudents(status.value)}
+                                            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[10px] font-black text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-primary)]/10"
+                                        >
+                                            سب {status.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
 
                     <div className="divide-y divide-[var(--color-border)]">
                         {students.map((student) => (
-                            <div key={student.id} className="p-4 flex items-center justify-between hover:bg-[var(--color-input)]/30 transition-colors gap-3">
+                            <div key={student.id} className="p-4 grid grid-cols-1 gap-3 hover:bg-[var(--color-input)]/30 transition-colors lg:grid-cols-[1fr_160px_260px] lg:items-center">
                                 <div className="flex items-center gap-4 min-w-0">
                                     <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] font-black text-xs border border-[var(--color-primary)]/20 shrink-0">
                                         {student.rollNo}
@@ -325,7 +319,7 @@ export const AttendancePage = () => {
                                     </div>
                                 </div>
 
-                                <div className="w-36 shrink-0">
+                                <div className="w-full lg:w-40">
                                     <select
                                         value={student.status}
                                         onChange={(e) => updateStatus(student.id, e.target.value)}
@@ -338,8 +332,21 @@ export const AttendancePage = () => {
                                         ))}
                                     </select>
                                 </div>
+
+                                <input
+                                    type="text"
+                                    value={student.remarks}
+                                    onChange={(event) => updateRemarks(student.id, event.target.value)}
+                                    placeholder="Remarks"
+                                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs font-bold text-[var(--color-text-main)] outline-none transition-colors focus:border-[var(--color-primary)]"
+                                />
                             </div>
                         ))}
+                        {!students.length ? (
+                            <div className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                حاضری کی فہرست خالی ہے۔ فلٹرز منتخب کر کے فہرست لوڈ کریں۔
+                            </div>
+                        ) : null}
                     </div>
 
                     <div className="p-6 bg-[var(--color-input)] border-t border-[var(--color-border)] space-y-4">

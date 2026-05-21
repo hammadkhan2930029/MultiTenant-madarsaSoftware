@@ -41,7 +41,7 @@ const defaultStudentProfiles = [
     education: {
       religiousEdu: 'ناظرہ مکمل',
       secularEdu: 'کلاس پنجم',
-      prevMadrassa: 'جامعہ فاروقیہ برانچ',
+      prevMadrassa: 'جامعہ فاروقیہ',
       prevSchool: 'سٹی ماڈل اسکول',
       requiredClass: 'ہشتم',
       requiredJamaat: 'نورانیہ',
@@ -117,7 +117,7 @@ const defaultStudentProfiles = [
       teacherName: 'مولانا زبیر',
     },
     classInfo: {
-      campus: 'گلشن کیمپس',
+      campus: 'مین کیمپس',
       className: 'ہفتم',
       section: 'B',
       familyNo: 'F-702',
@@ -321,7 +321,7 @@ export const createStudentProfileFromAdmission = (values) => {
       teacherName: values.teacherName || '',
     },
     classInfo: {
-      campus: values.campus || 'مین کیمپس',
+      campus: 'مین کیمپس',
       className: values.requiredClass || 'غیر متعین',
       section: values.section || 'A',
       familyNo: values.familyNo || `F-${String(Date.now()).slice(-3)}`,

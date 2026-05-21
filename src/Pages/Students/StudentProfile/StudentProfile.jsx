@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, CalendarDays, GraduationCap, Phone, ShieldCheck, User, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getStudentById } from '../../../Constant/StudentsApi';
+import { getApiAssetUrl } from '../../../Constant/AdminAuth';
+import { AppImages } from '../../../Constant/AppImages';
 
 const InfoGrid = ({ items }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -51,6 +53,7 @@ export const StudentProfile = () => {
         () => student?.assignments?.find((assignment) => assignment.status === 'active') || null,
         [student],
     );
+    const studentImageUrl = student?.imageUrl ? getApiAssetUrl(student.imageUrl) : AppImages.profile;
 
     if (error) {
         return <div className="max-w-5xl mx-auto p-6 text-red-400 font-bold">{error}</div>;
@@ -65,8 +68,11 @@ export const StudentProfile = () => {
             <div className="bg-[var(--color-surface)] rounded-[2.8rem] border border-[var(--color-border)] p-6 md:p-8 shadow-sm">
                 <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                     <img
-                        src={student.imageUrl ? `http://localhost:5001${student.imageUrl}` : 'https://placehold.co/160x160?text=Student'}
+                        src={studentImageUrl}
                         alt={student.fullName}
+                        onError={(event) => {
+                            event.currentTarget.src = AppImages.profile;
+                        }}
                         className="w-32 h-32 rounded-[2rem] object-cover border-4 border-[var(--color-primary)]/20"
                     />
 
@@ -83,11 +89,10 @@ export const StudentProfile = () => {
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                             <InfoCard label="Admission No" value={student.admissionNumber} />
                             <InfoCard label="Class" value={activeAssignment?.class?.name || '---'} />
                             <InfoCard label="Section" value={activeAssignment?.section?.name || '---'} />
-                            <InfoCard label="Campus" value={activeAssignment?.branch?.name || '---'} />
                         </div>
                     </div>
                 </div>
@@ -111,7 +116,6 @@ export const StudentProfile = () => {
             <SectionCard title="کلاس اور داخلہ" icon={GraduationCap}>
                 <InfoGrid
                     items={[
-                        { label: 'برانچ', value: activeAssignment?.branch?.name || '---' },
                         { label: 'کلاس', value: activeAssignment?.class?.name || '---' },
                         { label: 'سیکشن', value: activeAssignment?.section?.name || '---' },
                         { label: 'سیشن', value: activeAssignment?.session?.name || '---' },

@@ -1,20 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createSection, deleteSection, getBranches, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
+import { createSection, deleteSection, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
-    branchId: '',
     classId: '',
     name: '',
 };
 
 export const CreateSections = () => {
-    const [branches, setBranches] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
     const [search, setSearch] = useState('');
-    const [selectedBranchFilter, setSelectedBranchFilter] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
     const [formData, setFormData] = useState(emptyForm);
     const [editMode, setEditMode] = useState(null);
@@ -27,31 +24,21 @@ export const CreateSections = () => {
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
 
-    const activeBranches = useMemo(() => branches.filter((item) => item.status === 'active'), [branches]);
     const activeClasses = useMemo(() => classes.filter((item) => item.status === 'active'), [classes]);
 
-    const formClasses = useMemo(() => {
-        if (!formData.branchId) return [];
-        return activeClasses.filter((item) => String(item.branchId) === formData.branchId);
-    }, [activeClasses, formData.branchId]);
-
-    const filterClasses = useMemo(() => {
-        if (!selectedBranchFilter) return activeClasses;
-        return activeClasses.filter((item) => String(item.branchId) === selectedBranchFilter);
-    }, [activeClasses, selectedBranchFilter]);
+    const formClasses = activeClasses;
+    const filterClasses = activeClasses;
 
     const loadDependencies = async () => {
         setIsLoading(true);
         setError('');
 
         try {
-            const [branchesResult, classesResult, sectionsResult] = await Promise.all([
-                getBranches('page=1&limit=100'),
+            const [classesResult, sectionsResult] = await Promise.all([
                 getClasses('page=1&limit=100'),
                 getSections('page=1&limit=100'),
             ]);
 
-            setBranches(branchesResult.items || []);
             setClasses(classesResult.items || []);
             setSections(sectionsResult.items || []);
         } catch (loadError) {
@@ -72,10 +59,8 @@ export const CreateSections = () => {
     };
 
     const handleEdit = (section) => {
-        const branchId = section.class?.branch?.id ? String(section.class.branch.id) : '';
         setEditMode(section.id);
         setFormData({
-            branchId,
             classId: section.classId ? String(section.classId) : '',
             name: section.name || '',
         });
@@ -140,18 +125,15 @@ export const CreateSections = () => {
     };
 
     const filteredSections = sections.filter((section) => {
-        const matchesBranch = selectedBranchFilter
-            ? String(section.class?.branch?.id || '') === selectedBranchFilter
-            : true;
         const matchesClass = selectedClassFilter ? String(section.classId) === selectedClassFilter : true;
         const query = search.trim().toLowerCase();
         const matchesSearch = !query
             ? true
-            : [section.name, section.class?.name, section.class?.branch?.name]
+            : [section.name, section.class?.name]
                   .filter(Boolean)
                   .some((value) => String(value).toLowerCase().includes(query));
 
-        return matchesBranch && matchesClass && matchesSearch;
+        return matchesClass && matchesSearch;
     });
 
     return (
@@ -163,22 +145,6 @@ export const CreateSections = () => {
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
-                    <select
-                        value={selectedBranchFilter}
-                        onChange={(e) => {
-                            setSelectedBranchFilter(e.target.value);
-                            setSelectedClassFilter('');
-                        }}
-                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-44"
-                    >
-                        <option value="">تمام برانچز</option>
-                        {activeBranches.map((branch) => (
-                            <option key={branch.id} value={branch.id}>
-                                {branch.name}
-                            </option>
-                        ))}
-                    </select>
-
                     <select
                         value={selectedClassFilter}
                         onChange={(e) => setSelectedClassFilter(e.target.value)}
@@ -221,23 +187,7 @@ export const CreateSections = () => {
                         <span>{editMode ? 'سیکشن اپڈیٹ کریں' : 'نیا سیکشن اندراج'}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">برانچ</label>
-                            <select
-                                value={formData.branchId}
-                                onChange={(e) => setFormData({ branchId: e.target.value, classId: '', name: formData.name })}
-                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                            >
-                                <option value="">برانچ منتخب کریں</option>
-                                {activeBranches.map((branch) => (
-                                    <option key={branch.id} value={branch.id}>
-                                        {branch.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">جماعت</label>
                             <select
@@ -290,7 +240,6 @@ export const CreateSections = () => {
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشن</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
@@ -298,7 +247,7 @@ export const CreateSections = () => {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         سیکشنز کی فہرست لوڈ ہو رہی ہے...
                                     </td>
                                 </tr>
@@ -311,7 +260,6 @@ export const CreateSections = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text)]">{section.class?.name || '-'}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{section.class?.branch?.name || '-'}</td>
                                         <td className="px-6 py-4">
                                             <span className={`rounded-xl px-3 py-1 text-xs font-black ${section.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                                 {section.status === 'active' ? 'فعال' : 'غیر فعال'}
@@ -337,7 +285,7 @@ export const CreateSections = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         کوئی سیکشن ریکارڈ نہیں ملا۔
                                     </td>
                                 </tr>

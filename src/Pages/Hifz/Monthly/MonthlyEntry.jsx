@@ -35,7 +35,6 @@ const createMonthRow = (monthName) => ({
 });
 
 const createInitialFormData = () => ({
-    campus: '',
     className: '',
     section: '',
     teacher: '',
@@ -140,7 +139,6 @@ export const MonthlyJaizaEntry = () => {
 
         setFormData((prev) => ({
             ...prev,
-            campus: selectedStudent.classInfo?.campus || '',
             className: selectedStudent.classInfo?.className || prev.className,
             section: selectedStudent.classInfo?.section || prev.section,
             teacher: selectedStudent.education?.teacherName || prev.teacher,
@@ -155,18 +153,15 @@ export const MonthlyJaizaEntry = () => {
                 nextState.section = '';
                 nextState.studentId = '';
                 nextState.teacher = '';
-                nextState.campus = '';
             }
 
             if (field === 'section') {
                 nextState.studentId = '';
                 nextState.teacher = '';
-                nextState.campus = '';
             }
 
             if (field === 'studentId' && !value) {
                 nextState.teacher = '';
-                nextState.campus = '';
             }
 
             return nextState;
@@ -279,11 +274,6 @@ export const MonthlyJaizaEntry = () => {
                         <div className="space-y-2">
                             <label className="text-xs font-black text-[var(--color-text-muted)]">تعلیمی سال</label>
                             <input type="text" value={formData.academicYear} onChange={(e) => handleFieldChange('academicYear', e.target.value)} placeholder="1447ھ / 2026" className={baseFieldClassName} />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">کیمپس</label>
-                            <input type="text" value={formData.campus} readOnly placeholder="طالب علم منتخب کریں" className={readOnlyFieldClassName} />
                         </div>
 
                         <div className="space-y-2">

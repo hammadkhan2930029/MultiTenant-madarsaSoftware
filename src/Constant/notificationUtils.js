@@ -16,7 +16,7 @@ const exactTranslations = new Map([
   ['Sections data load nahi ho saki.', 'سیکشنز کا ڈیٹا لوڈ نہیں ہو سکا۔'],
   ['Sessions load nahi ho sakin.', 'سیشنز کی فہرست لوڈ نہیں ہو سکی۔'],
   ['Subjects load nahi ho sake.', 'مضامین کی فہرست لوڈ نہیں ہو سکی۔'],
-  ['Class name aur branch dono zaroori hain.', 'جماعت کا نام اور برانچ دونوں درج کرنا ضروری ہیں۔'],
+  ['Class name aur branch dono zaroori hain.', 'جماعت کا نام درج کرنا ضروری ہے۔'],
   ['Class update ho gayi.', 'جماعت کامیابی سے اپڈیٹ ہو گئی۔'],
   ['Class create ho gayi.', 'جماعت کامیابی سے شامل ہو گئی۔'],
   ['Class save nahi ho saki.', 'جماعت محفوظ نہیں ہو سکی۔'],

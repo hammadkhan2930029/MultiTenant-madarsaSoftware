@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createClass, deleteClass, getBranches, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+import { createClass, deleteClass, getDefaultBranch, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
@@ -9,10 +9,9 @@ const emptyForm = {
 };
 
 export const CreateClasses = () => {
-    const [branches, setBranches] = useState([]);
+    const [defaultBranch, setDefaultBranch] = useState(null);
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
-    const [selectedBranchFilter, setSelectedBranchFilter] = useState('');
     const [formData, setFormData] = useState(emptyForm);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -24,19 +23,17 @@ export const CreateClasses = () => {
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
 
-    const activeBranches = useMemo(() => branches.filter((item) => item.status === 'active'), [branches]);
-
     const loadDependencies = async () => {
         setIsLoading(true);
         setError('');
 
         try {
-            const [branchesResult, classesResult] = await Promise.all([
-                getBranches('page=1&limit=100'),
+            const [defaultBranchResult, classesResult] = await Promise.all([
+                getDefaultBranch(),
                 getClasses('page=1&limit=100'),
             ]);
 
-            setBranches(branchesResult.items || []);
+            setDefaultBranch(defaultBranchResult);
             setClasses(classesResult.items || []);
         } catch (loadError) {
             setError(loadError.message || 'جماعتوں کا ڈیٹا لوڈ نہیں ہو سکا۔');
@@ -67,8 +64,10 @@ export const CreateClasses = () => {
     };
 
     const handleSubmit = async () => {
-        if (!formData.name.trim() || !formData.branchId) {
-            setError('جماعت کا نام اور برانچ دونوں درج کرنا ضروری ہیں۔');
+        const branchId = formData.branchId || defaultBranch?.id;
+
+        if (!formData.name.trim() || !branchId) {
+            setError('جماعت کا نام درج کریں۔');
             return;
         }
 
@@ -79,7 +78,7 @@ export const CreateClasses = () => {
         try {
             const payload = {
                 name: formData.name.trim(),
-                branchId: Number(formData.branchId),
+                branchId: Number(branchId),
             };
 
             if (editMode) {
@@ -122,15 +121,14 @@ export const CreateClasses = () => {
     };
 
     const filteredClasses = classes.filter((academicClass) => {
-        const matchesBranch = selectedBranchFilter ? String(academicClass.branchId) === selectedBranchFilter : true;
         const query = search.trim().toLowerCase();
         const matchesSearch = !query
             ? true
-            : [academicClass.name, academicClass.branch?.name]
+            : [academicClass.name]
                   .filter(Boolean)
                   .some((value) => String(value).toLowerCase().includes(query));
 
-        return matchesBranch && matchesSearch;
+        return matchesSearch;
     });
 
     return (
@@ -142,19 +140,6 @@ export const CreateClasses = () => {
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
-                    <select
-                        value={selectedBranchFilter}
-                        onChange={(e) => setSelectedBranchFilter(e.target.value)}
-                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-52"
-                    >
-                        <option value="">تمام برانچز</option>
-                        {activeBranches.map((branch) => (
-                            <option key={branch.id} value={branch.id}>
-                                {branch.name}
-                            </option>
-                        ))}
-                    </select>
-
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -185,22 +170,6 @@ export const CreateClasses = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">برانچ</label>
-                            <select
-                                value={formData.branchId}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, branchId: e.target.value }))}
-                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                            >
-                                <option value="">برانچ منتخب کریں</option>
-                                {activeBranches.map((branch) => (
-                                    <option key={branch.id} value={branch.id}>
-                                        {branch.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">جماعت نام</label>
                             <div className="relative">
@@ -239,7 +208,6 @@ export const CreateClasses = () => {
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشنز</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
@@ -248,7 +216,7 @@ export const CreateClasses = () => {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         جماعتوں کی فہرست لوڈ ہو رہی ہے...
                                     </td>
                                 </tr>
@@ -256,7 +224,6 @@ export const CreateClasses = () => {
                                 filteredClasses.map((academicClass) => (
                                     <tr key={academicClass.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass.branch?.name || '-'}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
                                         <td className="px-6 py-4">
                                             <span className={`rounded-xl px-3 py-1 text-xs font-black ${academicClass.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
@@ -283,7 +250,7 @@ export const CreateClasses = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         کوئی جماعت ریکارڈ نہیں ملی۔
                                     </td>
                                 </tr>

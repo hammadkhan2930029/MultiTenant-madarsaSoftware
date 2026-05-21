@@ -1,20 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, PlusCircle, Search, Trash2, UserPlus } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, PlusCircle, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { SelectField, InputField } from '../../../Components/HR/FormElements';
-import { getBranches, getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
-import { assignStudentClass, getStudents } from '../../../Constant/StudentsApi';
+import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
+import { assignStudentClass, getStudents, removeStudentClassAssignment } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudent, setSelectedStudent] = useState(null);
-    const [filters, setFilters] = useState({ sessionId: '', branchId: '', classId: '', sectionId: '' });
+    const [filters, setFilters] = useState({ sessionId: '', classId: '', sectionId: '' });
     const [studentsData, setStudentsData] = useState([]);
     const [assignedList, setAssignedList] = useState([]);
-    const [branches, setBranches] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
     const [sessions, setSessions] = useState([]);
+    const [removingAssignmentId, setRemovingAssignmentId] = useState(null);
+    const [assignmentToRemove, setAssignmentToRemove] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
@@ -24,16 +25,14 @@ export const StudentAddToClass = () => {
 
         const loadData = async () => {
             try {
-                const [studentsResult, branchesResult, classesResult, sectionsResult, sessionsResult] = await Promise.all([
+                const [studentsResult, classesResult, sectionsResult, sessionsResult] = await Promise.all([
                     getStudents('page=1&limit=100'),
-                    getBranches('page=1&limit=100'),
                     getClasses('page=1&limit=100'),
                     getSections('page=1&limit=100'),
                     getSessions('page=1&limit=100'),
                 ]);
 
                 setStudentsData(studentsResult.items || []);
-                setBranches(branchesResult.items || []);
                 setClasses(classesResult.items || []);
                 setSections(sectionsResult.items || []);
                 setSessions(sessionsResult.items || []);
@@ -74,10 +73,10 @@ export const StudentAddToClass = () => {
             .slice(0, 8);
     }, [searchTerm, studentsData]);
 
-    const branchOptions = branches.filter((item) => item.status === 'active');
-    const classOptions = classes.filter((item) => item.status === 'active' && String(item.branchId) === String(filters.branchId));
+    const classOptions = classes.filter((item) => item.status === 'active');
     const sectionOptions = sections.filter((item) => item.status === 'active' && String(item.classId) === String(filters.classId));
     const sessionOptions = sessions.filter((item) => item.status === 'active');
+    const selectedClass = classes.find((item) => String(item.id) === String(filters.classId));
 
     const handleSelectStudent = (student) => {
         setSelectedStudent(student);
@@ -87,42 +86,71 @@ export const StudentAddToClass = () => {
     };
 
     const handleAddToList = async () => {
-        if (!selectedStudent || !filters.sessionId || !filters.branchId || !filters.classId || !filters.sectionId) {
+        if (!selectedStudent || !filters.sessionId || !filters.classId || !filters.sectionId || !selectedClass?.branchId) {
             setError('براہ کرم طالب علم اور تمام فیلڈز منتخب کریں۔');
             return;
         }
 
         try {
-            await assignStudentClass(selectedStudent.id, {
-                branchId: Number(filters.branchId),
+            const assignment = await assignStudentClass(selectedStudent.id, {
+                branchId: Number(selectedClass.branchId),
                 classId: Number(filters.classId),
                 sectionId: Number(filters.sectionId),
                 sessionId: Number(filters.sessionId),
             });
 
-            const branch = branches.find((item) => String(item.id) === String(filters.branchId));
             const academicClass = classes.find((item) => String(item.id) === String(filters.classId));
             const section = sections.find((item) => String(item.id) === String(filters.sectionId));
             const session = sessions.find((item) => String(item.id) === String(filters.sessionId));
 
             const newData = {
-                id: Date.now(),
+                id: assignment?.id || Date.now(),
                 studentId: selectedStudent.id,
                 name: selectedStudent.fullName,
                 rollNo: selectedStudent.admissionNumber,
-                session: session?.name || '---',
-                className: academicClass?.name || '---',
-                section: section?.name || '---',
-                branch: branch?.name || '---',
+                session: assignment?.session?.name || session?.name || '---',
+                className: assignment?.class?.name || academicClass?.name || '---',
+                section: assignment?.section?.name || section?.name || '---',
             };
 
             setAssignedList((current) => [newData, ...current.filter((item) => item.studentId !== selectedStudent.id)]);
             setSelectedStudent(null);
-            setFilters({ sessionId: '', branchId: '', classId: '', sectionId: '' });
+            setFilters({ sessionId: '', classId: '', sectionId: '' });
             setSuccess('طالب علم کو کامیابی سے کلاس میں شامل کر دیا گیا ہے۔');
             setError('');
         } catch (assignError) {
             setError(assignError.message || 'Class assign nahi ho saki.');
+        }
+    };
+
+    const handleRemoveAssignment = async () => {
+        if (!assignmentToRemove) return;
+
+        setRemovingAssignmentId(assignmentToRemove.id);
+        setError('');
+        setSuccess('');
+
+        try {
+            await removeStudentClassAssignment(assignmentToRemove.id);
+            setAssignedList((current) => current.filter((assignment) => assignment.id !== assignmentToRemove.id));
+            setStudentsData((current) =>
+                current.map((student) =>
+                    student.id === assignmentToRemove.studentId
+                        ? {
+                            ...student,
+                            assignments: (student.assignments || []).map((assignment) =>
+                                assignment.id === assignmentToRemove.id ? { ...assignment, status: 'inactive' } : assignment,
+                            ),
+                        }
+                        : student,
+                ),
+            );
+            setSuccess('طالب علم کی کلاس اسائنمنٹ ختم کر دی گئی ہے۔');
+            setAssignmentToRemove(null);
+        } catch (removeError) {
+            setError(removeError.message || 'Class assignment remove nahi ho saki.');
+        } finally {
+            setRemovingAssignmentId(null);
         }
     };
 
@@ -146,16 +174,16 @@ export const StudentAddToClass = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         {searchTerm && (
-                            <div className="absolute top-full right-0 left-0 bg-white border border-[var(--color-border)] rounded-2xl mt-2 shadow-xl z-50 overflow-hidden">
+                            <div className="absolute top-full right-0 left-0 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl mt-2 shadow-xl z-50 overflow-hidden">
                                 {filteredSearchStudents.length ? (
                                     filteredSearchStudents.map((student) => (
                                         <div
                                             key={student.id}
                                             onClick={() => handleSelectStudent(student)}
-                                            className="p-3 hover:bg-[var(--color-primary)]/10 cursor-pointer border-b border-slate-50 last:border-0 transition-colors"
+                                            className="p-3 hover:bg-[var(--color-primary)]/10 cursor-pointer border-b border-[var(--color-border)] last:border-0 transition-colors"
                                         >
-                                            <p className="font-black text-sm text-[var(--color-text)]">{student.fullName}</p>
-                                            <p className="text-[10px] text-[var(--color-text-muted)]">{student.admissionNumber} - {student.fatherName}</p>
+                                            <p className="font-black text-sm text-[var(--color-text-main)]">{student.fullName}</p>
+                                            <p className="text-[10px] font-bold text-[var(--color-text-muted)]">{student.admissionNumber} - {student.fatherName}</p>
                                         </div>
                                     ))
                                 ) : (
@@ -181,14 +209,10 @@ export const StudentAddToClass = () => {
                         <UserPlus size={18} /> مرحلہ 2: سیشن اور کلاس منتخب کریں
                     </h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <SelectField label="سیشن" options={['سیشن منتخب کریں', ...sessionOptions.map((item) => item.name)]} value={sessions.find((item) => String(item.id) === String(filters.sessionId))?.name || 'سیشن منتخب کریں'} onChange={(e) => {
                             const session = sessionOptions.find((item) => item.name === e.target.value);
                             setFilters((current) => ({ ...current, sessionId: session?.id || '' }));
-                        }} />
-                        <SelectField label="برانچ" options={['برانچ منتخب کریں', ...branchOptions.map((item) => item.name)]} value={branches.find((item) => String(item.id) === String(filters.branchId))?.name || 'برانچ منتخب کریں'} onChange={(e) => {
-                            const branch = branchOptions.find((item) => item.name === e.target.value);
-                            setFilters({ sessionId: filters.sessionId, branchId: branch?.id || '', classId: '', sectionId: '' });
                         }} />
                         <SelectField label="کلاس" options={['کلاس منتخب کریں', ...classOptions.map((item) => item.name)]} value={classes.find((item) => String(item.id) === String(filters.classId))?.name || 'کلاس منتخب کریں'} onChange={(e) => {
                             const academicClass = classOptions.find((item) => item.name === e.target.value);
@@ -227,16 +251,21 @@ export const StudentAddToClass = () => {
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {assignedList.map((item) => (
-                                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                <tr key={item.id} className="hover:bg-[var(--color-primary)]/10 transition-colors">
                                     <td className="p-4">
-                                        <div className="font-black text-sm">{item.name}</div>
+                                        <div className="font-black text-sm text-[var(--color-text-main)]">{item.name}</div>
                                         <div className="text-[9px] text-[var(--color-text-muted)]">{item.rollNo}</div>
                                     </td>
-                                    <td className="p-4 text-xs font-bold text-slate-600">{item.session}</td>
+                                    <td className="p-4 text-xs font-bold text-[var(--color-text-muted)]">{item.session}</td>
                                     <td className="p-4 text-xs font-black text-center"><span className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-3 py-1 rounded-full">{item.className}</span></td>
                                     <td className="p-4 text-xs font-black text-center">{item.section}</td>
                                     <td className="p-4 text-center">
-                                        <button className="text-rose-500 hover:bg-rose-50 p-2 rounded-xl transition-all">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAssignmentToRemove(item)}
+                                            disabled={removingAssignmentId === item.id}
+                                            className="text-rose-500 hover:bg-rose-500/10 p-2 rounded-xl transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
                                             <Trash2 size={16} />
                                         </button>
                                     </td>
@@ -246,6 +275,53 @@ export const StudentAddToClass = () => {
                     </table>
                 </div>
             </div>
+
+            {assignmentToRemove ? (
+                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-500">
+                                    <AlertTriangle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-[var(--color-text-main)]">کلاس اسائنمنٹ ختم کریں؟</h3>
+                                    <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">
+                                        {assignmentToRemove.name} کو {assignmentToRemove.className} / {assignmentToRemove.section} سے remove کیا جائے؟
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setAssignmentToRemove(null)}
+                                disabled={removingAssignmentId === assignmentToRemove.id}
+                                className="rounded-xl p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-primary)]/10 disabled:opacity-50"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={handleRemoveAssignment}
+                                disabled={removingAssignmentId === assignmentToRemove.id}
+                                className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {removingAssignmentId === assignmentToRemove.id ? 'Remove ho raha hai...' : 'Confirm Delete'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAssignmentToRemove(null)}
+                                disabled={removingAssignmentId === assignmentToRemove.id}
+                                className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black text-[var(--color-text-main)] transition-all hover:bg-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };

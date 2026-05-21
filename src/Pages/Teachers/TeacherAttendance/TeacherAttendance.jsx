@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Users, CheckCircle, XCircle, Clock, Phone, Building2, Save, Search, Eye } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Clock, Phone, BookOpen, Save, Search, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicker';
-import { getBranches } from '../../../Constant/AcademicSetupApi';
+import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -14,17 +14,11 @@ const STATUS_OPTIONS = [
     { value: 'Late', label: 'تاخیر' },
 ];
 
-const formatBranchOptions = (items) => [
-    { value: '', label: 'برانچ منتخب کریں' },
-    ...(items || []).map((item) => ({ value: String(item.id), label: item.name })),
-];
-
 export const TeacherAttendance = () => {
     const navigate = useNavigate();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedBranchId, setSelectedBranchId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
-    const [branches, setBranches] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -35,12 +29,12 @@ export const TeacherAttendance = () => {
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                const [branchResult, teacherResult] = await Promise.all([
-                    getBranches('page=1&limit=100'),
+                const [defaultBranch, teacherResult] = await Promise.all([
+                    getDefaultBranch(),
                     getTeachers('page=1&limit=100'),
                 ]);
 
-                setBranches(branchResult.items || []);
+                setSelectedBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
                 setTeachers(
                     (teacherResult.items || []).map((teacher) => ({
                         ...teacher,
@@ -61,7 +55,7 @@ export const TeacherAttendance = () => {
         setSuccessMessage('');
 
         if (!selectedBranchId) {
-            setError('Attendance ke liye branch select karna zaroori hai.');
+            setError('حاضری کے لیے بنیادی سیٹ اپ دستیاب نہیں۔');
             return;
         }
 
@@ -70,7 +64,7 @@ export const TeacherAttendance = () => {
         try {
             const [teacherResult, attendanceResult] = await Promise.all([
                 getTeachers('page=1&limit=100'),
-                getTeacherAttendance(`page=1&limit=200&branchId=${selectedBranchId}&date=${selectedDate}`),
+                getTeacherAttendance(`page=1&limit=100&branchId=${selectedBranchId}&date=${selectedDate}`),
             ]);
 
             const attendanceMap = new Map(
@@ -101,7 +95,7 @@ export const TeacherAttendance = () => {
 
     const handleSave = async () => {
         if (!selectedBranchId) {
-            setError('Save se pehle branch select karein.');
+            setError('محفوظ کرنے سے پہلے بنیادی سیٹ اپ دستیاب ہونا چاہیے۔');
             return;
         }
 
@@ -167,24 +161,10 @@ export const TeacherAttendance = () => {
                             <div className="w-full lg:w-[240px]">
                                 <ThemedDatePicker
                                     value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    onChange={(nextValue) => setSelectedDate(nextValue)}
                                     placeholder="تاریخ منتخب کریں"
                                 />
                             </div>
-                        </div>
-
-                        <div className="w-full xl:w-[240px]">
-                            <select
-                                value={selectedBranchId}
-                                onChange={(e) => setSelectedBranchId(e.target.value)}
-                                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-3 font-bold outline-none"
-                            >
-                                {formatBranchOptions(branches).map((option) => (
-                                    <option key={option.value || 'empty'} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
                         </div>
 
                         <div className="bg-[var(--color-bg)] flex flex-row justify-center items-center rounded-xl w-full xl:w-[35%] overflow-hidden border border-[var(--color-border)]/10">
@@ -268,7 +248,7 @@ export const TeacherAttendance = () => {
 
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
-                                    <Building2 size={16} className="text-[var(--color-primary)]" />
+                                    <BookOpen size={16} className="text-[var(--color-primary)]" />
                                     <span>{teacher.subject || '---'}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70" dir="ltr">

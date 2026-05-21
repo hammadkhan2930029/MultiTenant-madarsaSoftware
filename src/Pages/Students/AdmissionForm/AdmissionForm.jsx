@@ -16,10 +16,11 @@ import {
 import { Field, Form, Formik } from 'formik';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
-import { createStudent, getParents } from '../../../Constant/StudentsApi';
+import { createStudent, getParents, getStudents } from '../../../Constant/StudentsApi';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { fetchMadrassaProfile, getAdminSession } from '../../../Constant/AdminAuth';
 
 const INITIAL_VALUES = {
     idNo: '',
@@ -56,6 +57,41 @@ const INITIAL_VALUES = {
     studentImage: '',
 };
 
+const DEFAULT_ADMISSION_NUMBER = '0001';
+
+const parseAdmissionNumber = (value) => {
+    const text = String(value || '').trim();
+    const match = text.match(/^(.*?)(\d+)$/);
+
+    if (!match) return null;
+
+    return {
+        prefix: match[1],
+        number: Number(match[2]),
+        width: match[2].length,
+    };
+};
+
+const buildNextAdmissionNumber = (students = []) => {
+    const highest = students
+        .map((student) => parseAdmissionNumber(student?.admissionNumber))
+        .filter(Boolean)
+        .reduce((currentHighest, item) => {
+            if (!currentHighest || item.number > currentHighest.number) return item;
+            return currentHighest;
+        }, null);
+
+    if (!highest) return DEFAULT_ADMISSION_NUMBER;
+
+    const nextNumber = highest.number + 1;
+    return `${highest.prefix}${String(nextNumber).padStart(highest.width, '0')}`;
+};
+
+const fetchNextAdmissionNumber = async () => {
+    const result = await getStudents('page=1&limit=1000');
+    return buildNextAdmissionNumber(result?.items || []);
+};
+
 const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -66,11 +102,46 @@ const formatDate = (dateStr) => {
     return `${day}-${month}-${year}`;
 };
 
+const buildPrintValues = (formValues, savedStudent) => ({
+    ...INITIAL_VALUES,
+    ...formValues,
+    idNo: savedStudent?.admissionNumber || formValues.idNo,
+    admissionDate: savedStudent?.admissionDate || formValues.admissionDate,
+    admissionFee: savedStudent?.admissionFee ?? formValues.admissionFee,
+    fullName: savedStudent?.fullName || formValues.fullName,
+    fatherName: savedStudent?.fatherName || formValues.fatherName,
+    gender: savedStudent?.gender || formValues.gender,
+    caste: savedStudent?.caste || formValues.caste,
+    cnic: savedStudent?.cnic || formValues.cnic,
+    dob: savedStudent?.dob || formValues.dob,
+    bForm: savedStudent?.bForm || formValues.bForm,
+    currentAddress: savedStudent?.currentAddress || savedStudent?.address || formValues.currentAddress,
+    permanentAddress: savedStudent?.permanentAddress || formValues.permanentAddress,
+    district: savedStudent?.district || formValues.district,
+    mobile: savedStudent?.phone || formValues.mobile,
+    whatsapp: savedStudent?.whatsapp || formValues.whatsapp,
+    prevMadrassa: savedStudent?.prevMadrassa || formValues.prevMadrassa,
+    prevSchool: savedStudent?.prevSchool || formValues.prevSchool,
+    secularEdu: savedStudent?.secularEdu || formValues.secularEdu,
+    religiousEdu: savedStudent?.religiousEdu || formValues.religiousEdu,
+    requiredClass: savedStudent?.requiredClass || formValues.requiredClass,
+    requiredJamaat: savedStudent?.requiredJamaat || formValues.requiredJamaat,
+    teacherName: savedStudent?.teacherName || formValues.teacherName,
+    medicalCondition: savedStudent?.medicalCondition || formValues.medicalCondition,
+    monthlyFee: savedStudent?.monthlyFee ?? formValues.monthlyFee,
+    reside: savedStudent?.reside || formValues.reside,
+});
+
 export const AdmissionForm = () => {
+    const [initialFormValues, setInitialFormValues] = useState(INITIAL_VALUES);
+    const [isAdmissionNumberLoading, setIsAdmissionNumberLoading] = useState(true);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [savedProfile, setSavedProfile] = useState(null);
+    const [savedPrintValues, setSavedPrintValues] = useState(null);
+    const [savedPrintImagePreview, setSavedPrintImagePreview] = useState(null);
+    const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [submitError, setSubmitError] = useState('');
 
     const [parentSearch, setParentSearch] = useState('');
@@ -90,6 +161,59 @@ export const AdmissionForm = () => {
 
     useEffect(() => {
         window.scrollTo(0, 0);
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadAdmissionNumber = async () => {
+            setIsAdmissionNumberLoading(true);
+
+            try {
+                const nextAdmissionNumber = await fetchNextAdmissionNumber();
+                if (isMounted) {
+                    setInitialFormValues({ ...INITIAL_VALUES, idNo: nextAdmissionNumber });
+                }
+            } catch {
+                if (isMounted) {
+                    setInitialFormValues({ ...INITIAL_VALUES, idNo: DEFAULT_ADMISSION_NUMBER });
+                    setSubmitError('Admission number auto generate nahi ho saka. Default series 0001 se start ki gayi hai.');
+                }
+            } finally {
+                if (isMounted) {
+                    setIsAdmissionNumberLoading(false);
+                }
+            }
+        };
+
+        loadAdmissionNumber();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadMadrassaProfile = async () => {
+            try {
+                const profile = await fetchMadrassaProfile();
+                if (isMounted) {
+                    setMadrassaProfile(profile);
+                }
+            } catch {
+                if (isMounted) {
+                    setMadrassaProfile(getAdminSession()?.madrassaProfile || null);
+                }
+            }
+        };
+
+        loadMadrassaProfile();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -182,68 +306,83 @@ export const AdmissionForm = () => {
         setSubmitError('');
 
         try {
+            const admissionNumber = values.idNo?.trim() || initialFormValues.idNo || DEFAULT_ADMISSION_NUMBER;
+            const submittedValues = { ...values, idNo: admissionNumber };
             const parents = [];
 
-            if (values.fatherName) {
+            if (submittedValues.fatherName) {
                 parents.push({
                     ...(selectedParentId ? { parentId: selectedParentId } : {}),
-                    fullName: values.fatherName,
+                    fullName: submittedValues.fatherName,
                     relationship: 'father',
                     isPrimary: true,
-                    phone: values.mobile,
-                    cnic: values.cnic,
-                    occupation: values.fatherOccupation,
-                    address: values.currentAddress,
+                    phone: submittedValues.mobile,
+                    cnic: submittedValues.cnic,
+                    occupation: submittedValues.fatherOccupation,
+                    address: submittedValues.currentAddress,
                 });
             }
 
-            if (values.guardianName && values.guardianName !== values.fatherName) {
+            if (submittedValues.guardianName && submittedValues.guardianName !== submittedValues.fatherName) {
                 parents.push({
                     ...(selectedParentId ? { parentId: selectedParentId } : {}),
-                    fullName: values.guardianName,
-                    relationship: values.relation || 'guardian',
+                    fullName: submittedValues.guardianName,
+                    relationship: submittedValues.relation || 'guardian',
                     isPrimary: false,
-                    phone: values.guardianMobile,
-                    email: values.guardianEmail,
-                    cnic: values.guardianCnic,
-                    address: values.currentAddress,
+                    phone: submittedValues.guardianMobile,
+                    email: submittedValues.guardianEmail,
+                    cnic: submittedValues.guardianCnic,
+                    address: submittedValues.currentAddress,
                 });
             }
 
             const student = await createStudent({
-                admissionNumber: values.idNo,
-                admissionDate: values.admissionDate,
-                admissionFee: values.admissionFee,
-                fullName: values.fullName,
-                fatherName: values.fatherName,
-                gender: values.gender,
-                caste: values.caste,
-                cnic: values.cnic,
-                dob: values.dob,
-                bForm: values.bForm,
-                phone: values.mobile || values.whatsapp,
-                whatsapp: values.whatsapp,
-                address: values.currentAddress,
-                currentAddress: values.currentAddress,
-                permanentAddress: values.permanentAddress,
-                district: values.district,
-                prevMadrassa: values.prevMadrassa,
-                prevSchool: values.prevSchool,
-                secularEdu: values.secularEdu,
-                religiousEdu: values.religiousEdu,
-                requiredClass: values.requiredClass,
-                requiredJamaat: values.requiredJamaat,
-                teacherName: values.teacherName,
-                medicalCondition: values.medicalCondition,
-                monthlyFee: values.monthlyFee,
-                reside: values.reside,
+                admissionNumber,
+                admissionDate: submittedValues.admissionDate,
+                admissionFee: submittedValues.admissionFee,
+                fullName: submittedValues.fullName,
+                fatherName: submittedValues.fatherName,
+                gender: submittedValues.gender,
+                caste: submittedValues.caste,
+                cnic: submittedValues.cnic,
+                dob: submittedValues.dob,
+                bForm: submittedValues.bForm,
+                phone: submittedValues.mobile || submittedValues.whatsapp,
+                whatsapp: submittedValues.whatsapp,
+                address: submittedValues.currentAddress,
+                currentAddress: submittedValues.currentAddress,
+                permanentAddress: submittedValues.permanentAddress,
+                district: submittedValues.district,
+                prevMadrassa: submittedValues.prevMadrassa,
+                prevSchool: submittedValues.prevSchool,
+                secularEdu: submittedValues.secularEdu,
+                religiousEdu: submittedValues.religiousEdu,
+                requiredClass: submittedValues.requiredClass,
+                requiredJamaat: submittedValues.requiredJamaat,
+                teacherName: submittedValues.teacherName,
+                medicalCondition: submittedValues.medicalCondition,
+                monthlyFee: submittedValues.monthlyFee,
+                reside: submittedValues.reside,
                 parents,
                 image: imageFile,
             });
 
+            let nextAdmissionNumber = buildNextAdmissionNumber([{ admissionNumber: student?.admissionNumber || admissionNumber }]);
+
+            try {
+                nextAdmissionNumber = await fetchNextAdmissionNumber();
+            } catch {
+                // Keep the local next number when refreshing the list is unavailable.
+            }
+
+            const nextInitialValues = { ...INITIAL_VALUES, idNo: nextAdmissionNumber };
+
             setSavedProfile(student);
+            setSavedPrintValues(buildPrintValues(submittedValues, student));
+            setSavedPrintImagePreview(imagePreview);
             setShowModal(true);
-            resetForm();
+            setInitialFormValues(nextInitialValues);
+            resetForm({ values: nextInitialValues });
             setImagePreview(null);
             setImageFile(null);
             setParentSearch('');
@@ -260,26 +399,39 @@ export const AdmissionForm = () => {
 
     const triggerPrint = () => {
         setShowModal(false);
-        setTimeout(() => {
-            window.print();
-        }, 500);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                window.print();
+            });
+        });
     };
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-2 bg-[var(--color-bg)]" dir="rtl">
-            <Formik initialValues={INITIAL_VALUES} onSubmit={handleFormSubmit}>
-                {({ setFieldValue, values, isSubmitting }) => (
+            <Formik initialValues={initialFormValues} enableReinitialize onSubmit={handleFormSubmit}>
+                {({ setFieldValue, values, isSubmitting }) => {
+                    const printValues = savedPrintValues || values;
+                    const printImagePreview = savedPrintImagePreview || imagePreview;
+                    const madrassaName = madrassaProfile?.name?.trim() || 'جامعہ انوار القرآن';
+
+                    return (
                     <>
                         <Form className="print:hidden space-y-8 pb-10">
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
                                 <div className="bg-[#002a33] p-8 text-center text-white">
                                     <h2 className="text-3xl font-bold">طالب علم رجسٹریشن فارم</h2>
-                                    <p className="text-emerald-400 mt-2">جامعہ انوار القرآن</p>
+                                    <p className="text-emerald-400 mt-2">{madrassaName}</p>
                                 </div>
 
                                 <div className="p-6 md:p-10 space-y-12">
                                     <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-4 gap-6 items-end border-b pb-8">
-                                        <FormikInputField label="داخلہ نمبر" name="idNo" />
+                                        <FormikInputField
+                                            label="داخلہ نمبر"
+                                            name="idNo"
+                                            readOnly
+                                            placeholder={isAdmissionNumberLoading ? 'Generating...' : ''}
+                                            className="cursor-not-allowed bg-slate-100 text-[#002a33]"
+                                        />
                                         <FormikInputField label="داخلہ فیس" name="admissionFee" />
                                         <FormikInputField label="تاریخ داخلہ" name="admissionDate" type="date" />
                                         <div className="flex justify-center">
@@ -415,7 +567,7 @@ export const AdmissionForm = () => {
                                                         options={classOptions.map((item) => ({
                                                             id: item.id,
                                                             label: item.name,
-                                                            meta: item.branch?.name || '',
+                                                            meta: '',
                                                         }))}
                                                         placeholder="درجہ تلاش کریں"
                                                         onChange={(nextValue) => form.setFieldValue('requiredClass', nextValue)}
@@ -493,7 +645,7 @@ export const AdmissionForm = () => {
                                     </div>
                                     <div className="p-10 space-y-6 text-center">
                                         <p className="text-slate-600 text-lg">
-                                            طالب علم <b>{savedProfile?.fullName || values.fullName}</b> کا فارم مکمل ہو چکا ہے۔ کیا آپ ابھی پرنٹ نکالنا چاہتے ہیں؟
+                                            طالب علم <b>{savedProfile?.fullName || printValues.fullName}</b> کا فارم مکمل ہو چکا ہے۔ کیا آپ ابھی پرنٹ نکالنا چاہتے ہیں؟
                                         </p>
                                         <div className="flex flex-col gap-3">
                                             <button
@@ -514,7 +666,7 @@ export const AdmissionForm = () => {
                             </div>
                         ) : null}
 
-                        <div className="hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Noto Nastaliq Urdu' }}>
+                        <div className="admission-print-area hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Noto Nastaliq Urdu' }}>
                             <div className="absolute inset-0 flex items-center justify-center z-0" style={{ pointerEvents: 'none' }}>
                                 <img
                                     src={AppImages.logo}
@@ -526,75 +678,71 @@ export const AdmissionForm = () => {
 
                             <div className="border-[3px] border-[#004a5e] border-dashed rounded-md p-6 relative bg-white h-[1095px] z-10">
                                 <div className="text-center border-b-2 border-[#004a5e] pb-2 mb-6">
-                                    <h1 className="text-4xl font-bold text-[#0f172a]">جامعہ انوار القرآن</h1>
+                                    <h1 className="text-4xl font-bold text-[#0f172a]">{madrassaName}</h1>
                                     <div className="bg-[#00d094] text-white px-6 py-2 rounded-full shadow-xl inline-block text-lg font-bold mt-7">داخلہ فارم</div>
                                 </div>
 
                                 <div className="flex gap-6 mb-8 items-start">
                                     <div className="w-32 h-40 border-2 border-[#00d094] rounded-xl flex-shrink-0 flex items-center justify-center bg-gray-50 z-20">
-                                        {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover rounded-lg" alt="Student" /> : <span className="text-xs">تصویر</span>}
+                                        {printImagePreview ? <img src={printImagePreview} className="w-full h-full object-cover rounded-lg" alt="Student" /> : <span className="text-xs">تصویر</span>}
                                     </div>
                                     <div className="flex-1 space-y-6 pt-2">
                                         <div className="flex gap-4">
-                                            <PrintLine label="داخلہ نمبر" value={values.idNo} />
-                                            <PrintLine label="تاریخ داخلہ" value={formatDate(values.admissionDate)} />
+                                            <PrintLine label="داخلہ نمبر" value={printValues.idNo} />
+                                            <PrintLine label="تاریخ داخلہ" value={formatDate(printValues.admissionDate)} />
                                         </div>
                                         <div className="flex gap-4">
-                                            <PrintLine label="داخلہ فیس" value={values.admissionFee} />
-                                            <PrintLine label="قومیت / ذات" value={values.caste} />
+                                            <PrintLine label="داخلہ فیس" value={printValues.admissionFee} />
+                                            <PrintLine label="قومیت / ذات" value={printValues.caste} />
                                         </div>
-                                        <PrintLine label="نام طالب علم" value={values.fullName} flex="1.5" />
+                                        <PrintLine label="نام طالب علم" value={printValues.fullName} flex="1.5" />
                                     </div>
                                 </div>
 
                                 <div className="space-y-6">
                                     <div className="flex gap-6">
-                                        <PrintLine label="والد کا نام" value={values.fatherName} />
-                                        <PrintLine label="شناختی کارڈ نمبر" value={values.cnic} />
+                                        <PrintLine label="والد کا نام" value={printValues.fatherName} />
+                                        <PrintLine label="شناختی کارڈ نمبر" value={printValues.cnic} />
                                     </div>
                                     <div className="flex gap-6">
-                                        <PrintLine label="بے فارم نمبر" value={values.bForm} />
-                                        <PrintLine label="تاریخ پیدائش" value={formatDate(values.dob)} />
+                                        <PrintLine label="بے فارم نمبر" value={printValues.bForm} />
+                                        <PrintLine label="تاریخ پیدائش" value={formatDate(printValues.dob)} />
                                     </div>
-                                    <PrintLine label="حالیہ پتہ" value={values.currentAddress} />
-                                    <PrintLine label="مستقل پتہ" value={values.permanentAddress} />
+                                    <PrintLine label="حالیہ پتہ" value={printValues.currentAddress} />
+                                    <PrintLine label="مستقل پتہ" value={printValues.permanentAddress} />
                                     <div className="grid grid-cols-3 gap-6">
-                                        <PrintLine label="ضلع" value={values.district} />
-                                        <PrintLine label="موبائل نمبر" value={values.mobile} />
-                                        <PrintLine label="واٹس ایپ" value={values.whatsapp} />
+                                        <PrintLine label="ضلع" value={printValues.district} />
+                                        <PrintLine label="موبائل نمبر" value={printValues.mobile} />
+                                        <PrintLine label="واٹس ایپ" value={printValues.whatsapp} />
                                     </div>
 
                                     <div className="bg-[#e5faf4]/80 p-4 shadow-sm rounded-lg space-y-4 border border-[#00d094]/20">
                                         <div className="flex gap-6">
-                                            <PrintLine label="نام سرپرست" value={values.guardianName} />
-                                            <PrintLine label="رشتہ" value={values.relation} />
+                                            <PrintLine label="نام سرپرست" value={printValues.guardianName} />
+                                            <PrintLine label="رشتہ" value={printValues.relation} />
                                         </div>
                                         <div className="flex gap-6">
-                                            <PrintLine label="سرپرست موبائل" value={values.guardianMobile} />
-                                            <PrintLine label="سرپرست CNIC" value={values.guardianCnic} />
+                                            <PrintLine label="سرپرست موبائل" value={printValues.guardianMobile} />
+                                            <PrintLine label="سرپرست CNIC" value={printValues.guardianCnic} />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-x-10 gap-y-6 border-t pt-4 border-[#004a5e]">
-                                        <PrintLine label="دینی تعلیم" value={values.religiousEdu} />
-                                        <PrintLine label="عصری تعلیم" value={values.secularEdu} />
-                                        <PrintLine label="سابقہ مدرسہ" value={values.prevMadrassa} />
-                                        <PrintLine label="سابقہ اسکول" value={values.prevSchool} />
-                                        <PrintLine label="بیماری" value={values.medicalCondition} />
-                                        <PrintLine label="استاد کا نام" value={values.teacherName} />
+                                        <PrintLine label="دینی تعلیم" value={printValues.religiousEdu} />
+                                        <PrintLine label="عصری تعلیم" value={printValues.secularEdu} />
+                                        <PrintLine label="سابقہ مدرسہ" value={printValues.prevMadrassa} />
+                                        <PrintLine label="سابقہ اسکول" value={printValues.prevSchool} />
+                                        <PrintLine label="بیماری" value={printValues.medicalCondition} />
+                                        <PrintLine label="استاد کا نام" value={printValues.teacherName} />
                                     </div>
 
                                     <div className="flex gap-6 bg-[#e5faf4]/80 shadow-sm p-3 rounded border border-[#00d094]/20">
-                                        <PrintLine label="مطلوبہ درجہ" value={values.requiredClass} />
-                                        <PrintLine label="جماعت" value={values.requiredJamaat} />
-                                        <PrintLine label="ماہانہ فیس" value={values.monthlyFee} />
+                                        <PrintLine label="مطلوبہ درجہ" value={printValues.requiredClass} />
+                                        <PrintLine label="جماعت" value={printValues.requiredJamaat} />
+                                        <PrintLine label="ماہانہ فیس" value={printValues.monthlyFee} />
                                     </div>
                                 </div>
 
-                                <div className="absolute bottom-2 left-0 right-0 flex justify-around px-10 z-20">
-                                    <div className="text-center w-48 border-t-2 border-[#004a5e] pt-2 font-bold text-lg">دستخط سرپرست</div>
-                                    <div className="text-center w-48 border-t-2 border-[#004a5e] pt-2 font-bold text-lg">دستخط ناظمِ اعلیٰ</div>
-                                </div>
                             </div>
                         </div>
 
@@ -603,15 +751,29 @@ export const AdmissionForm = () => {
                                 __html: `
                             @media print {
                                 @page { size: A4 portrait; margin: 0; }
-                                body { visibility: hidden; -webkit-print-color-adjust: exact; }
-                                .print\\:block { visibility: visible; position: absolute; top: 0; left: 0; width: 100%; font-family: 'Noto Sans Arabic', sans-serif; }
+                                html, body, #root { width: 100%; min-height: 100%; }
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                body * { visibility: hidden; }
+                                .admission-print-area,
+                                .admission-print-area * {
+                                    visibility: visible !important;
+                                }
+                                .admission-print-area {
+                                    display: block !important;
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    width: 100%;
+                                    font-family: 'Noto Sans Arabic', sans-serif;
+                                }
                                 h1 { font-family: 'Noto Nastaliq Urdu', serif !important; }
                             }
                         `,
                             }}
                         />
                     </>
-                )}
+                    );
+                }}
             </Formik>
         </div>
     );
@@ -714,6 +876,8 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
 const PrintLine = ({ label, value, flex = '1' }) => (
     <div style={{ flex }} className="flex items-baseline gap-2">
         <span className="font-bold text-gray-800 whitespace-nowrap">{label}:</span>
-        <span className="flex-1 border-b border-black border-dotted min-h-[22px] px-2 italic text-[14px]">{value}</span>
+        <span className="flex-1 border-b border-black border-dotted min-h-[22px] px-2 text-[14px] font-bold text-[#0f172a]" style={{ color: '#0f172a' }}>
+            {value || ''}
+        </span>
     </div>
 );

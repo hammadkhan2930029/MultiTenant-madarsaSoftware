@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     Calendar,
     Clock,
@@ -14,6 +14,24 @@ import {
     ChevronDown,
     ChevronUp
 } from 'lucide-react';
+import { getClasses, getSections, getSessions, getSubjects } from '../../../Constant/AcademicSetupApi';
+import { createSchedule, deleteSchedule, getSchedules } from '../../../Constant/ScheduleApi';
+
+const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
+
+const mapScheduleFromApi = (schedule) => ({
+    id: schedule.id,
+    sessionId: String(schedule.session?.id || ''),
+    session: schedule.session?.name || '',
+    classId: String(schedule.class?.id || ''),
+    className: schedule.class?.name || '',
+    sectionId: String(schedule.section?.id || ''),
+    section: schedule.section?.name || '',
+    subjects: Array.isArray(schedule.subjects) ? schedule.subjects : [],
+    days: Array.isArray(schedule.days) ? schedule.days : [],
+    startTime: schedule.startTime || '',
+    endTime: schedule.endTime || '',
+});
 
 export const StudentScheduleManager = () => {
       useEffect(() => {
@@ -22,9 +40,21 @@ export const StudentScheduleManager = () => {
 
     const [selectLayout, setSelectLayout] = useState(2)
     const [schedules, setSchedules] = useState([]);
+    const [classOptions, setClassOptions] = useState([]);
+    const [sectionOptions, setSectionOptions] = useState([]);
+    const [sessionOptions, setSessionOptions] = useState([]);
+    const [subjectOptions, setSubjectOptions] = useState([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+    const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+    const [removingScheduleId, setRemovingScheduleId] = useState(null);
+    const [setupError, setSetupError] = useState('');
+    const [scheduleMessage, setScheduleMessage] = useState('');
     const [formData, setFormData] = useState({
-        session: '2025-26',
+        sessionId: '',
+        session: '',
+        classId: '',
         className: '',
+        sectionId: '',
         section: '',
         subjects: [],
         days: [],
@@ -34,15 +64,55 @@ export const StudentScheduleManager = () => {
 
     const [subjSearch, setSubjSearch] = useState("");
 
-    // Dropdown Options
-    const sessions = ["2024-25", "2025-26", "2026-27"];
-    const classes = ["نرسری", "اول", "دوم", "سوم", "چہارم", "پنجم", "ششم", "ہفتم", "ہشتم", "نہم", "دہم"];
-    const sections = ["سیکشن A", "سیکشن B", "سیکشن C", "بلو", "گرین", "ریڈ"];
-
     const daysList = ["پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ", "اتوار"];
-    const subjectsList = ["اردو", "اسلامیات", "ریاضی", "انگریزی", "سائنس", "کمپیوٹر", "فزکس", "کیمسٹری", "مطالعہ پاکستان"];
+    const subjectsList = subjectOptions.map((subject) => subject.name).filter(Boolean);
 
-    const filteredSubjects = subjectsList.filter(s => s.includes(subjSearch));
+    const availableSections = useMemo(
+        () => sectionOptions.filter((section) => !formData.classId || String(section.classId) === String(formData.classId)),
+        [formData.classId, sectionOptions],
+    );
+
+    const filteredSubjects = subjectsList.filter(s => s.toLowerCase().includes(subjSearch.toLowerCase()));
+
+    useEffect(() => {
+        const loadSetupOptions = async () => {
+            setIsLoadingOptions(true);
+            setSetupError('');
+
+            try {
+                const [classesResult, sectionsResult, sessionsResult, subjectsResult] = await Promise.all([
+                    getClasses('page=1&limit=100'),
+                    getSections('page=1&limit=100'),
+                    getSessions('page=1&limit=100'),
+                    getSubjects('page=1&limit=100'),
+                ]);
+
+                setClassOptions(activeOnly(classesResult.items));
+                setSectionOptions(activeOnly(sectionsResult.items));
+                setSessionOptions(activeOnly(sessionsResult.items));
+                setSubjectOptions(activeOnly(subjectsResult.items));
+            } catch (error) {
+                setSetupError(error.message || 'شیڈول کے لیے بنیادی ڈیٹا لوڈ نہیں ہو سکا۔');
+            } finally {
+                setIsLoadingOptions(false);
+            }
+        };
+
+        loadSetupOptions();
+    }, []);
+
+    useEffect(() => {
+        const loadSchedules = async () => {
+            try {
+                const result = await getSchedules('page=1&limit=100');
+                setSchedules((result.items || []).map(mapScheduleFromApi));
+            } catch (error) {
+                setSetupError(error.message || 'شیڈول لوڈ نہیں ہو سکا۔');
+            }
+        };
+
+        loadSchedules();
+    }, []);
 
     const toggleSelection = (field, value) => {
         setFormData(prev => ({
@@ -53,11 +123,53 @@ export const StudentScheduleManager = () => {
         }));
     };
 
-    const handleAddSchedule = (e) => {
+    const handleAddSchedule = async (e) => {
         e.preventDefault();
-        if (!formData.className || formData.subjects.length === 0) return;
-        setSchedules([...schedules, { ...formData, id: Date.now() }]);
-        setFormData({ ...formData, subjects: [], days: [], startTime: '', endTime: '' });
+        setSetupError('');
+        setScheduleMessage('');
+
+        if (!formData.sessionId || !formData.classId || !formData.sectionId || formData.subjects.length === 0 || formData.days.length === 0 || !formData.startTime || !formData.endTime) {
+            setSetupError('براہ کرم سیشن، کلاس، سیکشن، مضمون، دن اور وقت مکمل منتخب کریں۔');
+            return;
+        }
+
+        setIsSavingSchedule(true);
+
+        try {
+            const savedSchedule = await createSchedule({
+                sessionId: Number(formData.sessionId),
+                classId: Number(formData.classId),
+                sectionId: Number(formData.sectionId),
+                subjects: formData.subjects,
+                days: formData.days,
+                startTime: formData.startTime,
+                endTime: formData.endTime,
+            });
+
+            setSchedules((current) => [mapScheduleFromApi(savedSchedule), ...current]);
+            setFormData({ ...formData, subjects: [], days: [], startTime: '', endTime: '' });
+            setScheduleMessage('شیڈول کامیابی سے محفوظ ہو گیا۔');
+        } catch (error) {
+            setSetupError(error.message || 'شیڈول محفوظ نہیں ہو سکا۔');
+        } finally {
+            setIsSavingSchedule(false);
+        }
+    };
+
+    const handleDeleteSchedule = async (id) => {
+        setRemovingScheduleId(id);
+        setSetupError('');
+        setScheduleMessage('');
+
+        try {
+            await deleteSchedule(id);
+            setSchedules((current) => current.filter((schedule) => schedule.id !== id));
+            setScheduleMessage('شیڈول ختم کر دیا گیا۔');
+        } catch (error) {
+            setSetupError(error.message || 'شیڈول ختم نہیں ہو سکا۔');
+        } finally {
+            setRemovingScheduleId(null);
+        }
     };
 
     const groupedSchedules = schedules.reduce((acc, curr) => {
@@ -88,6 +200,16 @@ export const StudentScheduleManager = () => {
 
             {/* --- Form Section --- */}
             <div className="bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)] shadow-xl">
+                {setupError ? (
+                    <div className="mb-5 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-bold text-rose-500">
+                        {setupError}
+                    </div>
+                ) : null}
+                {scheduleMessage ? (
+                    <div className="mb-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-bold text-emerald-500">
+                        {scheduleMessage}
+                    </div>
+                ) : null}
                 <form onSubmit={handleAddSchedule} className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
 
                     {/* Step 1: Basic Selection */}
@@ -96,24 +218,55 @@ export const StudentScheduleManager = () => {
 
                         <div>
                             <label className="text-[11px] font-bold opacity-60 block mb-2">تعلیمی سیشن</label>
-                            <select className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none appearance-none cursor-pointer" value={formData.session} onChange={e => setFormData({ ...formData, session: e.target.value })}>
-                                {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+                            <select
+                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none appearance-none cursor-pointer"
+                                value={formData.sessionId}
+                                disabled={isLoadingOptions}
+                                onChange={e => {
+                                    const selectedSession = sessionOptions.find((session) => String(session.id) === e.target.value);
+                                    setFormData({ ...formData, sessionId: e.target.value, session: selectedSession?.name || '' });
+                                }}
+                            >
+                                <option value="">{isLoadingOptions ? 'لوڈ ہو رہا ہے...' : 'سیشن منتخب کریں'}</option>
+                                {sessionOptions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="text-[11px] font-bold opacity-60 block mb-2">کلاس منتخب کریں</label>
-                                <select className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer" value={formData.className} onChange={e => setFormData({ ...formData, className: e.target.value })}>
-                                    <option value="">کلاس </option>
-                                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                                <select
+                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                    value={formData.classId}
+                                    disabled={isLoadingOptions}
+                                    onChange={e => {
+                                        const selectedClass = classOptions.find((item) => String(item.id) === e.target.value);
+                                        setFormData({
+                                            ...formData,
+                                            classId: e.target.value,
+                                            className: selectedClass?.name || '',
+                                            sectionId: '',
+                                            section: '',
+                                        });
+                                    }}
+                                >
+                                    <option value="">{isLoadingOptions ? 'لوڈ ہو رہا ہے...' : 'کلاس منتخب کریں'}</option>
+                                    {classOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-[11px] font-bold opacity-60 block mb-2">سیکشن</label>
-                                <select className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer" value={formData.section} onChange={e => setFormData({ ...formData, section: e.target.value })}>
-                                    <option value="">سیکشن </option>
-                                    {sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+                                <select
+                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                    value={formData.sectionId}
+                                    disabled={isLoadingOptions || !formData.classId}
+                                    onChange={e => {
+                                        const selectedSection = availableSections.find((item) => String(item.id) === e.target.value);
+                                        setFormData({ ...formData, sectionId: e.target.value, section: selectedSection?.name || '' });
+                                    }}
+                                >
+                                    <option value="">{formData.classId ? 'سیکشن منتخب کریں' : 'پہلے کلاس منتخب کریں'}</option>
+                                    {availableSections.map(sec => <option key={sec.id} value={sec.id}>{sec.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -136,6 +289,11 @@ export const StudentScheduleManager = () => {
                                         {sub}
                                     </button>
                                 ))}
+                                {!filteredSubjects.length ? (
+                                    <div className="col-span-2 rounded-xl border border-[var(--color-border)]/10 bg-[var(--color-surface)] p-4 text-center text-[11px] font-bold opacity-60">
+                                        کوئی مضمون نہیں ملا۔
+                                    </div>
+                                ) : null}
                             </div>
 
                             {formData.subjects.length > 0 && (
@@ -174,8 +332,12 @@ export const StudentScheduleManager = () => {
                             </div>
                         </div>
 
-                        <button type="submit" className="w-full bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all mt-4">
-                            <Plus size={20} /> شیڈول محفوظ کریں
+                        <button
+                            type="submit"
+                            disabled={isSavingSchedule}
+                            className="w-full bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all mt-4 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <Plus size={20} /> {isSavingSchedule ? 'محفوظ ہو رہا ہے...' : 'شیڈول محفوظ کریں'}
                         </button>
                     </div>
                 </form>
@@ -260,8 +422,9 @@ export const StudentScheduleManager = () => {
                                                     </span>
                                                 </div>
                                                 <button
-                                                    onClick={() => setSchedules(schedules.filter(s => s.id !== item.id))}
-                                                    className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg"
+                                                    onClick={() => handleDeleteSchedule(item.id)}
+                                                    disabled={removingScheduleId === item.id}
+                                                    className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <Trash2 size={20} className="md:w-6 md:h-6" />
                                                 </button>
@@ -332,8 +495,9 @@ export const StudentScheduleManager = () => {
                                                                     ))}
                                                                 </div>
                                                                 <button
-                                                                    onClick={() => setSchedules(schedules.filter(s => s.id !== period.id))}
-                                                                    className="opacity-0 group-hover:opacity-100 text-red-500 transition-all p-1"
+                                                                    onClick={() => handleDeleteSchedule(period.id)}
+                                                                    disabled={removingScheduleId === period.id}
+                                                                    className="opacity-0 group-hover:opacity-100 text-red-500 transition-all p-1 disabled:cursor-not-allowed disabled:opacity-50"
                                                                 >
                                                                     <Trash2 size={16} />
                                                                 </button>

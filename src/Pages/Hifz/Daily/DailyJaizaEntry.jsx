@@ -16,7 +16,6 @@ const createEntry = () => ({
 });
 
 const initialFormData = {
-    campus: '',
     class: '',
     section: '',
     student: '',

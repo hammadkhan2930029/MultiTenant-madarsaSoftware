@@ -281,9 +281,6 @@ export const DailyJaizaList = () => {
                             کلاس / شعبہ: {selectedStudent ? `${selectedStudent.classInfo?.className} (${selectedStudent.classInfo?.section})` : '____________'}
                         </div>
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
-                            برانچ: {selectedStudent?.classInfo?.campus || registerMeta.campus}
-                        </div>
-                        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
                             طالب علم نمبر: {selectedStudent?.admission?.idNo || '____________'}
                         </div>
                     </div>

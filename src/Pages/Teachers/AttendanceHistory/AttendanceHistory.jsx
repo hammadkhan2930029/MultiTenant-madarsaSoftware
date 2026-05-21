@@ -115,7 +115,7 @@ export const TeacherAttendanceHistory = () => {
         const missingBranchRow = rowsToSave.find((item) => !item.branchId && !branchIdFromQuery);
 
         if (missingBranchRow) {
-            setError('Branch context missing hai. History me save ke liye branch ke saath open karein.');
+            setError('بنیادی سیٹ اپ دستیاب نہیں، حاضری محفوظ نہیں ہو سکتی۔');
             return;
         }
 

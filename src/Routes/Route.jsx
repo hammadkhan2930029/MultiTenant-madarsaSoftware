@@ -6,7 +6,6 @@ import { StudentRoutes } from './StudentRoutes';
 import { TeacherRoutes } from './TeacherRoutes';
 import { DepartmentRoutes } from './DepartmentRoutes';
 import { ProfileRoutes } from './ProfileRoutes';
-import { CreateBranch } from '../Pages/CreateBranches/CreateBranches';
 import { HRManagement } from '../Pages/HRManagement/HRManagement';
 import { SettingRoutes } from './SettingRoutes';
 import { FinanceRoutes } from './FinanceRoutes';
@@ -40,8 +39,8 @@ export const AppRoutes = () => {
       <Route path="/" element={<ProtectedAppShell />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="branch-management/create-branch" element={<CreateBranch />} />
-        <Route path="branch-management/:branchId" element={<CreateBranch />} />
+        <Route path="branch-management/create-branch" element={<Navigate to="/dashboard" replace />} />
+        <Route path="branch-management/:branchId" element={<Navigate to="/dashboard" replace />} />
         <Route path="HRManagement" element={<HRManagement />} />
         <Route path="finance/*" element={<FinanceRoutes />} />
         <Route path="hifz/*" element={<HifzRoutes />} />

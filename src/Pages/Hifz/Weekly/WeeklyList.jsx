@@ -8,7 +8,7 @@ const reportMeta = {
     week: 'ہفتہ: 1 تا 7 شعبان 1447ھ',
     className: 'کلاس: حفظ اول',
     teacher: 'استاد: قاری محمد سلیم',
-    branch: 'برانچ: مرکزی کیمپس',
+    location: 'مرکزی کیمپس',
 };
 
 const defaultWeeklyRows = [
@@ -198,7 +198,7 @@ export const WeeklyJaizaList = () => {
                             {reportMeta.teacher}
                         </div>
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">
-                            {reportMeta.branch}
+                            {reportMeta.location}
                         </div>
                     </div>
                 </div>

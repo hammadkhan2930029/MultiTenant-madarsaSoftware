@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import {
-    Building2, Mail, Phone, MapPin,
+    Mail, Phone, MapPin,
     Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
@@ -49,7 +49,7 @@ export const Profile = () => {
                     phone1: profile.phone1 || '',
                     phone2: profile.phone2 || '',
                     address: profile.address || '',
-                    branch: profile.branch || '',
+                    branch: profile.branch || 'مین کیمپس',
                     city: profile.city || '',
                     familyNoSeq: profile.familyNoSeq || '',
                     regNo: profile.regNo || '',
@@ -156,7 +156,7 @@ export const Profile = () => {
             formData.append('phone1', tempData.phone1 || '');
             formData.append('phone2', tempData.phone2 || '');
             formData.append('address', tempData.address || '');
-            formData.append('branch', tempData.branch || '');
+            formData.append('branch', 'مین کیمپس');
             formData.append('city', tempData.city || '');
             formData.append('familyNoSeq', tempData.familyNoSeq || '');
             formData.append('regNo', tempData.regNo || '');
@@ -174,7 +174,7 @@ export const Profile = () => {
                 phone1: savedProfile.phone1 || '',
                 phone2: savedProfile.phone2 || '',
                 address: savedProfile.address || '',
-                branch: savedProfile.branch || '',
+                branch: savedProfile.branch || 'مین کیمپس',
                 city: savedProfile.city || '',
                 familyNoSeq: savedProfile.familyNoSeq || '',
                 regNo: savedProfile.regNo || '',
@@ -315,10 +315,8 @@ export const Profile = () => {
                 </div>
 
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6">
-                    <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">مقام اور برانچ</h3>
-                    <div className="grid grid-cols-2 gap-6">
-                        <InfoField label="برانچ" icon={<Building2 size={16} />} value={madrassaData.branch} isEditing={isEditing} tempValue={tempData.branch} onChange={(v) => setTempData({ ...tempData, branch: v })} />
-
+                    <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">مقام</h3>
+                    <div className="grid grid-cols-1 gap-6">
                         <div className="space-y-3" ref={dropdownRef}>
                             <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest flex items-center gap-2">
                                 <Map size={14} className="text-[#00d094]" /> شہر

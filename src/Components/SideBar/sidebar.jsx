@@ -3,14 +3,13 @@ import {
     LayoutDashboard, Users, GraduationCap, UserCheck,
     BookOpen, Wallet, Settings, LogOut, Search,
     Bell, MessageSquare, Menu, ChevronDown,
-    ClipboardList, GraduationCap as ExamIcon, HeartHandshake, Building2,
+    ClipboardList, GraduationCap as ExamIcon, HeartHandshake,
     BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, BarChart3, Settings2, KeyRound
 } from 'lucide-react';
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
 import { fetchCurrentAdminProfile, fetchMadrassaProfile, getAdminSession, resolveApiAssetUrl, logoutAdmin } from '../../Constant/AdminAuth'
-import { getBranches } from '../../Constant/AcademicSetupApi';
 
 
 export const SideBar = () => {
@@ -26,7 +25,6 @@ export const SideBar = () => {
     const [adminProfile, setAdminProfile] = useState(() => getAdminSession()?.admin || null);
     const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [avatarSrc, setAvatarSrc] = useState('');
-    const [branchItems, setBranchItems] = useState([]);
     //--------------------------------------------------------------------
 
     useEffect(() => {
@@ -40,37 +38,6 @@ export const SideBar = () => {
             URL.revokeObjectURL(avatarSrc);
         }
     }, [avatarSrc]);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const loadBranchItems = async () => {
-            try {
-                const branchesResult = await getBranches('page=1&limit=100');
-                if (!isMounted) return;
-
-                setBranchItems(
-                    (branchesResult?.items || []).map((branch) => ({
-                        id: `branch_${branch.id}`,
-                        label: branch.name,
-                        path: `/branch-management/${branch.id}`,
-                    }))
-                );
-            } catch {
-                if (isMounted) {
-                    setBranchItems([]);
-                }
-            }
-        };
-
-        loadBranchItems();
-        window.addEventListener('branches:updated', loadBranchItems);
-
-        return () => {
-            isMounted = false;
-            window.removeEventListener('branches:updated', loadBranchItems);
-        };
-    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -118,7 +85,7 @@ export const SideBar = () => {
     const isActive = (path) => path && location.pathname === path;
     const sidebarTitle = madrassaProfile?.name?.trim() || 'Madarsa Management';
     const profileName = madrassaProfile?.name?.trim() || adminProfile?.name || 'Admin';
-    const sidebarBadge = madrassaProfile?.city?.trim() || madrassaProfile?.branch?.trim() || 'Premium Hub';
+    const sidebarBadge = madrassaProfile?.city?.trim() || 'Main Campus';
     const hasMadrassaLogo = Boolean(avatarSrc);
     const handleLogout = () => {
         logoutAdmin();
@@ -128,16 +95,6 @@ export const SideBar = () => {
     //--------------------------------------------------------------------
 
     const menuItems = [
-        {
-            id: 'branch_mgmt',
-            label: 'برانچ مینجمنٹ',
-            icon: Building2,
-            subMenu: [
-                { id: 'campus_1', label: 'کیمپس 1', path: '/branch-management/campus-1' },
-                { id: 'campus_2', label: 'کیمپس 2', path: '/branch-management/campus-2' },
-                { id: 'campus_3', label: 'کیمپس 3', path: '/branch-management/campus-3' },
-            ]
-        },
         {
             id: 'dashboard',
             label: 'ڈیش بورڈ',
@@ -390,14 +347,10 @@ export const SideBar = () => {
             path: '/store'
         },
     ];
-    menuItems[0].subMenu = branchItems.length
-        ? branchItems
-        : [{ id: 'main_campus_fallback', label: 'Main Campus', path: '/branch-management/create-branch' }];
     //--------------------------------------------------------------------
     const profileMenuItems = [
         { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
         { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
-        { id: 'add_branch', label: 'نئی برانچ شامل کریں', path: '/branch-management/create-branch', icon: UserCheck },
         { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck },
     ];
 
