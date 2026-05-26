@@ -146,7 +146,7 @@ export const SideBar = () => {
             id: 'hifz',
             label: 'شعبہ حفظ',
             icon: HeartHandshake,
-            path:'/hifz',
+            path: '/hifz',
             subMenu: [
 
                 {
@@ -224,31 +224,17 @@ export const SideBar = () => {
             icon: Wallet,
             path: '/finance',
             subMenu: [
-                // --- Naya Setup Section (Admin Purpose Define karne ke liye) ---
                 {
-                    id: 'finance-setup',
-                    label: 'مالیاتی سیٹ اپ',
+                    id: 'income-heads-config',
+                    label: 'آمدن و خرچ سیٹ اَپ',
                     icon: Settings2,
-                    path: '/finance/setup',
-                    subSubMenu: [
-                        {
-                            id: 'income-heads-config',
-                            label: 'آمدن اور خرچ ',
-                            path: '/finance/setup/income-expence',
-                            heads: ['Yahan admin naye purpose add kare ga']
-                        },
-                        // {
-                        //     id: 'expense-heads-config',
-                        //     label: 'اخراجات کی اقسام ',
-                        //     path: '/finance/setup/expense-heads',
-                        //     heads: ['Yahan admin naye kharchay define kare ga']
-                        // }
-                    ]
+                    path: '/finance/setup/income-expence',
+                    heads: ['Yahan admin naye purpose add kare ga']
                 },
                 // --- Income Section ---
                 {
                     id: 'income',
-                    label: 'آمدنی',
+                    label: 'عطیات',
                     icon: TrendingUp,
                     path: '/finance/income',
                     subSubMenu: [
@@ -275,34 +261,15 @@ export const SideBar = () => {
                 // --- Expenses Section ---
                 {
                     id: 'expenses',
-                    label: 'اخراجات',
+                    label: 'دیگر آمدن و خرچ',
                     icon: TrendingDown,
-                    path: '/finance/expenses',
-                    subSubMenu: [
-                        {
-                            id: 'payroll',
-                            label: 'تنخواہیں اور اجرت',
-                            path: '/finance/expenses/payroll',
-                            heads: ['Teacher Salaries', 'Staff Wages', 'Bonuses', 'Advanced Salary']
-                        },
-                        {
-                            id: 'operational',
-                            label: 'آپریشنل اخراجات',
-                            path: '/finance/expenses/operational',
-                            heads: ['Electricity Bill', 'Gas & Water', 'Internet & Phone', 'Building Rent']
-                        },
-                        {
-                            id: 'admin-academic',
-                            label: 'تعلیمی و دفتری',
-                            path: '/finance/expenses/admin-academic',
-                            heads: ['Stationery & Printing', 'Marketing & Ads', 'Repair & Maintenance', 'General Supplies']
-                        }
-                    ]
+                    path: '/finance/other-income-expense'
                 },
                 {
                     id: 'accounts',
                     label: 'بینک اور کیش',
                     icon: Landmark,
+                    hidden: true,
                     path: '/finance/accounts',
                     subSubMenu: [
                         {
@@ -348,7 +315,10 @@ export const SideBar = () => {
             id: 'exams',
             label: 'امتحان',
             icon: ExamIcon,
-            path: '/exams'
+            path: '/exams',
+            subMenu: [
+                { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' }
+            ]
         },
         {
             id: 'scholarship',
@@ -450,7 +420,7 @@ export const SideBar = () => {
                 {/* //--------------------------------------------------------------// */}
 
                 <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] vip-scrollbar px-1 ">
-                    {menuItems.map((item) => (
+                    {menuItems.filter((item) => !item.hidden).map((item) => (
                         <div key={item.id}>
                             {/* --- Level 1: Main Menu --- */}
                             <div
@@ -470,7 +440,7 @@ export const SideBar = () => {
                             {/* --- Level 2: Sub Menu --- */}
                             {item.subMenu && openSubMenu === item.id && (
                                 <div className="mt-2 mr-6 space-y-1 border-r border-white/10 pr-2">
-                                    {item.subMenu.map((sub) => (
+                                    {item.subMenu.filter((sub) => !sub.hidden).map((sub) => (
                                         <div key={sub.id} className="perspective-1000">
                                             <div
                                                 onClick={() => sub.subSubMenu ? toggleSubSubMenu(sub.id) : (navigate(sub.path), setIsSidebarOpen(false))}
@@ -490,7 +460,7 @@ export const SideBar = () => {
                                             {/* --- Level 3: Sub-Sub Menu (Finance Heads) --- */}
                                             {sub.subSubMenu && openSubSubMenu === sub.id && (
                                                 <div className="mt-1 mr-8 space-y-1 bg-[#00d094]/5 border-r-3 border-[#00d094] pr-3 animate-in fade-in zoom-in-95 duration-200">
-                                                    {sub.subSubMenu.map((subSub) => (
+                                                    {sub.subSubMenu.filter((subSub) => !subSub.hidden).map((subSub) => (
                                                         <div
                                                             key={subSub.id}
                                                             onClick={() => {

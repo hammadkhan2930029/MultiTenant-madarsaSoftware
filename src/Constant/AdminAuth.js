@@ -5,6 +5,7 @@ export const MADRASSA_PROFILE_UPDATED_EVENT = 'madarsa:madrassa-profile-updated'
 
 export const defaultAdminCredentials = {
   username: 'admin',
+  password: 'Admin@12345',
 };
 
 const canUseStorage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
@@ -62,6 +63,10 @@ export const loginAdmin = async ({ username, password }) => {
     admin: result?.data?.admin || null,
     loginAt: new Date().toISOString(),
   };
+
+  if (!session.token) {
+    throw new Error('لاگ اِن ٹوکن نہیں ملا۔ براہ کرم دوبارہ کوشش کریں۔');
+  }
 
   writeSession(session);
 

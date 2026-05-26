@@ -10,6 +10,7 @@ import { HRManagement } from '../Pages/HRManagement/HRManagement';
 import { SettingRoutes } from './SettingRoutes';
 import { FinanceRoutes } from './FinanceRoutes';
 import { HifzRoutes } from './HifzRoutes';
+import { ExamRoutes } from './ExamRoutes';
 import { AdminLogin } from '../Pages/Auth/AdminLogin';
 import { isAdminAuthenticated } from '../Constant/AdminAuth';
 
@@ -50,6 +51,7 @@ export const AppRoutes = () => {
         {StudentRoutes}
         {SettingRoutes}
         {TeacherRoutes}
+        {ExamRoutes}
       </Route>
 
       <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/login'} replace />} />

@@ -5,6 +5,8 @@ import { ExpenseHeadsSetup } from '../Pages/Finance/Settings/ExpenceHeads/Expenc
 import { FundCollection } from '../Pages/Finance/Incomes/FundCollection/FundCollection';
 import { FundList } from '../Pages/Finance/Incomes/FundList/FundList';
 import { SalaryEntry } from '../Pages/Finance/Expence/Salary/salary';
+import { OtherIncomeExpense } from '../Pages/Finance/Transactions/OtherIncomeExpense';
+import { FinancialStatement } from '../Pages/Finance/Reports/FinancialStatement';
 
 export const FinanceRoutes = () => {
     return (
@@ -24,6 +26,12 @@ export const FinanceRoutes = () => {
 
             <Route path="expenses">
                 <Route path="payroll" element={<SalaryEntry />} />
+            </Route>
+
+            <Route path="other-income-expense" element={<OtherIncomeExpense />} />
+
+            <Route path="reports">
+                <Route path="financial-statements" element={<FinancialStatement />} />
             </Route>
         </Routes>
     );

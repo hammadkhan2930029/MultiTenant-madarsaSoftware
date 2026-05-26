@@ -125,7 +125,7 @@ export const ThemedDatePicker = ({
   const openCalendar = () => {
     const wrapper = wrapperRef.current;
     const viewportWidth = window.innerWidth;
-    const desiredWidth = Math.min(320, viewportWidth - 24);
+    const desiredWidth = Math.min(size === 'sm' ? 280 : 320, viewportWidth - 24);
 
     if (wrapper) {
       const rect = wrapper.getBoundingClientRect();
@@ -163,9 +163,26 @@ export const ThemedDatePicker = ({
   const displayValue = selectedDate
     ? `${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}، ${selectedDate.getFullYear()}`
     : placeholder;
+  const buttonDisplayValue = size === 'sm' && selectedDate
+    ? `${selectedDate.getDate()}/${selectedDate.getMonth() + 1}/${selectedDate.getFullYear()}`
+    : displayValue;
 
-  const buttonSizeClass = size === 'sm' ? 'px-3 py-2.5 rounded-xl text-xs min-h-[44px]' : 'p-4 rounded-2xl';
+  const buttonSizeClass = size === 'sm' ? 'px-3 py-3 rounded-xl text-xs min-h-[56px]' : 'p-4 rounded-2xl';
   const buttonIconSize = size === 'sm' ? 16 : 18;
+  const isCompact = size === 'sm';
+  const panelClass = isCompact
+    ? 'absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-3'
+    : 'absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4';
+  const navButtonClass = isCompact
+    ? 'w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center'
+    : 'w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center';
+  const selectClass = isCompact
+    ? 'w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-2 text-xs font-bold text-[var(--color-text-main)] outline-none'
+    : 'w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm font-bold text-[var(--color-text-main)] outline-none';
+  const dayCellClass = isCompact ? 'h-8 rounded-lg text-xs' : 'h-10 rounded-xl text-sm';
+  const emptyDayClass = isCompact ? 'h-8' : 'h-10';
+  const panelGapClass = isCompact ? 'gap-1.5' : 'gap-2';
+  const footerButtonClass = isCompact ? 'flex-1 py-2 rounded-lg font-bold text-xs' : 'flex-1 py-2.5 rounded-xl font-bold text-sm';
 
   return (
     <div ref={wrapperRef} className={`space-y-2 relative ${className}`}>
@@ -177,6 +194,7 @@ export const ThemedDatePicker = ({
 
       <button
         type="button"
+        name={name}
         onClick={() => {
           if (isOpen) {
             setIsOpen(false);
@@ -184,47 +202,47 @@ export const ThemedDatePicker = ({
           }
           openCalendar();
         }}
-        className={`w-full border bg-[var(--color-input)] border-transparent outline-none font-bold transition-all focus:border-[var(--color-primary)] focus:ring-4 focus:ring-emerald-500/10 flex items-center justify-between gap-3 text-right ${buttonSizeClass}`}
+        className={`w-full min-w-0 border bg-[var(--color-input)] border-transparent outline-none font-bold transition-all focus:border-[var(--color-primary)] focus:ring-4 focus:ring-emerald-500/10 flex items-center justify-between gap-2 text-right ${buttonSizeClass}`}
       >
         <CalendarDays size={buttonIconSize} className="text-[var(--color-primary)] shrink-0" />
-        <span className={`flex-1 ${selectedDate ? 'text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)]'}`}>
-          {displayValue}
+        <span className={`min-w-0 flex-1 truncate whitespace-nowrap leading-[2] ${selectedDate ? 'text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)]'}`}>
+          {buttonDisplayValue}
         </span>
       </button>
 
       {isOpen ? (
         <div
           style={panelStyle}
-          className="absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4"
+          className={panelClass}
         >
-          <div className="flex items-center justify-between mb-4">
+          <div className={`flex items-center justify-between ${isCompact ? 'mb-3' : 'mb-4'}`}>
             <button
               type="button"
               onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
-              className="w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center"
+              className={navButtonClass}
             >
-              <ChevronRight size={18} />
+              <ChevronRight size={isCompact ? 16 : 18} />
             </button>
 
             <div className="text-center">
-              <p className="text-sm font-black text-[var(--color-text-main)]">{MONTHS[viewDate.getMonth()]}</p>
+              <p className={`${isCompact ? 'text-xs' : 'text-sm'} font-black text-[var(--color-text-main)]`}>{MONTHS[viewDate.getMonth()]}</p>
               <p className="text-[11px] font-bold text-[var(--color-text-muted)]">{viewDate.getFullYear()}</p>
             </div>
 
             <button
               type="button"
               onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
-              className="w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center"
+              className={navButtonClass}
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={isCompact ? 16 : 18} />
             </button>
           </div>
 
-          <div className="mb-4 grid grid-cols-2 gap-2">
+          <div className={`${isCompact ? 'mb-3' : 'mb-4'} grid grid-cols-2 gap-2`}>
             <select
               value={viewDate.getMonth()}
               onChange={handleMonthChange}
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm font-bold text-[var(--color-text-main)] outline-none"
+              className={selectClass}
             >
               {MONTHS.map((month, index) => (
                 <option key={month} value={index}>
@@ -236,7 +254,7 @@ export const ThemedDatePicker = ({
             <select
               value={viewDate.getFullYear()}
               onChange={handleYearChange}
-              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm font-bold text-[var(--color-text-main)] outline-none"
+              className={selectClass}
             >
               {yearOptions.map((year) => (
                 <option key={year} value={year}>
@@ -246,7 +264,7 @@ export const ThemedDatePicker = ({
             </select>
           </div>
 
-          <div dir="rtl" className="grid grid-cols-7 gap-2 text-center mb-3">
+          <div dir="rtl" className={`grid grid-cols-7 ${panelGapClass} text-center ${isCompact ? 'mb-2' : 'mb-3'}`}>
             {DAYS.map((day) => (
               <span key={day} className="text-[10px] font-black text-[var(--color-text-muted)] leading-tight">
                 {day}
@@ -254,10 +272,10 @@ export const ThemedDatePicker = ({
             ))}
           </div>
 
-          <div dir="rtl" className="grid grid-cols-7 gap-2">
+          <div dir="rtl" className={`grid grid-cols-7 ${panelGapClass}`}>
             {calendarDays.map((date, index) => {
               if (!date) {
-                return <div key={`empty-${index}`} className="h-10" />;
+                return <div key={`empty-${index}`} className={emptyDayClass} />;
               }
 
               const isSelected = isSameDate(date, selectedDate);
@@ -270,7 +288,7 @@ export const ThemedDatePicker = ({
                   type="button"
                   onClick={() => handleSelectDate(date)}
                   disabled={isBlocked}
-                  className={`h-10 rounded-xl text-sm font-bold transition-all border ${isSelected
+                  className={`${dayCellClass} font-bold transition-all border ${isSelected
                     ? 'bg-[var(--color-primary)] text-[#0b1120] border-[var(--color-primary)]'
                     : isToday
                       ? 'border-[var(--color-primary)]/40 text-[var(--color-primary)] bg-[var(--color-primary)]/5'
@@ -283,7 +301,7 @@ export const ThemedDatePicker = ({
             })}
           </div>
 
-          <div className="flex gap-2 mt-4">
+          <div className={`flex gap-2 ${isCompact ? 'mt-3' : 'mt-4'}`}>
             <button
               type="button"
               onClick={() => {
@@ -291,7 +309,7 @@ export const ThemedDatePicker = ({
                 setViewDate(today);
                 handleSelectDate(today);
               }}
-              className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-[#0b1120] font-bold text-sm"
+              className={`${footerButtonClass} bg-[var(--color-primary)] text-[#0b1120]`}
             >
               آج
             </button>
@@ -301,7 +319,7 @@ export const ThemedDatePicker = ({
                 emitChange('');
                 setIsOpen(false);
               }}
-              className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] font-bold text-sm"
+              className={`${footerButtonClass} border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)]`}
             >
               صاف کریں
             </button>

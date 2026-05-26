@@ -14,6 +14,9 @@ const staggerWrap = {
         },
     },
 };
+const MotionDiv = motion.div;
+const MotionForm = motion.form;
+const MotionButton = motion.button;
 
 export const AdminLogin = () => {
     const navigate = useNavigate();
@@ -48,24 +51,24 @@ export const AdminLogin = () => {
             dir="rtl"
         >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(45,212,191,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(34,211,238,0.14),transparent_32%),linear-gradient(135deg,#07111f,#122033_55%,#1b2940)]" />
-            <motion.div
+            <MotionDiv
                 className="absolute -top-24 left-8 h-80 w-80 rounded-full bg-teal-400/20 blur-3xl"
                 animate={{ x: [0, 140, 30, 0], y: [0, 70, 160, 0], scale: [1, 1.14, 0.92, 1], opacity: [0.45, 0.72, 0.38, 0.45] }}
                 transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <motion.div
+            <MotionDiv
                 className="absolute bottom-0 right-0 h-[24rem] w-[24rem] rounded-full bg-cyan-400/20 blur-3xl"
                 animate={{ x: [0, -120, -15, 0], y: [0, -70, -160, 0], scale: [1, 0.9, 1.14, 1], opacity: [0.42, 0.7, 0.34, 0.42] }}
                 transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <motion.div
+            <MotionDiv
                 className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl"
                 animate={{ x: [-80, 60, -35, -80], y: [-35, 50, 85, -35], scale: [0.95, 1.08, 1, 0.95], opacity: [0.22, 0.42, 0.16, 0.22] }}
                 transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
             />
 
             <div className="relative z-10 flex w-full justify-center">
-                <motion.form
+                <MotionForm
                     initial={{ opacity: 0, y: 30, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     variants={staggerWrap}
@@ -80,15 +83,15 @@ export const AdminLogin = () => {
                     </div>
 
                     <div className="space-y-6 pt-10 text-right md:pt-8">
-                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                        <MotionDiv initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
                             <h1 className="text-4xl font-black leading-[1.2] text-white md:text-5xl">مدرسہ ایڈمن پورٹل</h1>
                             <h2 className="mt-5 text-3xl font-black leading-[1.3] text-white">لاگ اِن کریں</h2>
                             <p className="mt-4 text-sm font-bold leading-7 text-slate-300">
                                 سسٹم میں داخل ہونے کے لیے ایڈمن کی تفصیل درج کریں۔
                             </p>
-                        </motion.div>
+                        </MotionDiv>
 
-                        <motion.div
+                        <MotionDiv
                             initial={{ opacity: 0, y: 14 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.32 }}
@@ -105,9 +108,9 @@ export const AdminLogin = () => {
                                     className="h-14 w-full rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.82)] pr-12 pl-4 text-base font-bold text-white outline-none transition-all placeholder:text-slate-400 focus:border-teal-300 focus:shadow-[0_0_0_5px_rgba(45,212,191,0.08)]"
                                 />
                             </div>
-                        </motion.div>
+                        </MotionDiv>
 
-                        <motion.div
+                        <MotionDiv
                             initial={{ opacity: 0, y: 14 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.39 }}
@@ -124,9 +127,9 @@ export const AdminLogin = () => {
                                     className="h-14 w-full rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.82)] pr-12 pl-4 text-base font-bold text-white outline-none transition-all placeholder:text-slate-400 focus:border-teal-300 focus:shadow-[0_0_0_5px_rgba(45,212,191,0.08)]"
                                 />
                             </div>
-                        </motion.div>
+                        </MotionDiv>
 
-                        <motion.button
+                        <MotionButton
                             initial={{ opacity: 0, y: 16 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.46 }}
@@ -136,9 +139,9 @@ export const AdminLogin = () => {
                         >
                             {isSubmitting ? 'لاگ اِن ہو رہا ہے...' : 'ایڈمن لاگ اِن'}
                             <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
-                        </motion.button>
+                        </MotionButton>
 
-                        <motion.div
+                        <MotionDiv
                             initial={{ opacity: 0, y: 18 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.52 }}
@@ -146,10 +149,14 @@ export const AdminLogin = () => {
                         >
                             ڈیفالٹ صارف نام:
                             <span className="text-white"> {credentials.username} </span>
+                            <span className="block">
+                                ڈیفالٹ پاس ورڈ:
+                                <span className="text-white"> {credentials.password} </span>
+                            </span>
                             <span className="block text-slate-400">لاگ اِن اب بیک اینڈ API اور JWT ٹوکن کے ذریعے ہو گا۔</span>
-                        </motion.div>
+                        </MotionDiv>
                     </div>
-                </motion.form>
+                </MotionForm>
             </div>
         </div>
     );
