@@ -25,6 +25,11 @@ export const createExamSchedule = async (payload) => {
   return result?.data;
 };
 
+export const updateExamSchedule = async (id, payload) => {
+  const result = await apiRequest(`/exam-schedules/${id}`, withJson('PUT', payload));
+  return result?.data;
+};
+
 export const deleteExamSchedule = async (id) => {
   const result = await apiRequest(`/exam-schedules/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;

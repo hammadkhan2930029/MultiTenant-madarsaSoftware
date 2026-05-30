@@ -103,6 +103,21 @@ body,
   color: var(--color-bg) !important;
 }
 
+.exam-native-time {
+  direction: ltr;
+  font-family: Arial, Helvetica, sans-serif !important;
+  line-height: normal !important;
+  color-scheme: dark;
+}
+
+.exam-native-time::-webkit-datetime-edit {
+  padding: 0;
+}
+
+.exam-native-time::-webkit-calendar-picker-indicator {
+  opacity: 0.72;
+}
+
 ::-webkit-scrollbar {
   width: 5px;
 }

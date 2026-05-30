@@ -317,7 +317,9 @@ export const SideBar = () => {
             icon: ExamIcon,
             path: '/exams',
             subMenu: [
-                { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' }
+                { id: 'exam_schedule_list', label: 'امتحانی شیڈول فہرست', path: '/exams/schedule-list' },
+                { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' },
+                { id: 'exam_result', label: 'امتحانی رزلٹ', path: '/exams/result' }
             ]
         },
         {
@@ -506,7 +508,7 @@ export const SideBar = () => {
                                     borderColor: 'var(--color-border)',
                                     color: 'var(--color-text-main)'
                                 }}
-                                className="absolute top-0 -right-60 lg:right-12 md:right-8 w-56 backdrop-blur-xl border shadow-2xl rounded-[2rem] p-3 animate-in slide-in-from-left-5 fade-in duration-300"
+                                className="absolute top-0 -right-72 lg:right-12 md:right-8 w-72 max-h-[80vh] overflow-y-auto backdrop-blur-xl border shadow-2xl rounded-[2rem] p-3 animate-in slide-in-from-left-5 fade-in duration-300"
                             >
                                 <p
                                     style={{ color: 'var(--color-primary)' }}
@@ -539,6 +541,26 @@ export const SideBar = () => {
                                             />
                                         </button>
                                     ))}
+                                    <button
+                                        onClick={() => { navigate('/exams/result-grades'); setOpenSubMenu(null); }}
+                                        style={{ '--hover-bg': 'var(--color-bg)' }}
+                                        className="w-full flex items-center justify-between p-3 rounded-xl transition-all group/item hover:bg-[var(--hover-bg)]"
+                                    >
+                                        <span
+                                            style={{ color: 'var(--color-text-main)' }}
+                                            className="text-xs font-bold group-hover/item:text-[var(--color-primary)] transition-colors"
+                                        >
+                                            رزلٹ فیصد رینج
+                                        </span>
+
+                                        <div
+                                            style={{
+                                                backgroundColor: 'var(--color-text-muted)',
+                                                borderColor: 'var(--color-border)'
+                                            }}
+                                            className="w-1.5 h-1.5 rounded-full group-hover/item:bg-[var(--color-primary)] transition-all"
+                                        />
+                                    </button>
                                 </div>
                             </div>
                         )}

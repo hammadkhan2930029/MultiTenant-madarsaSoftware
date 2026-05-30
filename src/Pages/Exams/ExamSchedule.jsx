@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock, FileText, Layers, Plus, Search, Trash2, Users } from 'lucide-react';
+import { CalendarDays, Clock, FileText, Layers, Plus, Printer, Search, Trash2, Users } from 'lucide-react';
 import { DateField } from '../../Components/HR/FormElements';
 import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
 import { createExamSchedule, deleteExamSchedule, getExamSchedules } from '../../Constant/ExamSchedulesApi';
+import { getAdminSession } from '../../Constant/AdminAuth';
 
 const text = {
     title: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644',
@@ -24,6 +25,7 @@ const text = {
     select: '\u0645\u0646\u062a\u062e\u0628 \u06a9\u0631\u06cc\u06ba',
     save: '\u0634\u06cc\u0688\u0648\u0644 \u0645\u062d\u0641\u0648\u0638 \u06a9\u0631\u06cc\u06ba',
     saving: '\u0645\u062d\u0641\u0648\u0638 \u06c1\u0648 \u0631\u06c1\u0627 \u06c1\u06d2...',
+    print: 'پرنٹ',
     required: '\u0628\u0631\u0627\u06c1 \u06a9\u0631\u0645 \u0627\u0645\u062a\u062d\u0627\u0646\u060c \u0633\u06cc\u0634\u0646\u060c \u06a9\u0644\u0627\u0633\u060c \u0645\u0636\u0645\u0648\u0646\u060c \u062a\u0627\u0631\u06cc\u062e \u0627\u0648\u0631 \u0648\u0642\u062a \u0645\u06a9\u0645\u0644 \u06a9\u0631\u06cc\u06ba\u06d4',
     saved: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644 \u0645\u062d\u0641\u0648\u0638 \u06c1\u0648 \u06af\u06cc\u0627\u06d4',
     deleted: '\u0634\u06cc\u0688\u0648\u0644 \u062d\u0630\u0641 \u06a9\u0631 \u062f\u06cc\u0627 \u06af\u06cc\u0627\u06d4',
@@ -45,8 +47,8 @@ const today = () => new Date().toISOString().split('T')[0];
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ur-PK') : '---');
 const toDateInputValue = (value) => (value ? new Date(value).toISOString().split('T')[0] : '');
 const getFieldValue = (valueOrEvent) => valueOrEvent?.target?.value ?? valueOrEvent ?? '';
-const examControlClass = 'h-[64px] rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base font-black outline-none focus:border-[var(--color-primary)]';
 const compactDateFieldClass = '[&_button]:h-[64px] [&_button]:min-h-[64px] [&_button]:rounded-xl [&_button]:border-[var(--color-border)] [&_button]:py-0 [&_button]:px-4 [&_button]:gap-3 [&_button_span]:overflow-visible [&_button_span]:text-clip [&_button_span]:whitespace-nowrap [&_button_span]:leading-[1.5] [&_button_span]:text-center [&_button_svg]:shrink-0';
+const timeControlClass = 'exam-native-time h-[64px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-5 text-left font-sans text-base font-black text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]';
 
 const createEmptyForm = () => ({
     examName: '',
@@ -206,6 +208,89 @@ export const ExamSchedule = () => {
         }
     };
 
+    const buildTimetableRows = (items) => items
+        .slice()
+        .sort((a, b) => `${a.examDate} ${a.startTime}`.localeCompare(`${b.examDate} ${b.startTime}`))
+        .map((schedule, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${formatDate(schedule.examDate)}</td>
+                <td>${new Date(schedule.examDate).toLocaleDateString('ur-PK', { weekday: 'long' })}</td>
+                <td>${schedule.subjectName || ''}</td>
+                <td dir="ltr">${schedule.startTime} - ${schedule.endTime}</td>
+                <td>${schedule.totalMarks || ''}</td>
+                <td>${schedule.room || ''}</td>
+                <td>${schedule.invigilator || ''}</td>
+                <td>${schedule.notes || ''}</td>
+            </tr>
+        `).join('');
+
+    const handlePrint = (targetSchedule = null) => {
+        const profile = getAdminSession()?.madrassaProfile || {};
+        const printWindow = window.open('', '_blank', 'width=1100,height=800');
+        if (!printWindow) return;
+
+        const printItems = targetSchedule
+            ? schedules.filter((schedule) => String(schedule.classId) === String(targetSchedule.classId) && String(schedule.sessionId) === String(targetSchedule.sessionId))
+            : filteredSchedules;
+        const sample = targetSchedule || printItems[0] || {};
+        const rows = buildTimetableRows(printItems);
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html lang="ur" dir="rtl">
+                <head>
+                    <meta charset="utf-8" />
+                    <title>Exam Schedule</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; direction: rtl; padding: 28px; color: #111827; }
+                        .header { text-align: center; margin-bottom: 18px; }
+                        h1 { margin: 0; font-size: 28px; }
+                        p { margin: 6px 0 0; color: #4b5563; }
+                        .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+                        .meta div { border: 1px solid #d1d5db; border-radius: 10px; padding: 10px; font-weight: 700; }
+                        .meta span { color: #047857; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #d1d5db; padding: 10px; text-align: right; }
+                        th { background: #064e3b; color: #ffffff; }
+                        tr:nth-child(even) td { background: #f8fafc; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>${profile.name || 'امتحانی شیڈول'}</h1>
+                        <p>${profile.address || ''}</p>
+                        <p>کلاس وائز امتحانی ٹائم ٹیبل</p>
+                    </div>
+                    <div class="meta">
+                        <div>امتحان: <span>${sample.examName || '---'}</span></div>
+                        <div>سیشن: <span>${sample.sessionName || '---'}</span></div>
+                        <div>کلاس: <span>${sample.className || '---'}</span></div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>تاریخ</th>
+                                <th>دن</th>
+                                <th>مضمون</th>
+                                <th>وقت</th>
+                                <th>نمبر</th>
+                                <th>کمرہ</th>
+                                <th>نگران</th>
+                                <th>نوٹ</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows || '<tr><td colspan="9">کوئی شیڈول موجود نہیں</td></tr>'}</tbody>
+                    </table>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    };
+
     return (
         <div className="min-h-screen bg-[var(--color-bg)] p-3 md:p-6 text-[var(--color-text-main)] font-urdu" dir="rtl">
             <div className="mx-auto max-w-7xl space-y-6">
@@ -260,7 +345,7 @@ export const ExamSchedule = () => {
                             </SelectField>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        <div className="flex items-center grid grid-cols-1 gap-3 md:grid-cols-3 ">
                             <DateField
                                 label={text.date}
                                 value={formData.examDate}
@@ -306,7 +391,17 @@ export const ExamSchedule = () => {
                                     </div>
                                     <h2 className="text-xl font-black">{text.listTitle}</h2>
                                 </div>
-                                <span className="text-xs font-bold text-[var(--color-text-muted)]">{filteredSchedules.length} / {schedules.length}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-[var(--color-text-muted)]">{filteredSchedules.length} / {schedules.length}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handlePrint()}
+                                        className="inline-flex h-10 items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-xs font-black text-[#0b1120] transition-all hover:bg-[var(--color-primary-hover)]"
+                                    >
+                                        <Printer size={15} />
+                                        پرنٹ
+                                    </button>
+                                </div>
                             </div>
                             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12">
                                 <div className="relative md:col-span-6">
@@ -341,7 +436,7 @@ export const ExamSchedule = () => {
                             {filteredSchedules.length ? (
                                 <div className="divide-y divide-[var(--color-border)]">
                                     {filteredSchedules.map((schedule) => (
-                                        <ScheduleRow key={schedule.id} schedule={schedule} deletingId={deletingId} onDelete={handleDelete} />
+                                        <ScheduleRow key={schedule.id} schedule={schedule} deletingId={deletingId} onDelete={handleDelete} onPrint={handlePrint} />
                                     ))}
                                 </div>
                             ) : isLoadingSchedules ? (
@@ -390,18 +485,13 @@ const TextInput = ({ label, value, onChange, type = 'text' }) => (
 const TimeInput = ({ label, value, onChange }) => (
     <div>
         <FieldLabel>{label}</FieldLabel>
-        <div className="relative">
-            <Clock size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-                type="text"
-                value={value}
-                onChange={(event) => onChange(event.target.value)}
-                dir="ltr"
-                inputMode="numeric"
-                placeholder="08:00"
-                className={`${examControlClass} w-full px-11 text-center leading-[1.5] placeholder:text-[var(--color-text-muted)]`}
-            />
-        </div>
+        <input
+            type="time"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            dir="ltr"
+            className={timeControlClass}
+        />
     </div>
 );
 
@@ -419,7 +509,7 @@ const StatCard = ({ icon, label, value }) => (
     </div>
 );
 
-const ScheduleRow = ({ schedule, deletingId, onDelete }) => (
+const ScheduleRow = ({ schedule, deletingId, onDelete, onPrint }) => (
     <div className="p-4 transition-colors hover:bg-[var(--color-bg)]/50">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="min-w-0 text-right">
@@ -448,15 +538,26 @@ const ScheduleRow = ({ schedule, deletingId, onDelete }) => (
                     <p className="text-[10px] font-black text-[var(--color-text-muted)]">{text.marks}</p>
                     <p className="mt-1 text-sm font-black">{schedule.totalMarks || '---'}</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => onDelete(schedule.id)}
-                    disabled={deletingId === schedule.id}
-                    className="flex min-h-[62px] items-center justify-center rounded-xl bg-rose-500/10 p-3 text-rose-400 transition-all hover:bg-rose-500 hover:text-white"
-                    aria-label={text.deleted}
-                >
-                    <Trash2 size={17} />
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        type="button"
+                        onClick={() => onPrint(schedule)}
+                        className="flex min-h-[62px] items-center justify-center rounded-xl bg-emerald-500/10 p-3 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-[#0b1120]"
+                        aria-label={text.print}
+                        title="اس کلاس کا مکمل شیڈول پرنٹ کریں"
+                    >
+                        <Printer size={17} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onDelete(schedule.id)}
+                        disabled={deletingId === schedule.id}
+                        className="flex min-h-[62px] items-center justify-center rounded-xl bg-rose-500/10 p-3 text-rose-400 transition-all hover:bg-rose-500 hover:text-white"
+                        aria-label={text.deleted}
+                    >
+                        <Trash2 size={17} />
+                    </button>
+                </div>
             </div>
         </div>
     </div>
