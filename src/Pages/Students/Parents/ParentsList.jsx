@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { InputField } from '../../../Components/HR/FormElements';
 import { createParent, deactivateParent, getParents, updateParent } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const INITIAL_FORM = {
     fullName: '',
@@ -14,6 +15,59 @@ const INITIAL_FORM = {
     email: '',
     cnic: '',
 };
+
+const formatDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toISOString().split('T')[0];
+};
+
+const getActiveAssignment = (student) =>
+    student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || null;
+
+const formatChildSummary = (item) => {
+    const student = item.student || {};
+    const activeAssignment = getActiveAssignment(student);
+
+    return [
+        student.admissionNumber,
+        student.fullName,
+        student.fatherName,
+        item.relationship,
+        item.isPrimary ? 'Primary' : 'Linked',
+        activeAssignment?.class?.name,
+        activeAssignment?.section?.name,
+        student.phone,
+    ]
+        .filter(Boolean)
+        .join(' | ');
+};
+
+const mapParentForExport = (parent) => ({
+    id: parent.id,
+    fullName: parent.fullName,
+    familyNumber: parent.familyNumber,
+    phone: parent.phone,
+    email: parent.email,
+    cnic: parent.cnic,
+    occupation: parent.occupation,
+    address: parent.address,
+    status: parent.status,
+    studentsCount: parent.students?.length || 0,
+    students: (parent.students || []).map(formatChildSummary).join('\n'),
+    studentAdmissionNumbers: (parent.students || []).map((item) => item.student?.admissionNumber).filter(Boolean).join(', '),
+    studentNames: (parent.students || []).map((item) => item.student?.fullName).filter(Boolean).join(', '),
+    studentClasses: (parent.students || [])
+        .map((item) => {
+            const activeAssignment = getActiveAssignment(item.student);
+            return [activeAssignment?.class?.name, activeAssignment?.section?.name].filter(Boolean).join(' ');
+        })
+        .filter(Boolean)
+        .join(', '),
+    createdAt: formatDate(parent.createdAt),
+    updatedAt: formatDate(parent.updatedAt),
+});
 
 export const ParentsList = () => {
     const navigate = useNavigate();
@@ -104,10 +158,31 @@ export const ParentsList = () => {
             parents.filter((parent) =>
                 [parent.fullName, parent.familyNumber, parent.phone, parent.occupation, parent.address, parent.email]
                     .filter(Boolean)
-                    .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())),
+                    .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
         [parents, searchTerm],
     );
+
+    const exportRows = useMemo(() => filteredParents.map(mapParentForExport), [filteredParents]);
+
+    const exportColumns = useMemo(() => [
+        { header: 'Parent ID', accessor: 'id' },
+        { header: 'Parent Name', accessor: 'fullName' },
+        { header: 'Family Number', accessor: 'familyNumber' },
+        { header: 'Phone', accessor: 'phone' },
+        { header: 'Email', accessor: 'email' },
+        { header: 'CNIC', accessor: 'cnic' },
+        { header: 'Occupation', accessor: 'occupation' },
+        { header: 'Address', accessor: 'address' },
+        { header: 'Status', accessor: 'status' },
+        { header: 'Linked Students Count', accessor: 'studentsCount' },
+        { header: 'Student Admission Numbers', accessor: 'studentAdmissionNumbers' },
+        { header: 'Student Names', accessor: 'studentNames' },
+        { header: 'Student Classes', accessor: 'studentClasses' },
+        { header: 'All Linked Students', accessor: 'students' },
+        { header: 'Created At', accessor: 'createdAt' },
+        { header: 'Updated At', accessor: 'updatedAt' },
+    ], []);
 
     return (
         <div className="max-w-7xl mx-auto p-2 md:p-0 space-y-8 pb-10" dir="rtl">
@@ -156,15 +231,18 @@ export const ParentsList = () => {
             <div className="overflow-hidden rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.08)]">
                 <div className="flex flex-col items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-5 md:flex-row md:items-center md:px-8">
                     <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">والدین کی فہرست</h3>
-                    <div className="group relative w-full md:max-w-md">
-                        <Search size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(event) => setSearchTerm(event.target.value)}
-                            placeholder="والدین، فیملی نمبر یا فون نمبر سے تلاش کریں..."
-                            className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] py-4 pr-14 pl-6 text-sm font-bold text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]/50"
-                        />
+                    <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+                        <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="parents-complete-list" className="w-full md:w-auto" />
+                        <div className="group relative w-full md:w-96">
+                            <Search size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]" />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(event) => setSearchTerm(event.target.value)}
+                                placeholder="والدین، فیملی نمبر یا فون نمبر سے تلاش کریں..."
+                                className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] py-4 pr-14 pl-6 text-sm font-bold text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]/50"
+                            />
+                        </div>
                     </div>
                 </div>
 

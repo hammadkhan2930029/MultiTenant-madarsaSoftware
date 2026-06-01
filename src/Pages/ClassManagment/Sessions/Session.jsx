@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSession, deleteSession, getSessions, updateSession } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const emptyForm = {
     name: '',
@@ -133,6 +134,13 @@ export const CreateSessions = () => {
             .some((value) => String(value).toLowerCase().includes(query));
     });
 
+    const exportColumns = [
+        { header: 'Session', accessor: 'name' },
+        { header: 'Start Date', accessor: (session) => formatDateInput(session.startDate) },
+        { header: 'End Date', accessor: (session) => formatDateInput(session.endDate) },
+        { header: 'Status', accessor: (session) => session.status || '---' },
+    ];
+
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -142,6 +150,7 @@ export const CreateSessions = () => {
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                    <ExportExcelButton rows={filteredSessions} columns={exportColumns} fileName="sessions-list" className="w-full md:w-auto" />
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input

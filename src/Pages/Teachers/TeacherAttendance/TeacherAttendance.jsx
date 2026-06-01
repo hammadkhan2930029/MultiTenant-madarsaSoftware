@@ -6,6 +6,7 @@ import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const STATUS_OPTIONS = [
     { value: 'Present', label: 'حاضر' },
@@ -156,6 +157,15 @@ export const TeacherAttendance = () => {
         [filteredTeachers],
     );
 
+    const exportColumns = useMemo(() => [
+        { header: 'ID', accessor: 'id' },
+        { header: 'Name', accessor: 'fullName' },
+        { header: 'Subject', accessor: 'subject' },
+        { header: 'Phone', accessor: 'phone' },
+        { header: 'Date', accessor: () => selectedDate },
+        { header: 'Status', accessor: (teacher) => STATUS_OPTIONS.find((status) => status.value === teacher.status)?.label || teacher.status },
+    ], [selectedDate]);
+
     return (
         <div className="p-6 space-y-6 bg-[var(--color-bg)] min-h-screen" dir="rtl">
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -191,13 +201,16 @@ export const TeacherAttendance = () => {
                             />
                         </div>
 
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving || !selectedBranchId}
-                            className="w-full xl:w-[15%] flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 py-2.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
-                        >
-                            <Save size={18} /> {isSaving ? 'محفوظ...' : 'محفوظ کریں'}
-                        </button>
+                        <div className="flex w-full flex-col gap-2 xl:w-[22%]">
+                            <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`teacher-attendance-${selectedDate}`} className="w-full" />
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving || !selectedBranchId}
+                                className="w-full flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 py-2.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                            >
+                                <Save size={18} /> {isSaving ? 'محفوظ...' : 'محفوظ کریں'}
+                            </button>
+                        </div>
                     </div>
 
                     {isLoading ? <div className="text-sm font-bold text-[var(--color-text-muted)]">حاضری لوڈ ہو رہی ہے...</div> : null}

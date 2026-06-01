@@ -5,6 +5,7 @@ import { getClasses, getSections, getSessions } from '../../../Constant/Academic
 import { getStudents } from '../../../Constant/StudentsApi';
 import { getStudentAttendance, saveStudentAttendance } from '../../../Constant/AttendanceApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const STATUS_OPTIONS = [
     { value: 'Present', label: 'حاضر' },
@@ -236,6 +237,14 @@ export const AttendancePage = () => {
         [students],
     );
 
+    const exportColumns = useMemo(() => [
+        { header: 'Admission No', accessor: 'rollNo' },
+        { header: 'Student Name', accessor: 'name' },
+        { header: 'Date', accessor: () => searchFilters.date },
+        { header: 'Status', accessor: (student) => STATUS_OPTIONS.find((status) => status.value === student.status)?.label || student.status },
+        { header: 'Remarks', accessor: 'remarks' },
+    ], [searchFilters.date]);
+
     return (
         <div className="p-4 md:p-6 space-y-6 bg-[var(--color-bg)] min-h-screen font-urdu text-right" dir="rtl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-surface)] p-6 rounded-[2rem] shadow-sm border border-[var(--color-border)]">
@@ -291,6 +300,7 @@ export const AttendancePage = () => {
                             <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">کل طلباء: {students.length}</p>
                             {students.length ? (
                                 <div className="grid grid-cols-2 gap-2 md:flex">
+                                    <ExportExcelButton rows={students} columns={exportColumns} fileName={`student-attendance-${searchFilters.date}`} className="col-span-2 w-full md:w-auto" />
                                     {STATUS_OPTIONS.map((status) => (
                                         <button
                                             key={status.value}

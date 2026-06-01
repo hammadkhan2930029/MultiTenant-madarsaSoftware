@@ -4,6 +4,7 @@ import { InputField } from '../../../Components/HR/FormElements';
 import { useNavigate } from 'react-router-dom';
 import { deleteTeacher, getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const listConfig = {
     teacher: {
@@ -29,6 +30,79 @@ const listConfig = {
         addPath: '/HRManagement?staffType=staff',
     },
 };
+
+const formatDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toISOString().split('T')[0];
+};
+
+const knownExportKeys = new Set([
+    'id',
+    'staffType',
+    'fullName',
+    'email',
+    'phone',
+    'cnic',
+    'subject',
+    'qualification',
+    'educationInstitute',
+    'educationYear',
+    'specialization',
+    'address',
+    'basicSalary',
+    'bankName',
+    'accountTitle',
+    'accountNumber',
+    'iban',
+    'jobTitle',
+    'department',
+    'employmentType',
+    'appointmentDate',
+    'joiningDate',
+    'experienceSummary',
+    'notes',
+    'status',
+    'imageUrl',
+    'createdAt',
+    'updatedAt',
+]);
+
+const getExtraData = (teacher) =>
+    Object.fromEntries(Object.entries(teacher || {}).filter(([key]) => !knownExportKeys.has(key)));
+
+const mapTeacherForExport = (teacher) => ({
+    id: teacher.id,
+    staffType: teacher.staffType,
+    fullName: teacher.fullName,
+    email: teacher.email,
+    phone: teacher.phone,
+    cnic: teacher.cnic,
+    subject: teacher.subject,
+    qualification: teacher.qualification,
+    educationInstitute: teacher.educationInstitute,
+    educationYear: teacher.educationYear,
+    specialization: teacher.specialization,
+    address: teacher.address,
+    basicSalary: teacher.basicSalary,
+    bankName: teacher.bankName,
+    accountTitle: teacher.accountTitle,
+    accountNumber: teacher.accountNumber,
+    iban: teacher.iban,
+    jobTitle: teacher.jobTitle,
+    department: teacher.department,
+    employmentType: teacher.employmentType,
+    appointmentDate: formatDate(teacher.appointmentDate),
+    joiningDate: formatDate(teacher.joiningDate),
+    experienceSummary: teacher.experienceSummary,
+    notes: teacher.notes,
+    status: teacher.status,
+    imageUrl: teacher.imageUrl,
+    createdAt: formatDate(teacher.createdAt),
+    updatedAt: formatDate(teacher.updatedAt),
+    extraData: JSON.stringify(getExtraData(teacher)),
+});
 
 export const TeachersList = ({ staffType = 'teacher' }) => {
     const navigate = useNavigate();
@@ -57,12 +131,46 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     const filteredTeachers = useMemo(
         () =>
             teachers.filter((teacher) =>
-                [teacher.fullName, teacher.subject, teacher.phone]
+                [teacher.fullName, teacher.subject, teacher.phone, teacher.cnic, teacher.email, teacher.jobTitle, teacher.department]
                     .filter(Boolean)
-                    .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())),
+                    .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
         [teachers, searchTerm],
     );
+
+    const exportRows = useMemo(() => filteredTeachers.map(mapTeacherForExport), [filteredTeachers]);
+
+    const exportColumns = useMemo(() => [
+        { header: 'Teacher / Staff ID', accessor: 'id' },
+        { header: 'Staff Type', accessor: 'staffType' },
+        { header: 'Full Name', accessor: 'fullName' },
+        { header: 'Email', accessor: 'email' },
+        { header: 'Phone', accessor: 'phone' },
+        { header: 'CNIC', accessor: 'cnic' },
+        { header: config.subjectLabel, accessor: 'subject' },
+        { header: 'Qualification', accessor: 'qualification' },
+        { header: 'Education Institute', accessor: 'educationInstitute' },
+        { header: 'Education Year', accessor: 'educationYear' },
+        { header: 'Specialization', accessor: 'specialization' },
+        { header: 'Address', accessor: 'address' },
+        { header: 'Basic Salary', accessor: 'basicSalary' },
+        { header: 'Bank Name', accessor: 'bankName' },
+        { header: 'Account Title', accessor: 'accountTitle' },
+        { header: 'Account Number', accessor: 'accountNumber' },
+        { header: 'IBAN', accessor: 'iban' },
+        { header: 'Job Title', accessor: 'jobTitle' },
+        { header: 'Department', accessor: 'department' },
+        { header: 'Employment Type', accessor: 'employmentType' },
+        { header: 'Appointment Date', accessor: 'appointmentDate' },
+        { header: 'Joining Date', accessor: 'joiningDate' },
+        { header: 'Experience Summary', accessor: 'experienceSummary' },
+        { header: 'Notes', accessor: 'notes' },
+        { header: 'Status', accessor: 'status' },
+        { header: 'Image URL', accessor: 'imageUrl' },
+        { header: 'Created At', accessor: 'createdAt' },
+        { header: 'Updated At', accessor: 'updatedAt' },
+        { header: 'Extra Data', accessor: 'extraData' },
+    ], [config.subjectLabel]);
 
     const handleDeleteTeacher = async () => {
         if (!deleteTarget) return;
@@ -96,6 +204,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                        <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="w-full sm:w-auto" />
                         <div className="relative w-full sm:w-64 group">
                             <Search size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                             <InputField
@@ -123,7 +232,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00d094] to-[#008a63] flex items-center justify-center text-white font-bold text-lg shadow-md">
-                                        {teacher.fullName.charAt(0)}
+                                        {(teacher.fullName || '?').charAt(0)}
                                     </div>
                                     <div>
                                         <h3 className="text-[16px] font-black text-[var(--color-text-main)]">{teacher.fullName}</h3>
@@ -188,7 +297,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                     <td className="p-5">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00d094] to-[#008a63] flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                                {teacher.fullName.charAt(0)}
+                                                {(teacher.fullName || '?').charAt(0)}
                                             </div>
                                             <span className="text-[14px] font-black text-[var(--color-text-main)]">{teacher.fullName}</span>
                                         </div>

@@ -4,7 +4,6 @@ import {
     ArrowDownCircle,
     ArrowUpCircle,
     BadgeDollarSign,
-    Download,
     FileSpreadsheet,
     FileText,
     Landmark,
@@ -62,7 +61,87 @@ const text = {
 
 const formatAmount = (value) => Number(value || 0).toLocaleString('en-US');
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ur-PK') : '---');
+const formatDateInput = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toISOString().split('T')[0];
+};
 const getFieldValue = (valueOrEvent) => valueOrEvent?.target?.value ?? valueOrEvent ?? '';
+const escapeCsvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+const getExtraData = (entry) => {
+    const knownKeys = new Set([
+        'id',
+        'date',
+        'transactionDate',
+        'type',
+        'category',
+        'description',
+        'amount',
+        'financeHead',
+        'financeHeadId',
+        'paymentMode',
+        'paymentStatus',
+        'slipNo',
+        'details',
+        'status',
+        'createdAt',
+        'updatedAt',
+    ]);
+
+    return Object.fromEntries(Object.entries(entry || {}).filter(([key]) => !knownKeys.has(key)));
+};
+
+const mapRecordForExport = (entry) => ({
+    rowType: 'Transaction',
+    summaryMetric: '',
+    summaryValue: '',
+    id: entry.id,
+    date: formatDateInput(entry.date || entry.transactionDate),
+    type: entry.type === 'amdan' || entry.type === 'income' ? text.income : text.expense,
+    rawType: entry.type,
+    category: entry.category || entry.financeHead?.name,
+    description: entry.description || entry.details,
+    amount: entry.amount,
+    signedAmount: entry.type === 'amdan' || entry.type === 'income' ? Number(entry.amount || 0) : -Number(entry.amount || 0),
+    financeHeadId: entry.financeHeadId || entry.financeHead?.id,
+    financeHeadName: entry.financeHead?.name,
+    financeHeadType: entry.financeHead?.type,
+    paymentMode: entry.paymentMode,
+    paymentStatus: entry.paymentStatus,
+    slipNo: entry.slipNo,
+    details: entry.details,
+    status: entry.status,
+    createdAt: formatDateInput(entry.createdAt),
+    updatedAt: formatDateInput(entry.updatedAt),
+    extraData: JSON.stringify(getExtraData(entry)),
+});
+
+const exportColumns = [
+    { header: 'Row Type', accessor: 'rowType' },
+    { header: 'Summary Metric', accessor: 'summaryMetric' },
+    { header: 'Summary Value', accessor: 'summaryValue' },
+    { header: 'Record ID', accessor: 'id' },
+    { header: 'Date', accessor: 'date' },
+    { header: 'Type', accessor: 'type' },
+    { header: 'Raw Type', accessor: 'rawType' },
+    { header: 'Category / Head', accessor: 'category' },
+    { header: 'Description', accessor: 'description' },
+    { header: 'Amount', accessor: 'amount' },
+    { header: 'Signed Amount', accessor: 'signedAmount' },
+    { header: 'Finance Head ID', accessor: 'financeHeadId' },
+    { header: 'Finance Head Name', accessor: 'financeHeadName' },
+    { header: 'Finance Head Type', accessor: 'financeHeadType' },
+    { header: 'Payment Mode', accessor: 'paymentMode' },
+    { header: 'Payment Status', accessor: 'paymentStatus' },
+    { header: 'Slip No', accessor: 'slipNo' },
+    { header: 'Details', accessor: 'details' },
+    { header: 'Status', accessor: 'status' },
+    { header: 'Created At', accessor: 'createdAt' },
+    { header: 'Updated At', accessor: 'updatedAt' },
+    { header: 'Extra Data', accessor: 'extraData' },
+];
 
 export const FinancialStatement = () => {
     const [filters, setFilters] = useState({
@@ -89,23 +168,25 @@ export const FinancialStatement = () => {
     });
     const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [loading, setLoading] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState('');
+
+    const effectiveFilters = useMemo(() => ({
+        ...filters,
+        fromDate: tableFilters.date || filters.fromDate,
+        toDate: tableFilters.date || filters.toDate,
+        type: tableFilters.type !== 'all' ? tableFilters.type : filters.type,
+    }), [filters, tableFilters.date, tableFilters.type]);
 
     const queryString = useMemo(() => {
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('limit', String(PAGE_SIZE));
-        const effectiveFilters = {
-            ...filters,
-            fromDate: tableFilters.date || filters.fromDate,
-            toDate: tableFilters.date || filters.toDate,
-            type: tableFilters.type !== 'all' ? tableFilters.type : filters.type,
-        };
         Object.entries(effectiveFilters).forEach(([key, value]) => {
             if (value && value !== 'all') params.set(key, value);
         });
         return params.toString();
-    }, [filters, page, tableFilters.date, tableFilters.type]);
+    }, [effectiveFilters, page]);
 
     const visibleRecords = useMemo(() => {
         const category = tableFilters.category.trim().toLowerCase();
@@ -113,8 +194,10 @@ export const FinancialStatement = () => {
         const amount = tableFilters.amount.trim();
 
         return records.filter((entry) => {
-            const categoryOk = !category || String(entry.category || '').toLowerCase().includes(category);
-            const descriptionOk = !description || String(entry.description || '').toLowerCase().includes(description);
+            const categoryValue = entry.category || entry.financeHead?.name || '';
+            const descriptionValue = entry.description || entry.details || '';
+            const categoryOk = !category || String(categoryValue).toLowerCase().includes(category);
+            const descriptionOk = !description || String(descriptionValue).toLowerCase().includes(description);
             const amountOk = !amount || String(entry.amount || '').includes(amount);
             return categoryOk && descriptionOk && amountOk;
         });
@@ -167,27 +250,81 @@ export const FinancialStatement = () => {
         setPage(1);
     };
 
-    const exportCsv = () => {
-        const header = [text.date, text.type, text.category, text.description, text.amount];
-        const rows = visibleRecords.map((entry) => [
-            formatDate(entry.date),
-            entry.type === 'amdan' ? text.income : text.expense,
-            entry.category,
-            entry.description,
-            entry.amount,
-        ]);
-        const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `maliyati-goshwara-${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
+    const buildExportQuery = ({ pageNumber, limit }) => {
+        const params = new URLSearchParams();
+        params.set('page', String(pageNumber));
+        params.set('limit', String(limit));
+        Object.entries(effectiveFilters).forEach(([key, value]) => {
+            if (value && value !== 'all') params.set(key, value);
+        });
+        return params.toString();
     };
 
-    const exportPdf = () => {
-        window.print();
+    const applyTableFilters = (items) => {
+        const category = tableFilters.category.trim().toLowerCase();
+        const description = tableFilters.description.trim().toLowerCase();
+        const amount = tableFilters.amount.trim();
+
+        return items.filter((entry) => {
+            const categoryValue = entry.category || entry.financeHead?.name || '';
+            const descriptionValue = entry.description || entry.details || '';
+            const categoryOk = !category || String(categoryValue).toLowerCase().includes(category);
+            const descriptionOk = !description || String(descriptionValue).toLowerCase().includes(description);
+            const amountOk = !amount || String(entry.amount || '').includes(amount);
+            return categoryOk && descriptionOk && amountOk;
+        });
+    };
+
+    const exportCsv = async () => {
+        setIsExporting(true);
+        setError('');
+
+        try {
+            const exportLimit = Number(meta.perPage || PAGE_SIZE);
+            const firstPage = await getFinancialRecords(buildExportQuery({ pageNumber: 1, limit: exportLimit }));
+            const totalPages = Number(firstPage.meta?.totalPages || 1);
+            const pageResults = totalPages > 1
+                ? await Promise.all(
+                    Array.from({ length: totalPages - 1 }, (_, index) =>
+                        getFinancialRecords(buildExportQuery({ pageNumber: index + 2, limit: exportLimit })),
+                    ),
+                )
+                : [];
+            const exportSummary = firstPage.summary || summary;
+            const allItems = [firstPage, ...pageResults].flatMap((data) => data.items || []);
+            const allRecords = applyTableFilters(allItems);
+            const summaryRows = [
+                { rowType: 'Summary', summaryMetric: text.totalIncome, summaryValue: exportSummary.totalAmdan },
+                { rowType: 'Summary', summaryMetric: text.totalExpense, summaryValue: exportSummary.totalKharch },
+                { rowType: 'Summary', summaryMetric: text.balance, summaryValue: exportSummary.remainingBalance },
+                { rowType: 'Summary', summaryMetric: text.totalTransactions, summaryValue: exportSummary.totalTransactions },
+            ];
+            const rows = [...summaryRows, ...allRecords.map(mapRecordForExport)];
+            const csv = [
+                exportColumns.map((column) => escapeCsvCell(column.header)).join(','),
+                ...rows.map((row) =>
+                    exportColumns
+                        .map((column) => {
+                            const value = typeof column.accessor === 'function' ? column.accessor(row) : row[column.accessor];
+                            return escapeCsvCell(value);
+                        })
+                        .join(','),
+                ),
+            ].join('\r\n');
+            const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `maliyati-goshwara-complete-${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        } catch (exportError) {
+            setError(exportError?.message || text.loadError);
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
@@ -198,16 +335,15 @@ export const FinancialStatement = () => {
                         <h1 className="text-2xl md:text-3xl font-black text-[var(--color-primary)]">{text.title}</h1>
                         <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">{text.subtitle}</p>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <button type="button" onClick={exportCsv} className="flex items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-black transition-all hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]">
-                            <FileSpreadsheet size={18} />
-                            {text.exportExcel}
-                        </button>
-                        <button type="button" onClick={exportPdf} className="flex items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-3 text-sm font-black text-[#0b1120] transition-all hover:bg-[var(--color-primary-hover)]">
-                            <Download size={18} />
-                            {text.exportPdf}
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={exportCsv}
+                        disabled={isExporting}
+                        className="flex items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-black transition-all hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <FileSpreadsheet size={18} />
+                        {isExporting ? 'Export ho raha hai...' : text.exportExcel}
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

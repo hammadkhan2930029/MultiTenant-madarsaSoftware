@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Book, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSubject, deleteSubject, getSubjects, updateSubject } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const emptyForm = {
     name: '',
@@ -123,6 +124,12 @@ export const CreateSubjects = () => {
         );
     }, [subjects, search]);
 
+    const exportColumns = useMemo(() => [
+        { header: 'Subject', accessor: 'name' },
+        { header: 'Detail', accessor: 'detail' },
+        { header: 'Status', accessor: (subject) => subject.status || '---' },
+    ], []);
+
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col items-center justify-between gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm backdrop-blur-sm md:flex-row">
@@ -132,6 +139,7 @@ export const CreateSubjects = () => {
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                    <ExportExcelButton rows={filteredSubjects} columns={exportColumns} fileName="subjects-list" className="w-full md:w-auto" />
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input

@@ -4,6 +4,7 @@ import { SelectField, InputField } from '../../../Components/HR/FormElements';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { assignStudentClass, getStudents, removeStudentClassAssignment } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -154,6 +155,13 @@ export const StudentAddToClass = () => {
         }
     };
 
+    const exportColumns = useMemo(() => [
+        { header: 'Student Name', accessor: 'name' },
+        { header: 'Session', accessor: 'session' },
+        { header: 'Class', accessor: 'className' },
+        { header: 'Section', accessor: 'section' },
+    ], []);
+
     return (
         <div className="p-4 md:p-6 space-y-6 bg-[var(--color-bg)] min-h-screen font-urdu text-right" dir="rtl">
             <div className="bg-[var(--color-surface)] p-6 rounded-[2rem] border border-[var(--color-border)] shadow-sm">
@@ -234,8 +242,9 @@ export const StudentAddToClass = () => {
             </div>
 
             <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] overflow-hidden shadow-sm">
-                <div className="p-5 border-b border-[var(--color-border)] bg-[var(--color-input)]/30">
+                <div className="flex flex-col gap-3 p-5 border-b border-[var(--color-border)] bg-[var(--color-input)]/30 md:flex-row md:items-center md:justify-between">
                     <h3 className="text-sm font-black text-[var(--color-text)]">حالیہ داخلے</h3>
+                    <ExportExcelButton rows={assignedList} columns={exportColumns} fileName="student-class-assignments" className="w-full md:w-auto" />
                 </div>
 
                 <div className="overflow-x-auto">

@@ -4,7 +4,7 @@ import {
     BookOpen, Wallet, Settings, LogOut, Search,
     Bell, MessageSquare, Menu, ChevronDown,
     ClipboardList, GraduationCap as ExamIcon, HeartHandshake,
-    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, BarChart3, Settings2, KeyRound
+    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, Settings2, KeyRound
 } from 'lucide-react';
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -285,24 +285,6 @@ export const SideBar = () => {
                         }
                     ]
                 },
-                {
-                    id: 'reports_finance',
-                    label: 'رپورٹس اور آڈٹ',
-                    icon: BarChart3,
-                    path: '/finance/reports',
-                    subSubMenu: [
-                        {
-                            id: 'financial-statements',
-                            label: 'مالیاتی گوشوارے',
-                            path: '/finance/reports/financial-statements'
-                        },
-                        {
-                            id: 'defaulters',
-                            label: 'بقایا جات',
-                            path: '/finance/reports/defaulters'
-                        }
-                    ]
-                }
             ]
         },
         //--------------------------------------------------------------------------------------
@@ -333,12 +315,6 @@ export const SideBar = () => {
             label: 'وظیفہ',
             icon: BadgeCent,
             path: '/scholarship'
-        },
-        {
-            id: 'reports',
-            label: 'رپورٹس',
-            icon: ClipboardList,
-            path: '/reports'
         },
         {
             id: 'books',

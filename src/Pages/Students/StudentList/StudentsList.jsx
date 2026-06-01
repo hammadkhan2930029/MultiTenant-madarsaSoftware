@@ -3,28 +3,127 @@ import { Eye, GraduationCap, Phone, Search, UserPlus, Users } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+
+const emptyValue = '---';
+
+const formatDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toISOString().split('T')[0];
+};
+
+const getActiveAssignment = (student) =>
+    student.assignments?.find((assignment) => assignment.status === 'active') || student.assignments?.[0] || null;
+
+const getPrimaryParent = (student) =>
+    student.parents?.find((parentItem) => parentItem.isPrimary)?.parent || student.parents?.[0]?.parent || null;
+
+const formatParentSummary = (parentItem) => {
+    const parent = parentItem.parent || {};
+    return [
+        parent.fullName,
+        parentItem.relationship,
+        parent.familyNumber,
+        parent.phone,
+        parent.cnic,
+        parent.email,
+        parent.occupation,
+        parent.address,
+    ]
+        .filter(Boolean)
+        .join(' | ');
+};
+
+const formatAssignmentSummary = (assignment) =>
+    [
+        assignment.session?.name,
+        assignment.class?.name,
+        assignment.section?.name,
+        assignment.status,
+        formatDate(assignment.createdAt),
+    ]
+        .filter(Boolean)
+        .join(' | ');
 
 const mapStudentsForList = (items) =>
     items.map((student) => {
-        const activeAssignment = student.assignments?.find((assignment) => assignment.status === 'active');
+        const activeAssignment = getActiveAssignment(student);
+        const primaryParent = getPrimaryParent(student);
+
         return {
             id: student.id,
             idNo: student.admissionNumber,
             name: student.fullName,
             fatherName: student.fatherName,
-            className: activeAssignment?.class?.name || '---',
-            section: activeAssignment?.section?.name || '---',
+            className: activeAssignment?.class?.name || emptyValue,
+            section: activeAssignment?.section?.name || emptyValue,
             familyNo:
-                student.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.familyNumber ||
-                student.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.phone ||
+                primaryParent?.familyNumber ||
+                primaryParent?.phone ||
                 student.phone ||
-                '---',
+                emptyValue,
         };
     });
+
+const mapStudentForExport = (student) => {
+    const activeAssignment = getActiveAssignment(student);
+    const primaryParent = getPrimaryParent(student);
+
+    return {
+        id: student.id,
+        admissionNumber: student.admissionNumber,
+        admissionDate: formatDate(student.admissionDate),
+        admissionFee: student.admissionFee,
+        fullName: student.fullName,
+        fatherName: student.fatherName,
+        gender: student.gender,
+        caste: student.caste,
+        cnic: student.cnic,
+        dob: formatDate(student.dob),
+        bForm: student.bForm,
+        phone: student.phone,
+        whatsapp: student.whatsapp,
+        email: student.email,
+        address: student.address,
+        currentAddress: student.currentAddress,
+        permanentAddress: student.permanentAddress,
+        district: student.district,
+        prevMadrassa: student.prevMadrassa,
+        prevSchool: student.prevSchool,
+        secularEdu: student.secularEdu,
+        religiousEdu: student.religiousEdu,
+        requiredClass: student.requiredClass,
+        requiredJamaat: student.requiredJamaat,
+        teacherName: student.teacherName,
+        medicalCondition: student.medicalCondition,
+        monthlyFee: student.monthlyFee,
+        reside: student.reside,
+        status: student.status,
+        className: activeAssignment?.class?.name,
+        sectionName: activeAssignment?.section?.name,
+        sessionName: activeAssignment?.session?.name,
+        branchName: activeAssignment?.branch?.name,
+        primaryParentName: primaryParent?.fullName,
+        primaryParentFamilyNumber: primaryParent?.familyNumber,
+        primaryParentPhone: primaryParent?.phone,
+        primaryParentEmail: primaryParent?.email,
+        primaryParentCnic: primaryParent?.cnic,
+        primaryParentOccupation: primaryParent?.occupation,
+        primaryParentAddress: primaryParent?.address,
+        parents: (student.parents || []).map(formatParentSummary).join('\n'),
+        assignments: (student.assignments || []).map(formatAssignmentSummary).join('\n'),
+        imageUrl: student.imageUrl,
+        createdAt: formatDate(student.createdAt),
+        updatedAt: formatDate(student.updatedAt),
+    };
+};
 
 export const StudentList = () => {
     const navigate = useNavigate();
     const [students, setStudents] = useState([]);
+    const [studentRecords, setStudentRecords] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -39,7 +138,9 @@ export const StudentList = () => {
 
             try {
                 const result = await getStudents('page=1&limit=100');
-                setStudents(mapStudentsForList(result.items || []));
+                const items = result.items || [];
+                setStudentRecords(items);
+                setStudents(mapStudentsForList(items));
             } catch (loadError) {
                 setError(loadError.message || 'Students load nahi ho sake.');
             } finally {
@@ -55,10 +156,82 @@ export const StudentList = () => {
             students.filter((student) =>
                 [student.name, student.idNo, student.familyNo]
                     .filter(Boolean)
-                    .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())),
+                    .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
         [searchTerm, students],
     );
+
+    const exportRows = useMemo(() => {
+        const query = searchTerm.toLowerCase();
+
+        return studentRecords
+            .filter((student) => {
+                const activeAssignment = getActiveAssignment(student);
+                const primaryParent = getPrimaryParent(student);
+
+                return [
+                    student.fullName,
+                    student.admissionNumber,
+                    student.fatherName,
+                    student.phone,
+                    primaryParent?.familyNumber,
+                    primaryParent?.phone,
+                    activeAssignment?.class?.name,
+                    activeAssignment?.section?.name,
+                ]
+                    .filter(Boolean)
+                    .some((value) => String(value).toLowerCase().includes(query));
+            })
+            .map(mapStudentForExport);
+    }, [searchTerm, studentRecords]);
+
+    const exportColumns = useMemo(() => [
+        { header: 'Student ID', accessor: 'id' },
+        { header: 'Admission No', accessor: 'admissionNumber' },
+        { header: 'Admission Date', accessor: 'admissionDate' },
+        { header: 'Admission Fee', accessor: 'admissionFee' },
+        { header: 'Student Name', accessor: 'fullName' },
+        { header: 'Father Name', accessor: 'fatherName' },
+        { header: 'Gender', accessor: 'gender' },
+        { header: 'Caste', accessor: 'caste' },
+        { header: 'CNIC', accessor: 'cnic' },
+        { header: 'Date of Birth', accessor: 'dob' },
+        { header: 'B-Form', accessor: 'bForm' },
+        { header: 'Phone', accessor: 'phone' },
+        { header: 'WhatsApp', accessor: 'whatsapp' },
+        { header: 'Email', accessor: 'email' },
+        { header: 'Address', accessor: 'address' },
+        { header: 'Current Address', accessor: 'currentAddress' },
+        { header: 'Permanent Address', accessor: 'permanentAddress' },
+        { header: 'District', accessor: 'district' },
+        { header: 'Previous Madrassa', accessor: 'prevMadrassa' },
+        { header: 'Previous School', accessor: 'prevSchool' },
+        { header: 'Secular Education', accessor: 'secularEdu' },
+        { header: 'Religious Education', accessor: 'religiousEdu' },
+        { header: 'Required Class', accessor: 'requiredClass' },
+        { header: 'Required Jamaat', accessor: 'requiredJamaat' },
+        { header: 'Teacher Name', accessor: 'teacherName' },
+        { header: 'Medical Condition', accessor: 'medicalCondition' },
+        { header: 'Monthly Fee', accessor: 'monthlyFee' },
+        { header: 'Residence', accessor: 'reside' },
+        { header: 'Status', accessor: 'status' },
+        { header: 'Class', accessor: 'className' },
+        { header: 'Section', accessor: 'sectionName' },
+        { header: 'Session', accessor: 'sessionName' },
+        { header: 'Branch', accessor: 'branchName' },
+        { header: 'Primary Parent', accessor: 'primaryParentName' },
+        { header: 'Family Number', accessor: 'primaryParentFamilyNumber' },
+        { header: 'Parent Phone', accessor: 'primaryParentPhone' },
+        { header: 'Parent Email', accessor: 'primaryParentEmail' },
+        { header: 'Parent CNIC', accessor: 'primaryParentCnic' },
+        { header: 'Parent Occupation', accessor: 'primaryParentOccupation' },
+        { header: 'Parent Address', accessor: 'primaryParentAddress' },
+        { header: 'All Parents', accessor: 'parents' },
+        { header: 'All Class Assignments', accessor: 'assignments' },
+        { header: 'Image URL', accessor: 'imageUrl' },
+        { header: 'Created At', accessor: 'createdAt' },
+        { header: 'Updated At', accessor: 'updatedAt' },
+    ], []);
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
@@ -81,14 +254,17 @@ export const StudentList = () => {
                     </button>
                 </div>
 
-                <div className="relative group">
-                    <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" size={20} />
-                    <input
-                        type="text"
-                        placeholder="نام، آئی ڈی یا فون سے تلاش کریں..."
-                        className="w-full pr-14 pl-6 py-4 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]"
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                    <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="students-complete-list" className="w-full md:w-auto" />
+                    <div className="relative group flex-1">
+                        <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" size={20} />
+                        <input
+                            type="text"
+                            placeholder="نام، آئی ڈی یا فون سے تلاش کریں..."
+                            className="w-full pr-14 pl-6 py-4 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]"
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
 

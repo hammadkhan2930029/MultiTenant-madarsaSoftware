@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSection, deleteSection, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
 const emptyForm = {
     classId: '',
@@ -136,6 +137,12 @@ export const CreateSections = () => {
         return matchesClass && matchesSearch;
     });
 
+    const exportColumns = [
+        { header: 'Section', accessor: 'name' },
+        { header: 'Class', accessor: (section) => section.class?.name || '---' },
+        { header: 'Status', accessor: (section) => section.status || '---' },
+    ];
+
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -145,6 +152,7 @@ export const CreateSections = () => {
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                    <ExportExcelButton rows={filteredSections} columns={exportColumns} fileName="sections-list" className="w-full md:w-auto" />
                     <select
                         value={selectedClassFilter}
                         onChange={(e) => setSelectedClassFilter(e.target.value)}
