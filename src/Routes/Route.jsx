@@ -7,6 +7,7 @@ import { TeacherRoutes } from './TeacherRoutes';
 import { DepartmentRoutes } from './DepartmentRoutes';
 import { ProfileRoutes } from './ProfileRoutes';
 import { HRManagement } from '../Pages/HRManagement/HRManagement';
+import { TeachersList } from '../Pages/Teachers/TeacherList/TeachersList';
 import { SettingRoutes } from './SettingRoutes';
 import { FinanceRoutes } from './FinanceRoutes';
 import { HifzRoutes } from './HifzRoutes';
@@ -43,6 +44,7 @@ export const AppRoutes = () => {
         <Route path="branch-management/create-branch" element={<Navigate to="/dashboard" replace />} />
         <Route path="branch-management/:branchId" element={<Navigate to="/dashboard" replace />} />
         <Route path="HRManagement" element={<HRManagement />} />
+        <Route path="staff/list" element={<TeachersList staffType="staff" />} />
         <Route path="finance/*" element={<FinanceRoutes />} />
         <Route path="hifz/*" element={<HifzRoutes />} />
 

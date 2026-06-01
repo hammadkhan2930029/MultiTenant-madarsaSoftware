@@ -122,7 +122,7 @@ export const MonthlyJaizaEntry = () => {
                     getStudents('page=1&limit=100&status=active'),
                     getClasses('page=1&limit=100&status=active'),
                     getSections('page=1&limit=100&status=active'),
-                    getTeachers('page=1&limit=100&status=active'),
+                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
 
                 if (isMounted) {

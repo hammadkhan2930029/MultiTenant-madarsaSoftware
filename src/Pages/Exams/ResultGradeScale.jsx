@@ -122,7 +122,7 @@ export const ResultGradeScale = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-[var(--color-primary)] md:text-3xl">رزلٹ فیصد رینج</h1>
-                            <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">یہاں admin define کرے گا کہ کس فیصد سے کس فیصد تک کون سا درجہ دکھانا ہے۔</p>
+                            <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">یہاں منتظم طے کرے گا کہ کس فیصد سے کس فیصد تک کون سا درجہ دکھانا ہے۔</p>
                         </div>
                     </div>
                 </div>

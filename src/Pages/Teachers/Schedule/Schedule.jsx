@@ -92,7 +92,7 @@ export const TeachersScheduleManager = () => {
                     getSections('page=1&limit=100'),
                     getSessions('page=1&limit=100'),
                     getSubjects('page=1&limit=100'),
-                    getTeachers('page=1&limit=100&status=active'),
+                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
 
                 setClassOptions(activeOnly(classesResult.items));

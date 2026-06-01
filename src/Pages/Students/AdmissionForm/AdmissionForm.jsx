@@ -177,7 +177,7 @@ export const AdmissionForm = () => {
             } catch {
                 if (isMounted) {
                     setInitialFormValues({ ...INITIAL_VALUES, idNo: DEFAULT_ADMISSION_NUMBER });
-                    setSubmitError('Admission number auto generate nahi ho saka. Default series 0001 se start ki gayi hai.');
+                    setSubmitError('داخلہ نمبر خودکار طور پر نہیں بن سکا۔ پہلے سے طے شدہ سلسلہ 0001 سے شروع کر دیا گیا ہے۔');
                 }
             } finally {
                 if (isMounted) {
@@ -222,7 +222,7 @@ export const AdmissionForm = () => {
                 const [classesResponse, sectionsResponse, teachersResponse] = await Promise.all([
                     getClasses('page=1&limit=100'),
                     getSections('page=1&limit=100'),
-                    getTeachers('page=1&limit=100'),
+                    getTeachers('page=1&limit=100&staffType=teacher'),
                 ]);
 
                 setClassOptions((classesResponse?.items || []).filter((item) => item.status === 'active'));
@@ -429,7 +429,7 @@ export const AdmissionForm = () => {
                                             label="داخلہ نمبر"
                                             name="idNo"
                                             readOnly
-                                            placeholder={isAdmissionNumberLoading ? 'Generating...' : ''}
+                                            placeholder={isAdmissionNumberLoading ? 'بن رہا ہے...' : ''}
                                             className="cursor-not-allowed bg-slate-100 text-[#002a33]"
                                         />
                                         <FormikInputField label="داخلہ فیس" name="admissionFee" />

@@ -119,15 +119,31 @@ export const EmployeeDetails = () => {
 
                         <DetailSection id="job" title="تقرری تفصیلات" icon={Briefcase} isOpen={openSection === 'job'} onToggle={toggleSection}>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <InfoField label="عملہ کی قسم" value={teacher.staffType === 'staff' ? 'دیگر عملہ' : 'استاد'} />
                                 <InfoField label="مضمون" value={teacher.subject} />
                                 <InfoField label="تعلیمی قابلیت" value={teacher.qualification} />
+                                <InfoField label="تعلیمی ادارہ" value={teacher.educationInstitute} />
+                                <InfoField label="تعلیمی سال" value={teacher.educationYear} />
+                                <InfoField label="تخصص / مہارت" value={teacher.specialization} />
+                                <InfoField label="عہدہ" value={teacher.jobTitle} />
+                                <InfoField label="شعبہ" value={teacher.department} />
+                                <InfoField label="ملازمت کی نوعیت" value={teacher.employmentType} />
+                                <InfoField label="تاریخ تقرری" value={teacher.appointmentDate} />
+                                <InfoField label="تاریخ شمولیت" value={teacher.joiningDate} />
                                 <InfoField label="حالت" value={statusLabel(teacher.status)} />
+                                <div className="md:col-span-3">
+                                    <InfoField label="سابقہ تجربہ" value={teacher.experienceSummary} />
+                                </div>
                             </div>
                         </DetailSection>
 
-                        <DetailSection id="salary" title="تنخواہ" icon={Wallet} isOpen={openSection === 'salary'} onToggle={toggleSection}>
+                        <DetailSection id="salary" title="تنخواہ / اکاؤنٹ" icon={Wallet} isOpen={openSection === 'salary'} onToggle={toggleSection}>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <InfoField label="بنیادی تنخواہ" value={`روپے ${teacher.basicSalary}`} dir="rtl" />
+                                <InfoField label="بینک کا نام" value={teacher.bankName} />
+                                <InfoField label="اکاؤنٹ ٹائٹل" value={teacher.accountTitle} />
+                                <InfoField label="اکاؤنٹ نمبر" value={teacher.accountNumber} dir="ltr" />
+                                <InfoField label="IBAN" value={teacher.iban} dir="ltr" />
                             </div>
                         </DetailSection>
 
@@ -135,6 +151,9 @@ export const EmployeeDetails = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <InfoField label="درج کرنے کی تاریخ" value={teacher.createdAt ? new Date(teacher.createdAt).toLocaleString('ur-PK') : '---'} />
                                 <InfoField label="آخری تبدیلی" value={teacher.updatedAt ? new Date(teacher.updatedAt).toLocaleString('ur-PK') : '---'} />
+                                <div className="md:col-span-2">
+                                    <InfoField label="نوٹس" value={teacher.notes} />
+                                </div>
                             </div>
                         </DetailSection>
                     </div>

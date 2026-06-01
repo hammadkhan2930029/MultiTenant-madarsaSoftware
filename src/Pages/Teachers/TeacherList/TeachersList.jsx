@@ -1,12 +1,38 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Edit2, Eye, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNavigate } from 'react-router-dom';
 import { deleteTeacher, getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
-export const TeachersList = () => {
+const listConfig = {
+    teacher: {
+        title: 'اساتذہ کی فہرست',
+        totalLabel: 'کل اساتذہ',
+        searchPlaceholder: 'نام، مضمون یا فون تلاش کریں...',
+        subjectLabel: 'مضمون',
+        loadError: 'اساتذہ لوڈ نہیں ہو سکے۔',
+        deleteSuccess: 'استاد کامیابی سے حذف کر دیا گیا۔',
+        deleteError: 'استاد حذف نہیں ہو سکا۔',
+        deleteTitle: 'استاد حذف کرنے کی تصدیق',
+        addPath: '/HRManagement?staffType=teacher',
+    },
+    staff: {
+        title: 'دیگر عملہ کی فہرست',
+        totalLabel: 'کل عملہ',
+        searchPlaceholder: 'نام، ذمہ داری یا فون تلاش کریں...',
+        subjectLabel: 'ذمہ داری',
+        loadError: 'دیگر عملہ لوڈ نہیں ہو سکا۔',
+        deleteSuccess: 'عملہ کامیابی سے حذف کر دیا گیا۔',
+        deleteError: 'عملہ حذف نہیں ہو سکا۔',
+        deleteTitle: 'عملہ حذف کرنے کی تصدیق',
+        addPath: '/HRManagement?staffType=staff',
+    },
+};
+
+export const TeachersList = ({ staffType = 'teacher' }) => {
     const navigate = useNavigate();
+    const config = listConfig[staffType] || listConfig.teacher;
     const [searchTerm, setSearchTerm] = useState('');
     const [teachers, setTeachers] = useState([]);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -15,18 +41,18 @@ export const TeachersList = () => {
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
 
-    const loadTeachers = async () => {
+    const loadTeachers = useCallback(async () => {
         try {
-            const result = await getTeachers('page=1&limit=100');
+            const result = await getTeachers(`page=1&limit=100&staffType=${staffType}`);
             setTeachers(result.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'اساتذہ لوڈ نہیں ہو سکے۔');
+            setError(loadError.message || config.loadError);
         }
-    };
+    }, [config.loadError, staffType]);
 
     useEffect(() => {
         loadTeachers();
-    }, []);
+    }, [loadTeachers]);
 
     const filteredTeachers = useMemo(
         () =>
@@ -46,11 +72,11 @@ export const TeachersList = () => {
         setIsDeleting(true);
         try {
             await deleteTeacher(deleteTarget.id);
-            setSuccess('استاد کامیابی سے حذف کر دیا گیا۔');
+            setSuccess(config.deleteSuccess);
             setDeleteTarget(null);
             await loadTeachers();
         } catch (deleteError) {
-            setError(deleteError.message || 'استاد حذف نہیں ہو سکا۔');
+            setError(deleteError.message || config.deleteError);
         } finally {
             setIsDeleting(false);
         }
@@ -61,10 +87,10 @@ export const TeachersList = () => {
             <div className="bg-[var(--color-surface)] rounded-[2.5rem] mt-6 md:mt-0 lg:mt-0 p-6 md:p-8 shadow-xl border border-white/5">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div className="space-y-2">
-                        <h2 className="text-2xl md:text-3xl font-black text-[var(--text-color)]">اساتذہ کی فہرست</h2>
+                        <h2 className="text-2xl md:text-3xl font-black text-[var(--text-color)]">{config.title}</h2>
                         <div className="flex items-center gap-3 mt-5">
                             <span className="bg-[var(--color-bg)]/20 text-[var(--color-primary)] text-[10px] font-bold px-3 py-1 rounded-full border border-[#00d094]/30 uppercase tracking-wider">
-                                کل تعداد: {filteredTeachers.length}
+                                {config.totalLabel}: {filteredTeachers.length}
                             </span>
                         </div>
                     </div>
@@ -74,13 +100,13 @@ export const TeachersList = () => {
                             <Search size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                             <InputField
                                 type="text"
-                                placeholder="نام، مضمون یا فون تلاش کریں..."
+                                placeholder={config.searchPlaceholder}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <button
-                            onClick={() => navigate('/HRManagement')}
+                            onClick={() => navigate(config.addPath)}
                             className="flex items-center justify-center gap-2 bg-[#00d094] text-[#002a33] px-6 py-3 rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 w-full sm:w-auto"
                         >
                             <UserPlus size={18} />
@@ -113,8 +139,8 @@ export const TeachersList = () => {
 
                             <div className="grid grid-cols-2 gap-2 text-[13px] border-t border-[var(--color-border)] pt-4">
                                 <div>
-                                    <p className="text-[var(--color-text-muted)] text-[11px] mb-1">مضمون</p>
-                                    <p className="font-medium">{teacher.subject}</p>
+                                    <p className="text-[var(--color-text-muted)] text-[11px] mb-1">{config.subjectLabel}</p>
+                                    <p className="font-medium">{teacher.subject || '---'}</p>
                                 </div>
                                 <div>
                                     <p className="text-[var(--color-text-muted)] text-[11px] mb-1">رابطہ</p>
@@ -148,8 +174,8 @@ export const TeachersList = () => {
                         <thead>
                             <tr className="border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">نمبر</th>
-                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">استاد کا نام</th>
-                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">مضمون</th>
+                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">نام</th>
+                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">{config.subjectLabel}</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">رابطہ</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">حالت</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">کارروائی</th>
@@ -167,7 +193,7 @@ export const TeachersList = () => {
                                             <span className="text-[14px] font-black text-[var(--color-text-main)]">{teacher.fullName}</span>
                                         </div>
                                     </td>
-                                    <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{teacher.subject}</td>
+                                    <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{teacher.subject || '---'}</td>
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]" dir="ltr">{teacher.phone || '---'}</td>
                                     <td className="p-5 text-center">
                                         <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${teacher.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
@@ -193,7 +219,7 @@ export const TeachersList = () => {
                     <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
                         <div className="flex items-start justify-between gap-4">
                             <div className="text-right">
-                                <h3 className="text-xl font-black text-[var(--color-text)]">استاد حذف کرنے کی تصدیق</h3>
+                                <h3 className="text-xl font-black text-[var(--color-text)]">{config.deleteTitle}</h3>
                                 <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
                                     کیا آپ واقعی <span className="text-rose-500">{deleteTarget.fullName}</span> کو حذف کرنا چاہتے ہیں؟
                                     یہ عمل واپس نہیں ہو گا۔

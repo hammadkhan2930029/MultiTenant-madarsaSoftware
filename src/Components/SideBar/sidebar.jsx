@@ -208,6 +208,7 @@ export const SideBar = () => {
             label: 'اساتذہ',
             icon: UserCheck,
             subMenu: [
+                { id: 't_add', label: 'نیا استاد شامل کریں', path: '/HRManagement' },
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
                 { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
@@ -309,7 +310,11 @@ export const SideBar = () => {
             id: 'HRManagement',
             label: 'عملہ',
             icon: UserPlus,
-            path: '/HRManagement'
+            path: '/HRManagement',
+            subMenu: [
+                { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
+                { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' }
+            ]
         },
         {
             id: 'exams',
@@ -319,7 +324,8 @@ export const SideBar = () => {
             subMenu: [
                 { id: 'exam_schedule_list', label: 'امتحانی شیڈول فہرست', path: '/exams/schedule-list' },
                 { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' },
-                { id: 'exam_result', label: 'امتحانی رزلٹ', path: '/exams/result' }
+                { id: 'exam_result', label: 'امتحانی رزلٹ', path: '/exams/result' },
+                { id: 'exam_result_list', label: 'رزلٹ فہرست', path: '/exams/result-list' }
             ]
         },
         {
@@ -514,7 +520,7 @@ export const SideBar = () => {
                                     style={{ color: 'var(--color-primary)' }}
                                     className="text-[10px] font-black uppercase tracking-widest mb-3 px-3"
                                 >
-                                    Quick Actions
+                                    فوری اختیارات
                                 </p>
 
                                 <div className="space-y-1">

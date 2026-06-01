@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Award, BookOpen, Calculator, Plus, Save, Search, Trash2, UserRound } from 'lucide-react';
 import { getSubjects } from '../../Constant/AcademicSetupApi';
 import { getStudents } from '../../Constant/StudentsApi';
-import { getStudentExamResult, saveExamResult } from '../../Constant/ExamResultsApi';
+import { getStudentExamResult, saveExamResult, updateExamResult } from '../../Constant/ExamResultsApi';
 import { defaultResultGrades, getResultGradeLabel } from '../../Constant/ResultGrades';
 import { getResultGrades } from '../../Constant/ResultGradesApi';
+import { useNotifier } from '../../Components/Notifications/useNotifier';
 
 const emptySubjectRow = () => ({
     id: crypto.randomUUID(),
@@ -18,6 +20,18 @@ const activeOnly = (items) => (items || []).filter((item) => !item.status || ite
 const toNumber = (value) => Number(value || 0);
 const getActiveAssignment = (student) => student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || null;
 const getPercentage = (obtained, total) => (total > 0 ? (obtained / total) * 100 : 0);
+const getResultErrorMessage = (message, fallback) => {
+    const text = String(message || '').toLowerCase();
+    if (text.includes('duplicate subjects')) return 'ایک ہی مضمون دوبارہ شامل نہیں کیا جا سکتا۔';
+    if (text.includes('student is not assigned')) return 'طالب علم اس کلاس/سیشن میں شامل نہیں ہے۔';
+    if (text.includes('active student')) return 'فعال طالب علم نہیں ملا۔';
+    if (text.includes('active session')) return 'فعال سیشن نہیں ملا۔';
+    if (text.includes('active class')) return 'فعال کلاس نہیں ملی۔';
+    if (text.includes('active section')) return 'فعال سیکشن نہیں ملا۔';
+    if (text.includes('active subjects')) return 'منتخب کردہ مضمون فعال نہیں ملا۔';
+    if (text.includes('validation')) return 'درج کردہ معلومات درست نہیں ہیں۔';
+    return message || fallback;
+};
 
 const buildResultQuery = (assignment) => {
     const params = new URLSearchParams();
@@ -36,6 +50,9 @@ const rowsFromResult = (result) => (result?.subjects || []).map((subjectRow) => 
 }));
 
 export const ExamResult = () => {
+    const notify = useNotifier();
+    const location = useLocation();
+    const editResult = location.state?.editResult || null;
     const [students, setStudents] = useState([]);
     const [subjects, setSubjects] = useState([]);
     const [search, setSearch] = useState('');
@@ -67,7 +84,7 @@ export const ExamResult = () => {
                     setGradeScale(defaultResultGrades);
                 }
             } catch (loadError) {
-                setError(loadError.message || 'رزلٹ کا بنیادی ڈیٹا لوڈ نہیں ہو سکا۔');
+                setError(getResultErrorMessage(loadError.message, 'رزلٹ کا بنیادی ڈیٹا لوڈ نہیں ہو سکا۔'));
             } finally {
                 setIsLoading(false);
             }
@@ -75,6 +92,25 @@ export const ExamResult = () => {
 
         loadData();
     }, []);
+
+    useEffect(() => {
+        if (!editResult) return;
+
+        setSelectedStudent({
+            ...(editResult.student || {}),
+            assignments: [{
+                id: `result-${editResult.id}`,
+                status: 'active',
+                class: editResult.class,
+                section: editResult.section,
+                session: editResult.session,
+            }],
+        });
+        setSearch(`${editResult.student?.fullName || ''} ${editResult.student?.admissionNumber ? `(${editResult.student.admissionNumber})` : ''}`.trim());
+        setSavedResultId(editResult.id);
+        setRows(rowsFromResult(editResult).length ? rowsFromResult(editResult) : [emptySubjectRow()]);
+        setSuccess('رزلٹ ترمیم کے لیے لوڈ ہو گیا۔');
+    }, [editResult]);
 
     const filteredStudents = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -110,7 +146,7 @@ export const ExamResult = () => {
 
         const studentAssignment = getActiveAssignment(student);
         if (!studentAssignment?.session?.id || !studentAssignment?.class?.id) {
-            setError('اس طالب علم کی active class/session assignment موجود نہیں۔');
+            setError('اس طالب علم کی فعال کلاس/سیشن تفویض موجود نہیں۔');
             return;
         }
 
@@ -120,10 +156,10 @@ export const ExamResult = () => {
             if (result) {
                 setSavedResultId(result.id);
                 setRows(rowsFromResult(result).length ? rowsFromResult(result) : [emptySubjectRow()]);
-                setSuccess('Saved result load ہو گیا۔');
+                setSuccess('محفوظ شدہ رزلٹ لوڈ ہو گیا۔');
             }
         } catch (loadError) {
-            setError(loadError.message || 'Saved result load نہیں ہو سکا۔');
+            setError(getResultErrorMessage(loadError.message, 'محفوظ شدہ رزلٹ لوڈ نہیں ہو سکا۔'));
         } finally {
             setIsResultLoading(false);
         }
@@ -155,7 +191,7 @@ export const ExamResult = () => {
         }
 
         if (!assignment?.session?.id || !assignment?.class?.id) {
-            setError('اس طالب علم کی class/session assignment مکمل نہیں۔');
+            setError('اس طالب علم کی کلاس/سیشن تفویض مکمل نہیں۔');
             return;
         }
 
@@ -165,8 +201,13 @@ export const ExamResult = () => {
             obtainedMarks: Number(row.obtainedMarks),
         }));
 
-        if (validRows.some((row) => !row.subjectId || !row.totalMarks || Number.isNaN(row.obtainedMarks))) {
-            setError('ہر row میں مضمون، کل نمبر اور حاصل کردہ نمبر درج کریں۔');
+        if (rows.some((row) => !row.subjectId || !row.totalMarks || row.obtainedMarks === '')) {
+            setError('ہر قطار میں مضمون، کل نمبر اور حاصل کردہ نمبر درج کریں۔');
+            return;
+        }
+
+        if (new Set(validRows.map((row) => row.subjectId)).size !== validRows.length) {
+            setError('ایک ہی مضمون دوبارہ شامل نہیں کیا جا سکتا۔');
             return;
         }
 
@@ -177,18 +218,25 @@ export const ExamResult = () => {
 
         setIsSaving(true);
         try {
-            const savedResult = await saveExamResult({
+            const payload = {
                 studentId: selectedStudent.id,
                 sessionId: assignment.session.id,
                 classId: assignment.class.id,
                 sectionId: assignment.section?.id || null,
                 subjects: validRows,
-            });
-            setSavedResultId(savedResult.id);
-            setRows(rowsFromResult(savedResult).length ? rowsFromResult(savedResult) : rows);
-            setSuccess(savedResultId ? 'رزلٹ اپڈیٹ ہو گیا۔' : 'رزلٹ محفوظ ہو گیا۔');
+            };
+            await (savedResultId
+                ? updateExamResult(savedResultId, payload)
+                : saveExamResult(payload));
+            const successMessage = savedResultId ? 'رزلٹ اپڈیٹ ہو گیا۔' : 'رزلٹ محفوظ ہو گیا۔';
+            setSelectedStudent(null);
+            setSearch('');
+            setSavedResultId(null);
+            setRows([emptySubjectRow()]);
+            setSuccess(successMessage);
+            notify.success(successMessage, savedResultId ? 'رزلٹ اپڈیٹ' : 'رزلٹ محفوظ');
         } catch (saveError) {
-            setError(saveError.message || 'رزلٹ محفوظ نہیں ہو سکا۔');
+            setError(getResultErrorMessage(saveError.message, 'رزلٹ محفوظ نہیں ہو سکا۔'));
         } finally {
             setIsSaving(false);
         }
@@ -204,7 +252,7 @@ export const ExamResult = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-[var(--color-primary)] md:text-3xl">امتحانی رزلٹ</h1>
-                            <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">طالب علم منتخب کریں، مضامین اور نمبر درج کریں، فیصد اور گریڈ خود calculate ہو جائیں گے۔</p>
+                            <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">طالب علم منتخب کریں، مضامین اور نمبر درج کریں، فیصد اور گریڈ خود حساب ہو جائیں گے۔</p>
                         </div>
                     </div>
                 </div>
@@ -291,21 +339,20 @@ export const ExamResult = () => {
                             </div>
 
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[760px] text-right text-sm">
+                                <table className="w-full min-w-[680px] text-right text-sm">
                                     <thead className="bg-[var(--color-bg)] text-xs font-black text-[var(--color-text-muted)]">
                                         <tr>
                                             <th className="p-4">مضمون</th>
                                             <th className="p-4">کل نمبر</th>
                                             <th className="p-4">حاصل کردہ نمبر</th>
                                             <th className="p-4">فیصد</th>
-                                            <th className="p-4">گریڈ</th>
                                             <th className="p-4 text-center">ایکشن</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)]">
                                         {isResultLoading ? (
                                             <tr>
-                                                <td colSpan="6" className="p-8 text-center font-black text-[var(--color-text-muted)]">Saved result load ہو رہا ہے...</td>
+                                                <td colSpan="5" className="p-8 text-center font-black text-[var(--color-text-muted)]">محفوظ شدہ رزلٹ لوڈ ہو رہا ہے...</td>
                                             </tr>
                                         ) : rows.map((row) => {
                                             const rowTotal = toNumber(row.totalMarks);
@@ -326,7 +373,6 @@ export const ExamResult = () => {
                                                         <input type="number" min="0" max={row.totalMarks || undefined} value={row.obtainedMarks} onChange={(event) => updateRow(row.id, 'obtainedMarks', event.target.value)} className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
                                                     </td>
                                                     <td className="p-3 font-sans font-black">{rowPercentage ? `${rowPercentage.toFixed(2)}%` : '---'}</td>
-                                                    <td className="p-3 font-black text-[var(--color-primary)]">{getResultGradeLabel(rowPercentage, gradeScale)}</td>
                                                     <td className="p-3 text-center">
                                                         <button type="button" onClick={() => deleteRow(row.id)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
                                                             <Trash2 size={16} />
