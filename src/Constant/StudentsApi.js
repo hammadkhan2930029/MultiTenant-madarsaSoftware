@@ -25,6 +25,11 @@ export const getStudentById = async (id) => {
   return result?.data || null;
 };
 
+export const getNextAdmissionNumber = async () => {
+  const result = await apiRequest('/students/next-admission-number', withToken({ method: 'GET' }));
+  return result?.data?.admissionNumber;
+};
+
 export const createStudent = async (payload) => {
   const formData = new FormData();
 

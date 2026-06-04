@@ -16,7 +16,7 @@ import {
 import { Field, Form, Formik } from 'formik';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
-import { createStudent, getParents, getStudents } from '../../../Constant/StudentsApi';
+import { createStudent, getNextAdmissionNumber, getParents } from '../../../Constant/StudentsApi';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -88,8 +88,7 @@ const buildNextAdmissionNumber = (students = []) => {
 };
 
 const fetchNextAdmissionNumber = async () => {
-    const result = await getStudents('page=1&limit=1000');
-    return buildNextAdmissionNumber(result?.items || []);
+    return (await getNextAdmissionNumber()) || DEFAULT_ADMISSION_NUMBER;
 };
 
 const formatDate = (dateStr) => {

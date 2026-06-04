@@ -14,6 +14,7 @@ import { HifzRoutes } from './HifzRoutes';
 import { ExamRoutes } from './ExamRoutes';
 import { AdminLogin } from '../Pages/Auth/AdminLogin';
 import { isAdminAuthenticated } from '../Constant/AdminAuth';
+import LandingPage from '../Pages/Landing/LandingPage';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -27,7 +28,7 @@ const ProtectedAppShell = () => {
   const location = useLocation();
 
   if (!isAdminAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/admin" replace state={{ from: location }} />;
   }
 
   return <SideBar />;
@@ -36,10 +37,12 @@ const ProtectedAppShell = () => {
 export const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/login" element={<LoginRoute />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/contact" element={<LandingPage />} />
+      <Route path="/admin" element={<LoginRoute />} />
+      <Route path="/login" element={<Navigate to="/admin" replace />} />
 
       <Route path="/" element={<ProtectedAppShell />}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="branch-management/create-branch" element={<Navigate to="/dashboard" replace />} />
         <Route path="branch-management/:branchId" element={<Navigate to="/dashboard" replace />} />
@@ -56,7 +59,7 @@ export const AppRoutes = () => {
         {ExamRoutes}
       </Route>
 
-      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/'} replace />} />
     </Routes>
   );
 };

@@ -13,6 +13,14 @@ export default {
         'theme': 'var(--shadow-main)',
         'card-theme': 'var(--shadow-card)',
       },
+      fontSize: {
+        'theme-title': ['clamp(1.8rem, 1.1rem + 2.2vw, 3.2rem)', { lineHeight: '1.9' }],
+        'theme-kicker': ['1.5rem', { lineHeight: '1.7' }],
+        'theme-body': ['1.75rem', { lineHeight: '2.25rem' }],
+        'theme-nav': ['1.5rem', { lineHeight: '1.6' }],
+        'theme-button': ['1.5rem', { lineHeight: '1.7' }],
+        'theme-detail': ['0.875rem', { lineHeight: '1.75rem' }],
+      },
       colors: {
         // Ab aap ye names pure project mein use kar sakte hain
         themeBg: "var(--color-bg)",
