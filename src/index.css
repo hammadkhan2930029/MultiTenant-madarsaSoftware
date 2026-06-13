@@ -66,15 +66,120 @@ nav {
 html,
 body,
 #root {
-  font-family: 'Noto Nastaliq Urdu', serif !important;
+  font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
   line-height: 1.8 !important;
   background-color: var(--color-bg) !important;
   color: var(--color-text-main) !important;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+body,
+#root {
+  font-size: 24px;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.text-xs {
+  font-size: 14px !important;
+}
+
+.text-sm {
+  font-size: 18px !important;
+}
+
+.text-base {
+  font-size: 24px !important;
+}
+
+.text-lg {
+  font-size: 28px !important;
+}
+
+[class*="text-[9px]"],
+[class*="text-[10px]"],
+[class*="text-[11px]"],
+[class*="text-[12px]"] {
+  font-size: 14px !important;
+}
+
+[class*="text-[13px]"],
+[class*="text-[14px]"] {
+  font-size: 16px !important;
+}
+
+[class*="text-[15px]"],
+[class*="text-[16px]"] {
+  font-size: 18px !important;
+}
+
+#root label {
+  font-size: 24px !important;
+}
+
+#root table th {
+  font-size: 22px !important;
+  line-height: 1.8 !important;
+}
+
+/* Horizontal student ID card typography is scoped to preserve its print size. */
+#root .student-id-card-horizontal .id-card-header-title {
+  font-size: 17px !important;
+  line-height: 1.55 !important;
+}
+
+#root .student-id-card-horizontal .id-card-header-subtitle {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+#root .student-id-card-horizontal .id-card-badge {
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+}
+
+#root .student-id-card-horizontal .id-card-line {
+  min-height: 23px;
+  padding-block: 1px;
+}
+
+#root .student-id-card-horizontal .id-card-label {
+  font-size: 12px !important;
+  line-height: 1.65 !important;
+}
+
+#root .student-id-card-horizontal .id-card-value {
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
+
+#root .student-id-card-horizontal .id-card-footer-text {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+}
+
+.admission-form-control,
+.admission-date-field > button {
+  box-sizing: border-box !important;
+  height: 88px !important;
+  min-height: 88px !important;
+  padding: 8px 16px !important;
+  font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+  line-height: 1.8 !important;
+}
+
+.admission-form select.admission-form-control {
+  padding-left: 48px !important;
+}
+
 .font-urdu {
-  font-family: 'Noto Nastaliq Urdu', serif !important;
+  font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
 }
 
 .finance-heads-page input,

@@ -916,7 +916,7 @@ const FeeReceipt = ({ voucher, madrassaProfile }) => {
                         page-break-inside: avoid !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
-                        font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Noto Naskh Arabic", serif !important;
+                        font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif !important;
                     }
 
                     .fee-print-area::before {
@@ -1198,7 +1198,7 @@ const FeeReceiptPrint = ({ voucher, madrassaProfile }) => {
                         height: 100% !important;
                         padding: 13mm 14mm 12mm !important;
                         box-sizing: border-box !important;
-                        font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Noto Naskh Arabic", serif !important;
+                        font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif !important;
                     }
 
                     .fee-print-watermark {

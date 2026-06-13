@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Eye, GraduationCap, Phone, Search, UserPlus, Users } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Edit2, Eye, GraduationCap, Phone, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getStudents } from '../../../Constant/StudentsApi';
+import { deleteStudent, getStudents } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
@@ -126,8 +126,11 @@ export const StudentList = () => {
     const [studentRecords, setStudentRecords] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
-    useNotificationBridge({ error });
+    const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -137,12 +140,12 @@ export const StudentList = () => {
             setError('');
 
             try {
-                const result = await getStudents('page=1&limit=100');
+                const result = await getStudents('page=1&limit=100&status=active');
                 const items = result.items || [];
                 setStudentRecords(items);
                 setStudents(mapStudentsForList(items));
             } catch (loadError) {
-                setError(loadError.message || 'Students load nahi ho sake.');
+                setError(loadError.message || 'طلبہ کی فہرست لوڈ نہیں ہو سکی۔');
             } finally {
                 setIsLoading(false);
             }
@@ -150,6 +153,26 @@ export const StudentList = () => {
 
         loadStudents();
     }, []);
+
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+
+        setIsDeleting(true);
+        setError('');
+        setSuccess('');
+
+        try {
+            await deleteStudent(deleteTarget.id);
+            setStudents((current) => current.filter((student) => student.id !== deleteTarget.id));
+            setStudentRecords((current) => current.filter((student) => student.id !== deleteTarget.id));
+            setSuccess('طالب علم کا ریکارڈ حذف کر دیا گیا۔');
+            setDeleteTarget(null);
+        } catch (deleteError) {
+            setError(deleteError.message || 'طالب علم کا ریکارڈ حذف نہیں ہو سکا۔');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const filteredStudents = useMemo(
         () =>
@@ -299,15 +322,17 @@ export const StudentList = () => {
                                 <Phone size={15} className="text-[var(--color-text-muted)]" />
                                 <span className="text-xs font-black text-[var(--color-text-muted)]">{student.familyNo}</span>
                             </div>
-                            <button
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    navigate(`/students/profile/${student.id}`);
-                                }}
-                                className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl hover:bg-emerald-500 hover:text-white transition-all"
-                            >
-                                <Eye size={18} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <ActionIcon label="دیکھیں" onClick={() => navigate(`/students/profile/${student.id}`)}>
+                                    <Eye size={18} />
+                                </ActionIcon>
+                                <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
+                                    <Edit2 size={18} />
+                                </ActionIcon>
+                                <ActionIcon label="حذف کریں" tone="danger" onClick={() => setDeleteTarget(student)}>
+                                    <Trash2 size={18} />
+                                </ActionIcon>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -345,15 +370,17 @@ export const StudentList = () => {
                                     </span>
                                 </td>
                                 <td className="p-6 text-center">
-                                    <button
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            navigate(`/students/profile/${student.id}`);
-                                        }}
-                                        className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-lg shadow-emerald-500/5"
-                                    >
-                                        <Eye size={16} />
-                                    </button>
+                                    <div className="flex justify-center gap-2">
+                                        <ActionIcon label="دیکھیں" onClick={() => navigate(`/students/profile/${student.id}`)}>
+                                            <Eye size={16} />
+                                        </ActionIcon>
+                                        <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
+                                            <Edit2 size={16} />
+                                        </ActionIcon>
+                                        <ActionIcon label="حذف کریں" tone="danger" onClick={() => setDeleteTarget(student)}>
+                                            <Trash2 size={16} />
+                                        </ActionIcon>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -370,6 +397,61 @@ export const StudentList = () => {
                     <p className="text-[var(--color-text-muted)] font-bold mt-2">براہ کرم تلاش کے الفاظ چیک کریں</p>
                 </div>
             ) : null}
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm" onClick={() => !isDeleting && setDeleteTarget(null)}>
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-500">
+                                    <AlertTriangle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-[var(--color-text)]">طالب علم حذف کریں؟</h3>
+                                    <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                        کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کا ریکارڈ حذف کرنا چاہتے ہیں؟
+                                    </p>
+                                </div>
+                            </div>
+                            <button type="button" onClick={() => !isDeleting && setDeleteTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-7 flex justify-end gap-3">
+                            <button type="button" onClick={() => setDeleteTarget(null)} disabled={isDeleting} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:opacity-60">
+                                منسوخ کریں
+                            </button>
+                            <button type="button" onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-70">
+                                {isDeleting ? 'حذف ہو رہا ہے...' : 'حذف کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
+    );
+};
+
+const ActionIcon = ({ children, label, tone = 'success', onClick }) => {
+    const toneClass = tone === 'danger'
+        ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white'
+        : tone === 'blue'
+            ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white'
+            : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white';
+
+    return (
+        <button
+            type="button"
+            title={label}
+            aria-label={label}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+            }}
+            className={`p-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/5 ${toneClass}`}
+        >
+            {children}
+        </button>
     );
 };

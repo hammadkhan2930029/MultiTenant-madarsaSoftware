@@ -151,7 +151,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       color: #475569;
       font-size: 10.5pt;
       line-height: 1.8;
-      font-family: "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     .title {
       margin: 6mm auto 5mm;
@@ -184,7 +184,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       display: block;
       color: #64748b;
       font-size: 8.5pt;
-      font-family: "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
       margin-bottom: 1mm;
     }
     .box span {
@@ -208,7 +208,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
     .summary .box span {
       color: #0f766e;
       font-size: 16pt;
-      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     table {
       width: 100%;
@@ -216,7 +216,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       overflow: hidden;
       border: 1px solid #0f766e;
       border-radius: 2mm;
-      font-family: "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     th {
       background: #0f766e;
@@ -235,7 +235,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
     .num {
       direction: ltr;
       text-align: center;
-      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
       font-weight: 800;
     }
     .empty {
@@ -252,7 +252,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       background: #f8fafc;
       font-size: 11pt;
       line-height: 1.9;
-      font-family: "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     .remarks strong { color: #0f766e; margin-left: 2mm; }
     .signatures {
@@ -274,7 +274,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       justify-content: space-between;
       color: #64748b;
       font-size: 8.5pt;
-      font-family: "Noto Naskh Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
       border-top: 1px solid #e2e8f0;
       padding-top: 2mm;
     }

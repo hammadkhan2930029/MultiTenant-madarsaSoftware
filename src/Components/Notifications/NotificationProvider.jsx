@@ -4,6 +4,12 @@ import { toUrduNotificationText } from '../../Constant/notificationUtils';
 import { NotificationContext } from './useNotifier';
 
 const SlideDown = (props) => <Slide {...props} direction="down" />;
+const severityTitles = {
+  success: 'کامیابی',
+  error: 'خرابی',
+  warning: 'تنبیہ',
+  info: 'اطلاع',
+};
 
 export const NotificationProvider = ({ children }) => {
   const [notification, setNotification] = useState(null);
@@ -17,12 +23,16 @@ export const NotificationProvider = ({ children }) => {
     if (!payload) return;
 
     const nextPayload = typeof payload === 'string' ? { message: payload } : payload;
+    const severity = nextPayload.severity || nextPayload.type || 'info';
 
     setNotification({
       open: true,
-      severity: nextPayload.severity || nextPayload.type || 'info',
-      title: toUrduNotificationText(nextPayload.title),
-      message: toUrduNotificationText(nextPayload.message, 'کارروائی مکمل ہو گئی۔'),
+      severity,
+      title: toUrduNotificationText(nextPayload.title, severityTitles[severity]),
+      message: toUrduNotificationText(
+        nextPayload.message,
+        severity === 'success' ? 'کارروائی کامیابی سے مکمل ہو گئی۔' : 'کارروائی مکمل نہیں ہو سکی۔',
+      ),
       autoHideDuration: nextPayload.autoHideDuration || 3200,
     });
   }, []);
@@ -46,7 +56,7 @@ export const NotificationProvider = ({ children }) => {
     window.alert = (message) => {
       showNotification({
         severity: 'info',
-        title: 'اطلاع',
+        title: severityTitles.info,
         message,
       });
     };
@@ -78,7 +88,16 @@ export const NotificationProvider = ({ children }) => {
             alignItems: 'flex-start',
             borderRadius: '18px',
             boxShadow: '0 24px 60px rgba(0,0,0,0.26)',
-            fontFamily: 'inherit',
+            fontFamily: '"Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif',
+            fontSize: '1.05rem',
+            lineHeight: 2,
+            '&, & *': {
+              fontFamily: '"Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", "Noto Naskh Arabic", serif !important',
+            },
+            '& .MuiAlertTitle-root': {
+              fontSize: '1.15rem',
+              fontWeight: 800,
+            },
             '& .MuiAlert-message': {
               width: '100%',
               textAlign: 'right',

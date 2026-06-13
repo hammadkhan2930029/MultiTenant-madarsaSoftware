@@ -358,9 +358,9 @@ export const TeachersScheduleManager = () => {
                                         <div className={`p-2 rounded-xl ${isExpanded ? 'bg-white/20' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}>
                                             <Layers size={20} />
                                         </div>
-                                        <div>
-                                            <h3 className="text-lg md:text-xl font-black">استاد: {groupName}</h3>
-                                            <p className={`text-[12px] font-bold ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
+                                        <div className="space-y-2 py-1">
+                                            <h3 className="text-xl md:text-2xl font-black leading-[1.8]">استاد: {groupName}</h3>
+                                            <p className={`block text-lg font-bold leading-[1.8] ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
                                                 کل پیریڈز: {groupedSchedules[groupName].length}
                                             </p>
                                         </div>
@@ -444,22 +444,22 @@ const ScheduleRow = ({ item, removingScheduleId, onDelete }) => (
     <div className="bg-[var(--color-bg)]/50 p-4 rounded-[2.5rem] md:rounded-[2.8rem] border border-[var(--color-border)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group relative shadow-md hover:shadow-xl transition-all duration-300 scale-100 hover:scale-101 m-2 px-5">
         <div className="flex gap-4 md:gap-5 items-center w-full sm:w-auto">
             <div className="text-center min-w-[70px] md:min-w-[90px] border-l-2 border-[var(--color-primary)]/20 pl-4">
-                <p className="text-sm md:text-sm font-black text-[var(--color-primary)]">{item.className || '---'}</p>
-                <p className="text-[11px] text-[var(--color-primary)] mt-1 font-bold">{item.section || '---'}</p>
+                <p className="text-lg font-black text-[var(--color-primary)]">{item.className || '---'}</p>
+                <p className="mt-1 text-base font-bold text-[var(--color-primary)]">{item.section || '---'}</p>
             </div>
 
             <div className="space-y-1.5 flex-1">
-                <p className="text-[13px] font-black opacity-70">{item.session}</p>
+                <p className="text-lg font-black opacity-70">{item.session}</p>
                 <div className="flex flex-wrap gap-1.5 md:gap-2">
                     {item.subjects.map((subject) => (
-                        <span key={subject} className="text-[11px] md:text-[14px] font-bold bg-[var(--color-bg)] px-2 py-0.5 rounded-md border border-[var(--color-border)]/5">
+                        <span key={subject} className="text-base font-bold bg-[var(--color-bg)] px-2 py-0.5 rounded-md border border-[var(--color-border)]/5">
                             {subject}
                         </span>
                     ))}
                 </div>
                 <div className="flex flex-wrap gap-2">
                     {item.days.map((day) => (
-                        <span key={day} className="text-[11px] md:text-[14px] font-bold text-[var(--color-primary)] opacity-70">
+                        <span key={day} className="text-base font-bold text-[var(--color-primary)] opacity-80">
                             {day}
                         </span>
                     ))}

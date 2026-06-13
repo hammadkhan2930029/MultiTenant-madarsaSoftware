@@ -8,7 +8,6 @@ import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton'
 
 const INITIAL_FORM = {
     fullName: '',
-    familyNumber: '',
     phone: '',
     occupation: '',
     address: '',
@@ -84,7 +83,7 @@ export const ParentsList = () => {
             const result = await getParents('page=1&limit=100');
             setParents(result.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'Parents load nahi ho sake.');
+            setError(loadError.message || 'والدین کی فہرست لوڈ نہیں ہو سکی۔');
         }
     };
 
@@ -113,16 +112,16 @@ export const ParentsList = () => {
         try {
             if (editingParentId) {
                 await updateParent(editingParentId, formValues);
-                setSuccess('Parent update ho gaye.');
+                setSuccess('والدین کی معلومات اپڈیٹ ہو گئیں۔');
             } else {
                 await createParent(formValues);
-                setSuccess('Parent create ho gaye.');
+                setSuccess('والدین کی معلومات شامل ہو گئیں۔');
             }
 
             resetForm();
             await loadParents();
         } catch (saveError) {
-            setError(saveError.message || 'Parent save nahi ho sake.');
+            setError(saveError.message || 'والدین کی معلومات محفوظ نہیں ہو سکیں۔');
         }
     };
 
@@ -130,7 +129,6 @@ export const ParentsList = () => {
         setEditingParentId(parent.id);
         setFormValues({
             fullName: parent.fullName || '',
-            familyNumber: parent.familyNumber || '',
             phone: parent.phone || '',
             occupation: parent.occupation || '',
             address: parent.address || '',
@@ -146,10 +144,10 @@ export const ParentsList = () => {
             if (editingParentId === parentId) {
                 resetForm();
             }
-            setSuccess('Parent inactive kar diye gaye.');
+            setSuccess('والدین کا ریکارڈ غیر فعال کر دیا گیا۔');
             await loadParents();
         } catch (deleteError) {
-            setError(deleteError.message || 'Parent inactive nahi ho sake.');
+            setError(deleteError.message || 'والدین کا ریکارڈ غیر فعال نہیں ہو سکا۔');
         }
     };
 
@@ -171,7 +169,7 @@ export const ParentsList = () => {
         { header: 'Family Number', accessor: 'familyNumber' },
         { header: 'Phone', accessor: 'phone' },
         { header: 'Email', accessor: 'email' },
-        { header: 'CNIC', accessor: 'cnic' },
+        { header: 'ID', accessor: 'cnic' },
         { header: 'Occupation', accessor: 'occupation' },
         { header: 'Address', accessor: 'address' },
         { header: 'Status', accessor: 'status' },
@@ -218,12 +216,23 @@ export const ParentsList = () => {
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <InputField label="والدین کا نام" value={formValues.fullName} onChange={(event) => handleChange('fullName', event.target.value)} placeholder="نام درج کریں" />
-                        <InputField label="فیملی نمبر" value={formValues.familyNumber} onChange={(event) => handleChange('familyNumber', event.target.value)} placeholder="خودکار جنریٹ یا دستی" />
                         <InputField label="فون نمبر" value={formValues.phone} onChange={(event) => handleChange('phone', event.target.value)} placeholder="0300-0000000" />
-                        <InputField label="پیشہ" value={formValues.occupation} onChange={(event) => handleChange('occupation', event.target.value)} placeholder="پیشہ درج کریں" />
-                        <InputField label="پتہ" value={formValues.address} onChange={(event) => handleChange('address', event.target.value)} placeholder="گھر کا پتہ درج کریں" />
+                        <InputField
+                            label="پیشہ"
+                            value={formValues.occupation}
+                            onChange={(event) => handleChange('occupation', event.target.value)}
+                            placeholder="پیشہ درج کریں"
+                            className="min-h-[68px] py-3 leading-[2.5]"
+                        />
+                        <InputField
+                            label="پتہ"
+                            value={formValues.address}
+                            onChange={(event) => handleChange('address', event.target.value)}
+                            placeholder="گھر کا پتہ درج کریں"
+                            className="min-h-[68px] py-3 leading-[2.5]"
+                        />
                         <InputField label="ای میل" value={formValues.email} onChange={(event) => handleChange('email', event.target.value)} placeholder="example@email.com" />
-                        <InputField label="CNIC" value={formValues.cnic} onChange={(event) => handleChange('cnic', event.target.value)} placeholder="42101-1234567-1" />
+                        <InputField label="ID" value={formValues.cnic} onChange={(event) => handleChange('cnic', event.target.value)} placeholder="42101-1234567-1" />
                     </div>
                 </form>
             </div>

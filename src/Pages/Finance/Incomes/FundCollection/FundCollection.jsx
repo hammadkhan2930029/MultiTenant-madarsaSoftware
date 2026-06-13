@@ -159,7 +159,7 @@ export const FundCollection = () => {
                         padding: 0; 
                         -webkit-print-color-adjust: exact; 
                     }
-                    .urdu-font { font-family: 'Noto Nastaliq Urdu', serif; }
+                    .urdu-font { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; }
                     
                     /* A5 dimensions constraint */
                  .a5-page {

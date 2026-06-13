@@ -76,6 +76,11 @@ export const updateStudent = async (id, payload) => {
   return result?.data;
 };
 
+export const deleteStudent = async (id) => {
+  const result = await apiRequest(`/students/${id}`, withToken({ method: 'DELETE' }));
+  return result?.data;
+};
+
 export const assignStudentClass = async (id, payload) => {
   const result = await apiRequest(`/students/${id}/assign-class`, withJson('POST', payload));
   return result?.data;

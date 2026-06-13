@@ -14,13 +14,14 @@ import {
     X,
 } from 'lucide-react';
 import { Field, Form, Formik } from 'formik';
+import { useSearchParams } from 'react-router-dom';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
-import { createStudent, getNextAdmissionNumber, getParents } from '../../../Constant/StudentsApi';
+import { createStudent, getNextAdmissionNumber, getParents, getStudentById, updateStudent } from '../../../Constant/StudentsApi';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
-import { fetchMadrassaProfile, getAdminSession } from '../../../Constant/AdminAuth';
+import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 
 const INITIAL_VALUES = {
     idNo: '',
@@ -40,7 +41,7 @@ const INITIAL_VALUES = {
     mobile: '',
     whatsapp: '',
     guardianName: '',
-    relation: '',
+    relation: 'father',
     guardianMobile: '',
     guardianEmail: '',
     guardianCnic: '',
@@ -131,7 +132,59 @@ const buildPrintValues = (formValues, savedStudent) => ({
     reside: savedStudent?.reside || formValues.reside,
 });
 
+const toDateInputValue = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).split('T')[0];
+    return date.toISOString().split('T')[0];
+};
+
+const mapStudentToFormValues = (student) => {
+    const primaryParentLink = student?.parents?.find((item) => item.isPrimary) || student?.parents?.[0] || {};
+    const primaryParent = primaryParentLink.parent || {};
+    const guardianLink = student?.parents?.find((item) => !item.isPrimary) || {};
+    const guardian = guardianLink.parent || primaryParent;
+
+    return {
+        ...INITIAL_VALUES,
+        idNo: student?.admissionNumber || '',
+        admissionDate: toDateInputValue(student?.admissionDate),
+        admissionFee: student?.admissionFee ?? '',
+        fullName: student?.fullName || '',
+        fatherName: student?.fatherName || primaryParent.fullName || '',
+        gender: student?.gender || 'male',
+        caste: student?.caste || '',
+        cnic: student?.cnic || primaryParent.cnic || '',
+        dob: toDateInputValue(student?.dob),
+        bForm: student?.bForm || '',
+        currentAddress: student?.currentAddress || student?.address || primaryParent.address || '',
+        permanentAddress: student?.permanentAddress || '',
+        district: student?.district || '',
+        fatherOccupation: primaryParent.occupation || '',
+        mobile: student?.phone || primaryParent.phone || '',
+        whatsapp: student?.whatsapp || '',
+        guardianName: guardian.fullName || '',
+        relation: guardianLink.relationship || primaryParentLink.relationship || 'father',
+        guardianMobile: guardian.phone || '',
+        guardianEmail: guardian.email || '',
+        guardianCnic: guardian.cnic || '',
+        prevMadrassa: student?.prevMadrassa || '',
+        prevSchool: student?.prevSchool || '',
+        secularEdu: student?.secularEdu || '',
+        religiousEdu: student?.religiousEdu || '',
+        requiredClass: student?.requiredClass || '',
+        requiredJamaat: student?.requiredJamaat || '',
+        teacherName: student?.teacherName || '',
+        medicalCondition: student?.medicalCondition || '',
+        monthlyFee: student?.monthlyFee ?? '',
+        reside: student?.reside || INITIAL_VALUES.reside,
+        studentImage: student?.imageUrl || '',
+    };
+};
+
 export const AdmissionForm = () => {
+    const [searchParams] = useSearchParams();
+    const editingStudentId = searchParams.get('studentId');
     const [initialFormValues, setInitialFormValues] = useState(INITIAL_VALUES);
     const [isAdmissionNumberLoading, setIsAdmissionNumberLoading] = useState(true);
     const [imagePreview, setImagePreview] = useState(null);
@@ -166,6 +219,11 @@ export const AdmissionForm = () => {
         let isMounted = true;
 
         const loadAdmissionNumber = async () => {
+            if (editingStudentId) {
+                setIsAdmissionNumberLoading(false);
+                return;
+            }
+
             setIsAdmissionNumberLoading(true);
 
             try {
@@ -190,7 +248,45 @@ export const AdmissionForm = () => {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [editingStudentId]);
+
+    useEffect(() => {
+        if (!editingStudentId) return undefined;
+
+        let isMounted = true;
+
+        const loadStudentForEdit = async () => {
+            setIsAdmissionNumberLoading(true);
+            setSubmitError('');
+
+            try {
+                const student = await getStudentById(editingStudentId);
+                if (!isMounted) return;
+
+                const nextValues = mapStudentToFormValues(student);
+                const primaryParentLink = student?.parents?.find((item) => item.isPrimary) || student?.parents?.[0];
+
+                setInitialFormValues(nextValues);
+                setSelectedParentId(primaryParentLink?.parent?.id || null);
+                setParentSearch(primaryParentLink?.parent?.fullName || '');
+                setImagePreview(student?.imageUrl ? getApiAssetUrl(student.imageUrl) : null);
+            } catch (error) {
+                if (isMounted) {
+                    setSubmitError(error.message || 'طالب علم کی معلومات لوڈ نہیں ہو سکیں۔');
+                }
+            } finally {
+                if (isMounted) {
+                    setIsAdmissionNumberLoading(false);
+                }
+            }
+        };
+
+        loadStudentForEdit();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [editingStudentId]);
 
     useEffect(() => {
         let isMounted = true;
@@ -308,12 +404,15 @@ export const AdmissionForm = () => {
             const admissionNumber = values.idNo?.trim() || initialFormValues.idNo || DEFAULT_ADMISSION_NUMBER;
             const submittedValues = { ...values, idNo: admissionNumber };
             const parents = [];
+            const guardianRelation = submittedValues.relation?.trim() || 'father';
+            const guardianIsFather =
+                submittedValues.guardianName?.trim() === submittedValues.fatherName?.trim();
 
             if (submittedValues.fatherName) {
                 parents.push({
                     ...(selectedParentId ? { parentId: selectedParentId } : {}),
                     fullName: submittedValues.fatherName,
-                    relationship: 'father',
+                    relationship: guardianIsFather ? guardianRelation : 'father',
                     isPrimary: true,
                     phone: submittedValues.mobile,
                     cnic: submittedValues.cnic,
@@ -322,11 +421,11 @@ export const AdmissionForm = () => {
                 });
             }
 
-            if (submittedValues.guardianName && submittedValues.guardianName !== submittedValues.fatherName) {
+            if (submittedValues.guardianName && !guardianIsFather) {
                 parents.push({
                     ...(selectedParentId ? { parentId: selectedParentId } : {}),
                     fullName: submittedValues.guardianName,
-                    relationship: submittedValues.relation || 'guardian',
+                    relationship: guardianRelation,
                     isPrimary: false,
                     phone: submittedValues.guardianMobile,
                     email: submittedValues.guardianEmail,
@@ -335,7 +434,7 @@ export const AdmissionForm = () => {
                 });
             }
 
-            const student = await createStudent({
+            const payload = {
                 admissionNumber,
                 admissionDate: submittedValues.admissionDate,
                 admissionFee: submittedValues.admissionFee,
@@ -364,17 +463,23 @@ export const AdmissionForm = () => {
                 reside: submittedValues.reside,
                 parents,
                 image: imageFile,
-            });
+            };
+
+            const student = editingStudentId
+                ? await updateStudent(editingStudentId, payload)
+                : await createStudent(payload);
 
             let nextAdmissionNumber = buildNextAdmissionNumber([{ admissionNumber: student?.admissionNumber || admissionNumber }]);
 
-            try {
-                nextAdmissionNumber = await fetchNextAdmissionNumber();
-            } catch {
-                // Keep the local next number when refreshing the list is unavailable.
+            if (!editingStudentId) {
+                try {
+                    nextAdmissionNumber = await fetchNextAdmissionNumber();
+                } catch {
+                    // Keep the local next number when refreshing the list is unavailable.
+                }
             }
 
-            const nextInitialValues = { ...INITIAL_VALUES, idNo: nextAdmissionNumber };
+            const nextInitialValues = editingStudentId ? mapStudentToFormValues(student) : { ...INITIAL_VALUES, idNo: nextAdmissionNumber };
 
             setSavedProfile(student);
             setSavedPrintValues(buildPrintValues(submittedValues, student));
@@ -382,13 +487,16 @@ export const AdmissionForm = () => {
             setShowModal(true);
             setInitialFormValues(nextInitialValues);
             resetForm({ values: nextInitialValues });
-            setImagePreview(null);
             setImageFile(null);
-            setParentSearch('');
-            setParentResults([]);
-            setSelectedParentId(null);
-            setSelectedRequiredClassId(null);
-            setIsParentDropdownOpen(false);
+
+            if (!editingStudentId) {
+                setImagePreview(null);
+                setParentSearch('');
+                setParentResults([]);
+                setSelectedParentId(null);
+                setSelectedRequiredClassId(null);
+                setIsParentDropdownOpen(false);
+            }
         } catch (error) {
             setSubmitError(error.message || 'طالب علم کا ریکارڈ محفوظ نہیں ہو سکا۔');
         } finally {
@@ -415,7 +523,7 @@ export const AdmissionForm = () => {
 
                     return (
                     <>
-                        <Form className="print:hidden space-y-8 pb-10">
+                        <Form className="admission-form print:hidden space-y-8 pb-10">
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
                                 <div className="bg-[#002a33] p-8 text-center text-white">
                                     <h2 className="text-3xl font-bold">طالب علم رجسٹریشن فارم</h2>
@@ -427,9 +535,8 @@ export const AdmissionForm = () => {
                                         <FormikInputField
                                             label="داخلہ نمبر"
                                             name="idNo"
-                                            readOnly
                                             placeholder={isAdmissionNumberLoading ? 'بن رہا ہے...' : ''}
-                                            className="cursor-not-allowed bg-slate-100 text-[#002a33]"
+                                            className="text-[var(--color-text-main)]"
                                         />
                                         <FormikInputField label="داخلہ فیس" name="admissionFee" />
                                         <FormikInputField label="تاریخ داخلہ" name="admissionDate" type="date" />
@@ -457,8 +564,8 @@ export const AdmissionForm = () => {
                                     </div>
 
                                     <div className="flex flex-row justify-end items-start">
-                                        <div className="flex flex-row items-start bg-white border-2 border-slate-100 rounded-2xl shadow-sm hover:border-emerald-400 transition-all overflow-visible group w-full max-w-xl">
-                                            <div className="group bg-[#00d094] hover:bg-[#00b37e] text-[#002a33] p-7 transition-colors rounded-r-2xl">
+                                        <div className="flex h-16 w-full max-w-xl flex-row items-stretch overflow-visible rounded-2xl border-2 border-slate-100 bg-white shadow-sm transition-all hover:border-emerald-400">
+                                            <div className="flex w-20 shrink-0 items-center justify-center rounded-r-2xl bg-[#00d094] text-[#002a33] transition-colors hover:bg-[#00b37e]">
                                                 <Search size={22} strokeWidth={2.5} className="group-hover:text-white" />
                                             </div>
                                             <div className="relative w-full">
@@ -476,7 +583,7 @@ export const AdmissionForm = () => {
                                                         }
                                                     }}
                                                     placeholder="والدین تلاش کریں..."
-                                                    className="w-full bg-slate-50 p-4 rounded-l-2xl outline-none text-[#002a33] font-medium text-right focus:bg-white focus:border-emerald-400"
+                                                    className="h-full w-full rounded-l-2xl bg-slate-50 px-5 text-right text-lg font-medium leading-normal text-[#002a33] outline-none placeholder:text-slate-400 focus:bg-white"
                                                     dir="rtl"
                                                 />
                                                 {isParentDropdownOpen && parentSearch.trim().length >= 2 ? (
@@ -510,8 +617,16 @@ export const AdmissionForm = () => {
 
                                     <FormSection title="بنیادی معلومات" icon={<User size={20} />}>
                                         <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-6">
-                                            <FormikInputField label="نام طالب علم" name="fullName" />
-                                            <FormikInputField label="والد کا نام" name="fatherName" />
+                                            <FormikInputField
+                                                label="نام طالب علم"
+                                                name="fullName"
+                                                className="admission-urdu-input"
+                                            />
+                                            <FormikInputField
+                                                label="والد کا نام"
+                                                name="fatherName"
+                                                className="admission-urdu-input"
+                                            />
                                             <FormikSelectField
                                                 label="جنس"
                                                 name="gender"
@@ -530,11 +645,23 @@ export const AdmissionForm = () => {
 
                                     <FormSection title="رابطہ اور پتہ" icon={<MapPin size={20} />}>
                                         <div className="grid grid-cols-1 gap-6 mb-6">
-                                            <FormikInputField label="حالیہ پتہ" name="currentAddress" />
-                                            <FormikInputField label="مستقل پتہ" name="permanentAddress" />
+                                            <FormikInputField
+                                                label="حالیہ پتہ"
+                                                name="currentAddress"
+                                                className="admission-urdu-input"
+                                            />
+                                            <FormikInputField
+                                                label="مستقل پتہ"
+                                                name="permanentAddress"
+                                                className="admission-urdu-input"
+                                            />
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            <FormikInputField label="ضلع" name="district" />
+                                            <FormikInputField
+                                                label="ضلع"
+                                                name="district"
+                                                className="admission-urdu-input"
+                                            />
                                             <FormikInputField label="والد کا پیشہ" name="fatherOccupation" />
                                             <FormikInputField label="موبائل نمبر" name="mobile" />
                                             <FormikInputField label="واٹس ایپ" name="whatsapp" />
@@ -665,7 +792,7 @@ export const AdmissionForm = () => {
                             </div>
                         ) : null}
 
-                        <div className="admission-print-area hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Noto Nastaliq Urdu' }}>
+                        <div className="admission-print-area hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }}>
                             <div className="absolute inset-0 flex items-center justify-center z-0" style={{ pointerEvents: 'none' }}>
                                 <img
                                     src={AppImages.logo}
@@ -763,9 +890,9 @@ export const AdmissionForm = () => {
                                     top: 0;
                                     left: 0;
                                     width: 100%;
-                                    font-family: 'Noto Sans Arabic', sans-serif;
+                                    font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
                                 }
-                                h1 { font-family: 'Noto Nastaliq Urdu', serif !important; }
+                                h1 { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important; }
                             }
                         `,
                             }}
@@ -787,13 +914,27 @@ const FormSection = ({ title, icon, children }) => (
     </div>
 );
 
-const FormikInputField = ({ label, name, type = 'text', ...props }) => (
+const FormikInputField = ({ label, name, type = 'text', className = '', ...props }) => (
     <Field name={name}>
         {({ field, form }) =>
             type === 'date' ? (
-                <DateField label={label} name={name} value={field.value || ''} onChange={(nextValue) => form.setFieldValue(name, nextValue)} {...props} />
+                <DateField
+                    label={label}
+                    name={name}
+                    value={field.value || ''}
+                    onChange={(nextValue) => form.setFieldValue(name, nextValue)}
+                    className={`admission-date-field ${className}`}
+                    {...props}
+                />
             ) : (
-                <InputField label={label} type={type} {...field} {...props} value={field.value || ''} />
+                <InputField
+                    label={label}
+                    type={type}
+                    {...field}
+                    {...props}
+                    value={field.value || ''}
+                    className={`admission-form-control ${className}`}
+                />
             )
         }
     </Field>
@@ -807,6 +948,7 @@ const FormikSelectField = ({ label, name, options }) => (
                 options={options}
                 value={field.value || options[0]?.value || options[0]}
                 onChange={(event) => form.setFieldValue(name, event.target.value)}
+                className="admission-form-control"
             />
         )}
     </Field>
@@ -840,7 +982,7 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
                     onFocus={() => setIsOpen(true)}
                     onBlur={() => setTimeout(() => setIsOpen(false), 150)}
                     placeholder={placeholder}
-                    className="w-full p-4 rounded-2xl border outline-none font-bold transition-all bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]"
+                    className="admission-form-control w-full rounded-2xl border outline-none font-bold transition-all bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]"
                 />
                 <ChevronDown size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)] pointer-events-none" />
 

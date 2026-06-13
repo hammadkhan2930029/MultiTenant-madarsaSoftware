@@ -208,30 +208,38 @@ export const Profile = () => {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#00d094]/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
 
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                    <div className="relative group">
-                        <div className="w-32 h-32 bg-white rounded-[2.5rem] p-2 shadow-2xl transition-all group-hover:scale-105 duration-500 border-4 border-white/20">
-                            <img
-                                src={logoPreview || AppImages.logo}
-                                alt="Logo"
-                                onError={() => setLogoPreview(AppImages.logo)}
-                                className="w-full h-full object-contain rounded-[2rem]"
+                    <div className="shrink-0 text-center">
+                        <div className="relative group mx-auto w-fit">
+                            <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-[2.5rem] border-4 border-white/20 bg-white p-3 shadow-2xl transition-all duration-500 group-hover:scale-105">
+                                <img
+                                    src={logoPreview || AppImages.logo}
+                                    alt="Logo"
+                                    onError={() => setLogoPreview(AppImages.logo)}
+                                    className="block h-full w-full rounded-[2rem] object-contain"
+                                />
+                            </div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoChange}
+                                className="hidden"
                             />
+                            {isEditing && (
+                                <button
+                                    type="button"
+                                    onClick={handleLogoPick}
+                                    className="absolute -bottom-2 -right-2 bg-[#00d094] p-3 rounded-2xl shadow-lg hover:scale-110 transition-all text-white border-4 border-[#002a33] hover:rotate-12"
+                                    aria-label="لوگو منتخب کریں"
+                                >
+                                    <Camera size={20} />
+                                </button>
+                            )}
                         </div>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleLogoChange}
-                            className="hidden"
-                        />
                         {isEditing && (
-                            <button
-                                type="button"
-                                onClick={handleLogoPick}
-                                className="absolute -bottom-2 -right-2 bg-[#00d094] p-3 rounded-2xl shadow-lg hover:scale-110 transition-all text-white border-4 border-[#002a33] hover:rotate-12"
-                            >
-                                <Camera size={20} />
-                            </button>
+                            <p className="mt-4 max-w-48 text-xs font-bold leading-5 text-white/70">
+                                بہترین سائز: 512 × 512 پکسل، مربع PNG یا JPG، زیادہ سے زیادہ 5 MB
+                            </p>
                         )}
                     </div>
 

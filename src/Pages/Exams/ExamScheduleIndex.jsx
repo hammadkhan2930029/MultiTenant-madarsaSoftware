@@ -239,7 +239,7 @@ export const ExamScheduleIndex = () => {
                     <meta charset="utf-8" />
                     <title>Exam Schedule</title>
                     <style>
-                        body { font-family: Arial, sans-serif; direction: rtl; padding: 28px; color: #111827; }
+                        body { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; direction: rtl; padding: 28px; color: #111827; }
                         .header { text-align: center; margin-bottom: 18px; }
                         h1 { margin: 0; font-size: 28px; }
                         p { margin: 6px 0 0; color: #4b5563; }

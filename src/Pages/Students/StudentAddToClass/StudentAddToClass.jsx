@@ -54,7 +54,7 @@ export const StudentAddToClass = () => {
 
                 setAssignedList(mappedAssignments);
             } catch (loadError) {
-                setError(loadError.message || 'Assignment data load nahi ho saki.');
+                setError(loadError.message || 'کلاس اسائنمنٹ کا ڈیٹا لوڈ نہیں ہو سکا۔');
             }
         };
 
@@ -120,7 +120,7 @@ export const StudentAddToClass = () => {
             setSuccess('طالب علم کو کامیابی سے کلاس میں شامل کر دیا گیا ہے۔');
             setError('');
         } catch (assignError) {
-            setError(assignError.message || 'Class assign nahi ho saki.');
+            setError(assignError.message || 'طالب علم کو کلاس میں شامل نہیں کیا جا سکا۔');
         }
     };
 
@@ -149,7 +149,7 @@ export const StudentAddToClass = () => {
             setSuccess('طالب علم کی کلاس اسائنمنٹ ختم کر دی گئی ہے۔');
             setAssignmentToRemove(null);
         } catch (removeError) {
-            setError(removeError.message || 'Class assignment remove nahi ho saki.');
+            setError(removeError.message || 'کلاس اسائنمنٹ ختم نہیں ہو سکی۔');
         } finally {
             setRemovingAssignmentId(null);
         }
@@ -296,7 +296,7 @@ export const StudentAddToClass = () => {
                                 <div>
                                     <h3 className="text-xl font-black text-[var(--color-text-main)]">کلاس اسائنمنٹ ختم کریں؟</h3>
                                     <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">
-                                        {assignmentToRemove.name} کو {assignmentToRemove.className} / {assignmentToRemove.section} سے remove کیا جائے؟
+                                        {assignmentToRemove.name} کو {assignmentToRemove.className} / {assignmentToRemove.section} سے ہٹایا جائے؟
                                     </p>
                                 </div>
                             </div>
@@ -317,7 +317,7 @@ export const StudentAddToClass = () => {
                                 disabled={removingAssignmentId === assignmentToRemove.id}
                                 className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                {removingAssignmentId === assignmentToRemove.id ? 'Remove ho raha hai...' : 'Confirm Delete'}
+                                {removingAssignmentId === assignmentToRemove.id ? 'حذف ہو رہا ہے...' : 'حذف کرنے کی تصدیق کریں'}
                             </button>
                             <button
                                 type="button"
@@ -325,7 +325,7 @@ export const StudentAddToClass = () => {
                                 disabled={removingAssignmentId === assignmentToRemove.id}
                                 className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black text-[var(--color-text-main)] transition-all hover:bg-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                Cancel
+                                منسوخ کریں
                             </button>
                         </div>
                     </div>

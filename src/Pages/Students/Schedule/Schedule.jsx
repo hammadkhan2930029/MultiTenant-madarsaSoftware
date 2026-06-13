@@ -11,11 +11,12 @@ import {
     Search,
     LayoutDashboard,
     LayoutPanelTop,
+    Pencil,
     ChevronDown,
     ChevronUp
 } from 'lucide-react';
 import { getClasses, getSections, getSessions, getSubjects } from '../../../Constant/AcademicSetupApi';
-import { createSchedule, deleteSchedule, getSchedules } from '../../../Constant/ScheduleApi';
+import { createSchedule, deleteSchedule, getSchedules, updateSchedule } from '../../../Constant/ScheduleApi';
 
 const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
 
@@ -34,9 +35,9 @@ const mapScheduleFromApi = (schedule) => ({
 });
 
 export const StudentScheduleManager = () => {
-      useEffect(() => {
-            window.scrollTo(0, 0)
-        }, [])
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [])
 
     const [selectLayout, setSelectLayout] = useState(2)
     const [schedules, setSchedules] = useState([]);
@@ -47,6 +48,7 @@ export const StudentScheduleManager = () => {
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
+    const [editingScheduleId, setEditingScheduleId] = useState(null);
     const [setupError, setSetupError] = useState('');
     const [scheduleMessage, setScheduleMessage] = useState('');
     const [formData, setFormData] = useState({
@@ -136,7 +138,7 @@ export const StudentScheduleManager = () => {
         setIsSavingSchedule(true);
 
         try {
-            const savedSchedule = await createSchedule({
+            const payload = {
                 sessionId: Number(formData.sessionId),
                 classId: Number(formData.classId),
                 sectionId: Number(formData.sectionId),
@@ -144,16 +146,59 @@ export const StudentScheduleManager = () => {
                 days: formData.days,
                 startTime: formData.startTime,
                 endTime: formData.endTime,
-            });
+            };
+            const savedSchedule = editingScheduleId
+                ? await updateSchedule(editingScheduleId, payload)
+                : await createSchedule(payload);
 
-            setSchedules((current) => [mapScheduleFromApi(savedSchedule), ...current]);
+            setSchedules((current) =>
+                editingScheduleId
+                    ? current.map((schedule) => (schedule.id === editingScheduleId ? mapScheduleFromApi(savedSchedule) : schedule))
+                    : [mapScheduleFromApi(savedSchedule), ...current]
+            );
             setFormData({ ...formData, subjects: [], days: [], startTime: '', endTime: '' });
-            setScheduleMessage('شیڈول کامیابی سے محفوظ ہو گیا۔');
+            setEditingScheduleId(null);
+            setScheduleMessage(editingScheduleId ? 'شیڈول کامیابی سے اپڈیٹ ہو گیا۔' : 'شیڈول کامیابی سے محفوظ ہو گیا۔');
         } catch (error) {
             setSetupError(error.message || 'شیڈول محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSavingSchedule(false);
         }
+    };
+
+    const handleEditSchedule = (schedule) => {
+        setEditingScheduleId(schedule.id);
+        setFormData({
+            sessionId: schedule.sessionId,
+            session: schedule.session,
+            classId: schedule.classId,
+            className: schedule.className,
+            sectionId: schedule.sectionId,
+            section: schedule.section,
+            subjects: [...schedule.subjects],
+            days: [...schedule.days],
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+        });
+        setSetupError('');
+        setScheduleMessage('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEditSchedule = () => {
+        setEditingScheduleId(null);
+        setFormData({
+            sessionId: '',
+            session: '',
+            classId: '',
+            className: '',
+            sectionId: '',
+            section: '',
+            subjects: [],
+            days: [],
+            startTime: '',
+            endTime: '',
+        });
     };
 
     const handleDeleteSchedule = async (id) => {
@@ -180,7 +225,7 @@ export const StudentScheduleManager = () => {
     // ----------------------------------------------------
     const [expandedClass, setExpandedClass] = useState(null);
 
-    
+
     const toggleClass = (className) => {
         setExpandedClass(expandedClass === className ? null : className);
     };
@@ -214,10 +259,10 @@ export const StudentScheduleManager = () => {
 
                     {/* Step 1: Basic Selection */}
                     <div className="space-y-5">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">بنیادی معلومات</h4>
+                        <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">بنیادی معلومات</h4>
 
                         <div>
-                            <label className="text-[11px] font-bold opacity-60 block mb-2">تعلیمی سیشن</label>
+                            <label className="text-xl font-bold opacity-70 block mb-2">تعلیمی سیشن</label>
                             <select
                                 className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none appearance-none cursor-pointer"
                                 value={formData.sessionId}
@@ -234,7 +279,7 @@ export const StudentScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[11px] font-bold opacity-60 block mb-2">کلاس منتخب کریں</label>
+                                <label className="text-xl font-bold opacity-70 block mb-2">کلاس منتخب کریں</label>
                                 <select
                                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
                                     value={formData.classId}
@@ -255,7 +300,7 @@ export const StudentScheduleManager = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-[11px] font-bold opacity-60 block mb-2">سیکشن</label>
+                                <label className="text-xl font-bold opacity-70 block mb-2">سیکشن</label>
                                 <select
                                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
                                     value={formData.sectionId}
@@ -274,18 +319,18 @@ export const StudentScheduleManager = () => {
 
                     {/* Step 2: Subjects Multi-Select */}
                     <div className="flex flex-col space-y-4">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">مضامین کی فہرست</h4>
+                        <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">مضامین کی فہرست</h4>
 
                         <div className="bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-2xl p-4 flex-1 flex flex-col min-h-[200px]">
                             <div className="relative mb-3">
                                 <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-30" />
-                                <input className="w-full bg-[var(--color-surface)] border border-[var(--color-border)]/5 rounded-lg py-2 pr-9 pl-3 text-[11px] outline-none" placeholder="مضمون تلاش کریں..." value={subjSearch} onChange={(e) => setSubjSearch(e.target.value)} />
+                                <input className="w-full bg-[var(--color-surface)] border border-[var(--color-border)]/5 rounded-lg py-2 pr-9 pl-3 text-base outline-none" placeholder="مضمون تلاش کریں..." value={subjSearch} onChange={(e) => setSubjSearch(e.target.value)} />
                             </div>
 
                             <div className="grid grid-cols-2 gap-1.5 overflow-y-auto max-h-40 pr-1 custom-scroll">
                                 {filteredSubjects.map(sub => (
                                     <button key={sub} type="button" onClick={() => toggleSelection('subjects', sub)}
-                                        className={`text-right text-[10px] p-2.5 rounded-lg border transition-all ${formData.subjects.includes(sub) ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)]/5 opacity-70 hover:opacity-100'}`}>
+                                        className={`text-right text-base p-2.5 rounded-lg border transition-all ${formData.subjects.includes(sub) ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)]/5 opacity-70 hover:opacity-100'}`}>
                                         {sub}
                                     </button>
                                 ))}
@@ -299,7 +344,7 @@ export const StudentScheduleManager = () => {
                             {formData.subjects.length > 0 && (
                                 <div className="mt-4 pt-3 border-t border-[var(--color-border)]/5 flex flex-wrap gap-1">
                                     {formData.subjects.map(s => (
-                                        <span key={s} className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[9px] font-bold px-2 py-1 rounded flex items-center gap-1">
+                                        <span key={s} className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-base font-bold px-2 py-1 rounded flex items-center gap-1">
                                             {s} <X size={10} className="cursor-pointer" onClick={() => toggleSelection('subjects', s)} />
                                         </span>
                                     ))}
@@ -310,12 +355,12 @@ export const StudentScheduleManager = () => {
 
                     {/* Step 3: Timing & Days */}
                     <div className="space-y-5">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">وقت اور دن</h4>
+                        <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">وقت اور دن</h4>
 
                         <div className="flex flex-wrap gap-1.5">
                             {daysList.map(day => (
                                 <button key={day} type="button" onClick={() => toggleSelection('days', day)}
-                                    className={`px-3 py-2 rounded-xl text-[10px] font-bold border transition-all ${formData.days.includes(day) ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-[var(--color-bg)] border-[var(--color-border)]/10 opacity-50'}`}>
+                                    className={`px-3 py-2 rounded-xl text-base font-bold border transition-all ${formData.days.includes(day) ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-[var(--color-bg)] border-[var(--color-border)]/10 opacity-60'}`}>
                                     {day}
                                 </button>
                             ))}
@@ -323,32 +368,44 @@ export const StudentScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
                             <div>
-                                <label className="text-[10px] opacity-50 block mb-1">کلاس شروع</label>
-                                <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} />
+                                <label className="text-lg opacity-70 block mb-1">کلاس شروع</label>
+                                <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} />
                             </div>
                             <div>
-                                <label className="text-[10px] opacity-50 block mb-1">کلاس ختم</label>
-                                <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} />
+                                <label className="text-lg opacity-70 block mb-1">کلاس ختم</label>
+                                <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} />
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={isSavingSchedule}
-                            className="w-full bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all mt-4 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <Plus size={20} /> {isSavingSchedule ? 'محفوظ ہو رہا ہے...' : 'شیڈول محفوظ کریں'}
-                        </button>
+                        <div className="mt-4 flex gap-3">
+                            {editingScheduleId ? (
+                                <button
+                                    type="button"
+                                    onClick={cancelEditSchedule}
+                                    className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-4 font-black text-[var(--color-text)]"
+                                >
+                                    منسوخ کریں
+                                </button>
+                            ) : null}
+                            <button
+                                type="submit"
+                                disabled={isSavingSchedule}
+                                className="flex-1 bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {editingScheduleId ? <Pencil size={20} /> : <Plus size={20} />}
+                                {isSavingSchedule ? 'محفوظ ہو رہا ہے...' : editingScheduleId ? 'شیڈول اپڈیٹ کریں' : 'شیڈول محفوظ کریں'}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
             {/* ----------------------------------------------------Select Data Layout----------------------------------------------- */}
             {schedules.length > 0 && (
                 <div className='flex flex-row justify-start items-center'>
-                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[10px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
                         <LayoutDashboard size={20} /> دنوں کے حساب سے
                     </button>
-                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[10px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
                         <LayoutPanelTop size={20} /> مضمون کے حساب سے
                     </button>
                 </div>
@@ -373,11 +430,19 @@ export const StudentScheduleManager = () => {
                                         <div className={`p-2 rounded-xl ${isExpanded ? 'bg-white/20' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}>
                                             <Layers size={20} />
                                         </div>
-                                        <div>
-                                            <h3 className="text-lg md:text-xl font-black">کلاس: {className}</h3>
-                                            <p className={`text-[12px] font-bold ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
-                                                سیشن: {groupedSchedules[className][0].session}
-                                            </p>
+                                        <div className="space-y-2 py-1">
+                                            <h3 className="text-xl md:text-2xl font-black leading-[1.8]">کلاس: {className}</h3>
+                                            <div className='flex flex-row items-center justify-around w-[110px]'>
+                                              
+                                                <p className={`block text-sm font-bold leading-[1.8] ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
+                                                  سیشن
+                                                </p>
+                                              
+                                                  <p className={`block text-sm font-bold leading-[1.8] ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
+                                                   : {groupedSchedules[className][0].session}
+                                                </p>
+                                            </div>
+                                           
                                         </div>
                                     </div>
 
@@ -392,21 +457,21 @@ export const StudentScheduleManager = () => {
 
                                             <div className="flex gap-4 md:gap-5 items-center w-full sm:w-auto">
                                                 <div className="text-center min-w-[50px] md:min-w-[60px] border-l-2 border-[var(--color-primary)]/20 pl-4">
-                                                    <p className="text-sm md:text-md font-black text-[var(--color-primary)]">{item.section || 'عام'}</p>
-                                                    <p className="text-[10px] md:text-sm opacity-40 font-bold uppercase tracking-tighter">سیکشن</p>
+                                                    <p className="text-lg font-black text-[var(--color-primary)]">{item.section || 'عام'}</p>
+                                                    <p className="text-base opacity-50 font-bold uppercase tracking-tighter">سیکشن</p>
                                                 </div>
 
                                                 <div className="space-y-1.5 flex-1">
                                                     <div className="flex flex-wrap gap-1.5 md:gap-2">
                                                         {item.subjects.map(s => (
-                                                            <span key={s} className="text-[11px] md:text-[14px] font-bold bg-[var(--color-bg)] px-2 py-0.5 rounded-md border border-[var(--color-border)]/5">
+                                                            <span key={s} className="text-base font-bold bg-[var(--color-bg)] px-2 py-0.5 rounded-md border border-[var(--color-border)]/5">
                                                                 {s}
                                                             </span>
                                                         ))}
                                                     </div>
                                                     <div className="flex flex-wrap gap-2">
                                                         {item.days.map(d => (
-                                                            <span key={d} className="text-[11px] md:text-[14px] font-bold text-[var(--color-primary)] opacity-70">
+                                                            <span key={d} className="text-base font-bold text-[var(--color-primary)] opacity-80">
                                                                 {d}
                                                             </span>
                                                         ))}
@@ -417,17 +482,28 @@ export const StudentScheduleManager = () => {
                                             <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto border-t sm:border-t-0 border-[var(--color-border)]/5 pt-3 sm:pt-0 gap-2">
                                                 <div className="flex items-center gap-1.5 text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
                                                     <Clock size={12} className="md:w-3.5 md:h-3.5" />
-                                                    <span className="text-[13px] md:text-[16px] font-black tracking-tighter" dir="ltr">
+                                                    <span className="text-lg font-black tracking-tighter" dir="ltr">
                                                         {item.startTime} - {item.endTime}
                                                     </span>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleDeleteSchedule(item.id)}
-                                                    disabled={removingScheduleId === item.id}
-                                                    className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    <Trash2 size={20} className="md:w-6 md:h-6" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleEditSchedule(item)}
+                                                        className="rounded-lg p-1.5 text-blue-500 transition-all hover:bg-blue-500/10"
+                                                        title="تبدیل کریں"
+                                                    >
+                                                        <Pencil size={20} className="md:w-6 md:h-6" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSchedule(item.id)}
+                                                        disabled={removingScheduleId === item.id}
+                                                        className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"
+                                                        title="حذف کریں"
+                                                    >
+                                                        <Trash2 size={20} className="md:w-6 md:h-6" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -455,10 +531,10 @@ export const StudentScheduleManager = () => {
                                         <div className={`p-2 rounded-xl ${isExpanded ? 'bg-white/20' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}>
                                             <Layers size={20} />
                                         </div>
-                                        <div>
-                                            <h3 className="text-lg md:text-xl font-black">کلاس: {className}</h3>
-                                            <p className={`text-[12px] font-bold ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
-                                                سیشن: {groupedSchedules[className][0].session}
+                                        <div className="space-y-2 py-1">
+                                            <h3 className="text-xl md:text-2xl font-black leading-[1.8]">کلاس: {className}</h3>
+                                            <p className={`block text-lg font-bold leading-[1.8] ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
+                                                سیشن:&nbsp;&nbsp;{groupedSchedules[className][0].session}
                                             </p>
                                         </div>
                                     </div>
@@ -494,13 +570,24 @@ export const StudentScheduleManager = () => {
                                                                         </span>
                                                                     ))}
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => handleDeleteSchedule(period.id)}
-                                                                    disabled={removingScheduleId === period.id}
-                                                                    className="opacity-0 group-hover:opacity-100 text-red-500 transition-all p-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
+                                                                <div className="flex items-center gap-1 opacity-0 transition-all group-hover:opacity-100">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleEditSchedule(period)}
+                                                                        className="p-1 text-blue-500"
+                                                                        title="تبدیل کریں"
+                                                                    >
+                                                                        <Pencil size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteSchedule(period.id)}
+                                                                        disabled={removingScheduleId === period.id}
+                                                                        className="p-1 text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        title="حذف کریں"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
                                                             </div>
 
                                                             <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl w-fit border border-amber-100">

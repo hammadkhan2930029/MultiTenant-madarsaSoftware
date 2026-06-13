@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     LayoutDashboard, Users, GraduationCap, UserCheck,
     BookOpen, Wallet, Settings, LogOut, Search,
@@ -25,6 +25,8 @@ export const SideBar = () => {
     const [adminProfile, setAdminProfile] = useState(() => getAdminSession()?.admin || null);
     const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [avatarSrc, setAvatarSrc] = useState('');
+    const profileMenuRef = useRef(null);
+    const floatingSettingsRef = useRef(null);
     //--------------------------------------------------------------------
 
     useEffect(() => {
@@ -38,6 +40,25 @@ export const SideBar = () => {
             URL.revokeObjectURL(avatarSrc);
         }
     }, [avatarSrc]);
+
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            const target = event.target;
+            const clickedInsideProfile = profileMenuRef.current?.contains(target);
+            const clickedInsideSettings = floatingSettingsRef.current?.contains(target);
+
+            if (isProfileOpen && !clickedInsideProfile) {
+                setIsProfileOpen(false);
+            }
+
+            if (openSubMenu === 'floating_settings' && !clickedInsideSettings) {
+                setOpenSubMenu(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, [isProfileOpen, openSubMenu]);
 
     useEffect(() => {
         let isMounted = true;
@@ -212,9 +233,7 @@ export const SideBar = () => {
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
                 { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
-
-
-
+                { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' },
             ]
         },
 
@@ -332,7 +351,7 @@ export const SideBar = () => {
     //--------------------------------------------------------------------
     const profileMenuItems = [
         { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
-        { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
+        // { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
         { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck },
     ];
 
@@ -391,14 +410,14 @@ export const SideBar = () => {
                 <div className="flex items-center gap-3 mb-8 px-2 py-4">
                     <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/10 shadow-lg shrink-0 flex items-center justify-center">
                         {hasMadrassaLogo ? (
-                            <img src={avatarSrc} alt={sidebarTitle} className="w-full h-full object-cover" />
+                            <img src={avatarSrc} alt={sidebarTitle} className="h-full w-full object-contain p-1" />
                         ) : (
                             <GraduationCap className="text-[#00d094]" size={26} />
                         )}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h1 className="text-white font-black text-base leading-tight break-words" title={sidebarTitle}>{sidebarTitle}</h1>
-                        <p className="text-[9px] text-[#00d094] font-bold tracking-[0.16em] uppercase truncate" title={sidebarBadge}>{sidebarBadge}</p>
+                        <h1 className="text-white text-[24px] font-black text-base leading-tight break-words" title={sidebarTitle}>{sidebarTitle}</h1>
+                        <p className="text-[18px] text-[#00d094] font-bold tracking-[0.16em] uppercase truncate" title={sidebarBadge}>{sidebarBadge}</p>
                     </div>
                 </div>
                 {/* //--------------------------------------------------------------// */}
@@ -416,7 +435,7 @@ export const SideBar = () => {
                             >
                                 <div className="flex items-center gap-3">
                                     {item.icon && <item.icon size={20} className={isActive(item.path) ? 'text-white' : 'text-[#00d094]/70'} />}
-                                    <span className="text-[13px] font-bold">{item.label}</span>
+                                    <span className="text-[18px] font-bold">{item.label}</span>
                                 </div>
                                 {item.subMenu && <ChevronDown size={14} className={`transition-transform duration-300 ${openSubMenu === item.id ? 'rotate-180' : ''}`} />}
                             </div>
@@ -428,7 +447,7 @@ export const SideBar = () => {
                                         <div key={sub.id} className="perspective-1000">
                                             <div
                                                 onClick={() => sub.subSubMenu ? toggleSubSubMenu(sub.id) : (navigate(sub.path), setIsSidebarOpen(false))}
-                                                className={`text-[12px] p-2.5 rounded-xl  cursor-pointer flex items-center justify-between transition-all ${isActive(sub.path) || (sub.subSubMenu && sub.subSubMenu.some(ss => isActive(ss.path)))
+                                                className={`text-[16px] p-2.5 rounded-xl  cursor-pointer flex items-center justify-between transition-all ${isActive(sub.path) || (sub.subSubMenu && sub.subSubMenu.some(ss => isActive(ss.path)))
                                                     ? 'text-[#00d094] font-bold bg-[#00d094]/5'
                                                     : 'text-gray-400 hover:text-white'
                                                     }`}
@@ -451,7 +470,7 @@ export const SideBar = () => {
                                                                 if (subSub.path) navigate(subSub.path);
                                                                 setIsSidebarOpen(false);
                                                             }}
-                                                            className="text-[12px] p-2 text-gray-400 hover:text-[#00d094] hover:bg-[#00d094]/9 rounded-lg cursor-pointer transition-all flex items-center gap-2"
+                                                            className="text-[16px] p-2 text-gray-400 hover:text-[#00d094] hover:bg-[#00d094]/9 rounded-lg cursor-pointer transition-all flex items-center gap-2"
                                                         >
                                                             <span >•</span>
                                                             {subSub.label}
@@ -472,7 +491,7 @@ export const SideBar = () => {
 
                 {/* --------------------------------------setting---------------------------------------------------- */}
                 <div className={`fixed top-1/2 -translate-y-1/2 z-[70] transition-all duration-500 ${isSidebarOpen ? 'right-64' : 'right-0 md:right-64'}`}>
-                    <div className="relative group">
+                    <div ref={floatingSettingsRef} className="relative group">
                         {/* --- Floating Button --- */}
                         <button
                             onClick={() => toggleSubMenu('floating_settings')}
@@ -559,15 +578,20 @@ export const SideBar = () => {
                 <nav className="h-20 bg-themeSurface/70 backdrop-blur-md border border-transparent dark:border-themeBorder  shadow-[0_8px_30px_rgb(0,0,0,0.06)] px-6 md:px-10 flex items-center justify-between sticky top-4 z-50 rounded-[2.5rem] mx-2 md:mx-4 transition-all">
 
                     <div className="flex items-center gap-4">
-                        <div className="relative">
+                        <div ref={profileMenuRef} className="relative">
                             <div className="flex items-center gap-5 cursor-pointer" onClick={() => setIsProfileOpen(!isProfileOpen)}>
                                 <div className="relative group/avatar">
                                     <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#00d094] border-2 border-themeSurface rounded-full z-10 animate-pulse" />
-                                    <Avatar src={avatarSrc} alt={profileName} className="w-11 h-11 border-2 border-emerald-100 shadow-sm" />
+                                    <Avatar
+                                        src={avatarSrc}
+                                        alt={profileName}
+                                        className="w-11 h-11 border-2 border-emerald-100 shadow-sm"
+                                        sx={{ bgcolor: '#ffffff', '& img': { objectFit: 'contain', padding: '4px' } }}
+                                    />
                                 </div>
                                 <div className="hidden sm:flex flex-col items-end text-right leading-none min-w-0 max-w-[11rem]">
-                                    <p className="font-black text-sm text-themeText max-w-full truncate p-1" title={profileName}>{profileName}</p>
-                                    <div className="flex items-center justify-end gap-1.5 text-[10px] leading-none">
+                                    <p className="font-black text-md text-themeText max-w-full truncate p-1" title={profileName}>{profileName}</p>
+                                    <div className="flex items-center justify-end gap-1.5 text-[10px] leading-none mt-2">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                         <p className="text-themeMuted font-bold uppercase tracking-[0.12em]">{adminProfile?.role || 'Admin'}</p>
                                     </div>

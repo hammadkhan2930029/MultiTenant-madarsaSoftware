@@ -2,16 +2,37 @@
 import {
     Plus, Search, Trash2, MapPin, X, ArrowRight, Check, ChevronDown, Map
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { createCity, deactivateCity, getCities } from '../../../Constant/CityApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const suggestedCities = [
-    'کراچی', 'لاہور', 'اسلام آباد', 'راولپنڈی', 'فیصل آباد',
-    'ملتان', 'پشاور', 'کوئٹہ', 'گوجرانوالہ', 'سیالکوٹ', 'حیدرآباد',
-    'سکھر', 'جھنگ', 'شیخوپورہ', 'گجرات', 'مردان', 'قصور', 'رحیم یار خان'
+  'کراچی', 'لاہور', 'اسلام آباد', 'راولپنڈی', 'فیصل آباد',
+  'ملتان', 'پشاور', 'کوئٹہ', 'گوجرانوالہ', 'سیالکوٹ',
+  'حیدرآباد', 'سکھر', 'جھنگ', 'شیخوپورہ', 'گجرات',
+  'مردان', 'قصور', 'رحیم یار خان', 'سرگودھا', 'بہاولپور',
+  'ساہیوال', 'اوکاڑہ', 'وہاڑی', 'ڈی جی خان', 'بہاولنگر',
+  'چنیوٹ', 'ٹوبہ ٹیک سنگھ', 'پاکپتن', 'خانیوال', 'لودھراں',
+  'بھکر', 'میانوالی', 'لیہ', 'مظفرگڑھ', 'راجن پور',
+  'نارووال', 'ننکانہ صاحب', 'حافظ آباد', 'منڈی بہاؤالدین',
+  'چکوال', 'اٹک', 'جہلم', 'گجر خان', 'تلہ گنگ',
+  'ایبٹ آباد', 'ہری پور', 'مانسہرہ', 'بٹگرام', 'کوہستان',
+  'سوات', 'مینگورہ', 'بونیر', 'شانگلہ', 'دیر بالا',
+  'دیر زیریں', 'چترال', 'نوشہرہ', 'صوابی', 'کوہاٹ',
+  'ہنگو', 'کرک', 'بنوں', 'لکی مروت', 'ڈیرہ اسماعیل خان',
+  'مالاکنڈ', 'پاراچنار', 'خیبر', 'باجوڑ', 'مہمند',
+  'میرپور', 'مظفرآباد', 'باغ', 'راولاکوٹ', 'کوٹلی',
+  'گلگت', 'سکردو', 'ہنزہ', 'دیامر', 'غذر',
+  'سبی', 'جعفر آباد', 'نصیر آباد', 'ژوب', 'لورالائی',
+  'چمن', 'گوادر', 'تربت', 'خضدار', 'حب',
+  'دادو', 'لاڑکانہ', 'شکارپور', 'جیکب آباد', 'گھوٹکی',
+  'نواب شاہ', 'میرپور خاص', 'عمرکوٹ', 'بدین', 'ٹھٹھہ',
+  'مٹیاری', 'ٹنڈو آدم', 'ٹنڈو محمد خان', 'جامشورو',
+  'کشمور', 'کندھ کوٹ', 'سانگھڑ', 'خیرپور', 'نوشہرو فیروز'
 ];
 
 export const CreateCities = () => {
+    const navigate = useNavigate();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -58,14 +79,15 @@ export const CreateCities = () => {
         const isNotAdded = !activeCities.some((item) => item.name === city);
         return isNotAdded && city.includes(searchTerm);
     });
+    const cityNameToSave = (selectedCity || searchTerm).trim();
 
     const handleAddCity = async () => {
-        if (!selectedCity) return;
+        if (!cityNameToSave) return;
 
         try {
             setIsSaving(true);
-            const createdCity = await createCity({ name: selectedCity });
-            setCities((prev) => [createdCity, ...prev]);
+            const createdCity = await createCity({ name: cityNameToSave });
+            setCities((prev) => [...prev, createdCity]);
             setSelectedCity('');
             setSearchTerm('');
             setIsOpen(false);
@@ -86,6 +108,15 @@ export const CreateCities = () => {
         } catch (error) {
             notify.error(error?.message || 'شہر حذف نہیں ہو سکا۔', 'حذف کرنے میں مسئلہ پیش آیا');
         }
+    };
+
+    const handleBack = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+            return;
+        }
+
+        navigate('/Profile/setting');
     };
 
     return (
@@ -177,8 +208,8 @@ export const CreateCities = () => {
 
                         <button
                             onClick={handleAddCity}
-                            disabled={!selectedCity || isSaving}
-                            className={`w-full py-5 rounded-2xl font-black text-sm shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${selectedCity && !isSaving
+                            disabled={!cityNameToSave || isSaving}
+                            className={`w-full py-5 rounded-2xl font-black text-sm shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${cityNameToSave && !isSaving
                                 ? 'bg-[#00d094] text-white hover:bg-[#00b07d] hover:shadow-[#00d094]/30'
                                 : 'bg-[var(--color-bg)] text-[var(--color-text-muted)] opacity-50 cursor-not-allowed'}`}
                         >
@@ -209,7 +240,7 @@ export const CreateCities = () => {
                                 activeCities.map((city, index) => (
                                     <tr key={city.id} className="bg-[var(--color-bg)]/50 hover:bg-[var(--color-bg)] transition-all duration-300 group rounded-2xl border border-transparent hover:border-[#00d094]/20">
                                         <td className="px-8 py-5 font-bold text-[var(--color-text-muted)] first:rounded-r-[1.5rem]">
-                                            {String(activeCities.length - index).padStart(2, '0')}
+                                            {String(index + 1).padStart(2, '0')}
                                         </td>
                                         <td className="px-8 py-5 font-black text-[var(--color-text)]">
                                             <div className="flex items-center gap-4">
@@ -246,7 +277,11 @@ export const CreateCities = () => {
             </div>
 
             <div className="flex justify-start pt-4">
-                <button className="group flex items-center gap-3 bg-[var(--color-surface)] text-[var(--color-text-muted)] px-10 py-4 rounded-[1.5rem] font-black text-sm border border-[var(--color-border)] hover:bg-[var(--color-bg)] hover:text-[#00d094] transition-all shadow-md">
+                <button
+                    type="button"
+                    onClick={handleBack}
+                    className="group flex items-center gap-3 bg-[var(--color-surface)] text-[var(--color-text-muted)] px-10 py-4 rounded-[1.5rem] font-black text-sm border border-[var(--color-border)] hover:bg-[var(--color-bg)] hover:text-[#00d094] transition-all shadow-md"
+                >
                     <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /> واپس جائیں
                 </button>
             </div>

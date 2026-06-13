@@ -205,13 +205,15 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
                         <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="w-full sm:w-auto" />
-                        <div className="relative w-full sm:w-64 group">
-                            <Search size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+                        <div className="relative w-full sm:w-80 group">
+                            <Search size={18} className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                             <InputField
                                 type="text"
                                 placeholder={config.searchPlaceholder}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                dir="rtl"
+                                className="h-[72px] pr-5 pl-14 text-right leading-[1.8]"
                             />
                         </div>
                         <button

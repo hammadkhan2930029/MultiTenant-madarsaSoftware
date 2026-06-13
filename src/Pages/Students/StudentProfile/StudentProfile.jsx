@@ -5,6 +5,12 @@ import { getStudentById } from '../../../Constant/StudentsApi';
 import { getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { AppImages } from '../../../Constant/AppImages';
 
+const GENDER_LABELS = {
+    male: 'مرد',
+    female: 'خاتون',
+    other: 'دیگر',
+};
+
 const InfoGrid = ({ items }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
@@ -42,7 +48,7 @@ export const StudentProfile = () => {
                 const result = await getStudentById(id);
                 setStudent(result);
             } catch (loadError) {
-                setError(loadError.message || 'Student profile load nahi ho saka.');
+                setError(loadError.message || 'طالب علم کی پروفائل لوڈ نہیں ہو سکی۔');
             }
         };
 
@@ -60,7 +66,7 @@ export const StudentProfile = () => {
     }
 
     if (!student) {
-        return <div className="max-w-5xl mx-auto p-6 font-bold text-[var(--color-text-muted)]">Profile load ho raha hai...</div>;
+        return <div className="max-w-5xl mx-auto p-6 font-bold text-[var(--color-text-muted)]">پروفائل لوڈ ہو رہی ہے...</div>;
     }
 
     return (
@@ -80,7 +86,9 @@ export const StudentProfile = () => {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
                                 <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.25em]">Student Profile</p>
-                                <h1 className="text-3xl md:text-4xl font-black text-[var(--color-text-main)] mt-2">{student.fullName}</h1>
+                                <h1 className="mt-2 py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)] md:text-4xl">
+                                    {student.fullName}
+                                </h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-4">ولدیت: {student.fatherName}</p>
                             </div>
 
@@ -103,7 +111,7 @@ export const StudentProfile = () => {
                     items={[
                         { label: 'نام طالب علم', value: student.fullName },
                         { label: 'والد کا نام', value: student.fatherName },
-                        { label: 'جنس', value: student.gender },
+                        { label: 'جنس', value: GENDER_LABELS[student.gender] || student.gender },
                         { label: 'تاریخ پیدائش', value: student.dob ? new Date(student.dob).toLocaleDateString() : '---' },
                         { label: 'فون', value: student.phone },
                         { label: 'ای میل', value: student.email },
@@ -137,8 +145,6 @@ export const StudentProfile = () => {
                             <p className="mt-4 text-sm font-bold text-[var(--color-text-main)] flex items-center gap-2">
                                 <Phone size={14} className="text-[var(--color-primary)]" /> {parentItem.parent?.phone || '---'}
                             </p>
-                            <p className="mt-2 text-sm text-[var(--color-text-muted)]">{parentItem.parent?.occupation || '---'}</p>
-                            <p className="mt-1 text-xs text-[var(--color-text-muted)]">{parentItem.isPrimary ? 'Primary Parent' : 'Linked Parent'}</p>
                         </div>
                     ))}
                 </div>

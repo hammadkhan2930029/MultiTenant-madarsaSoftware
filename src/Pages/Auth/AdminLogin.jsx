@@ -39,7 +39,7 @@ export const AdminLogin = () => {
             await loginAdmin(formData);
             navigate('/dashboard', { replace: true });
         } catch (loginError) {
-            setError(loginError?.message || 'Login failed.');
+            setError(loginError?.message || 'لاگ اِن نہیں ہو سکا۔');
         } finally {
             setIsSubmitting(false);
         }

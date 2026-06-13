@@ -18,7 +18,7 @@ export const ParentProfile = () => {
                 const result = await getParentById(id);
                 setParent(result);
             } catch (loadError) {
-                setError(loadError.message || 'Parent profile load nahi ho saka.');
+                setError(loadError.message || 'والدین کی پروفائل لوڈ نہیں ہو سکی۔');
             }
         };
 
@@ -54,7 +54,9 @@ export const ParentProfile = () => {
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="min-w-0">
                                 <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[var(--color-text-muted)]">Parent Profile</p>
-                                <h1 className="mt-2 break-words text-2xl font-black text-[var(--color-text-main)] sm:text-3xl md:text-4xl">{parent.fullName}</h1>
+                                <h1 className="mt-2 break-words py-2 text-2xl font-black leading-[1.8] text-[var(--color-text-main)] sm:text-3xl md:text-4xl">
+                                    {parent.fullName}
+                                </h1>
                             </div>
 
                             <button onClick={() => navigate(-1)} className="flex w-full items-center justify-center gap-2 self-stretch rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-bold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-input)] md:w-auto md:self-start">
@@ -68,7 +70,7 @@ export const ParentProfile = () => {
                             <InfoCard label="ای میل" value={parent.email || '---'} />
                             <InfoCard label="پیشہ" value={parent.occupation || '---'} />
                             <InfoCard label="کل بچے" value={String(parent.students?.length || 0)} icon={<Users size={14} className="text-[var(--color-primary)]" />} />
-                            <InfoCard label="CNIC" value={parent.cnic || '---'} />
+                            <InfoCard label="ID" value={parent.cnic || '---'} />
                             <InfoCard label="پتہ" value={parent.address || 'پتہ درج نہیں ہے'} icon={<MapPin size={14} className="text-[var(--color-primary)]" />} />
                         </div>
                     </div>

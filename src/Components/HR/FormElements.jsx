@@ -6,13 +6,13 @@ import { ThemedDatePicker } from '../DatePicker/ThemedDatePicker';
 export const InputField = ({ label, placeholder, isDark, type = "text", className = '', ...props }) => (
   <div className="space-y-2">
     {label ? (
-      <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">{label}</label>
+      <label className="text-[11px]  font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">{label}</label>
     ) : null}
     <input
       type={type}
       placeholder={placeholder}
       {...props}
-      className={`w-full p-4 rounded-2xl border outline-none font-bold transition-all focus:ring-4 focus:ring-emerald-500/10 ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
+      className={`w-full p-4 font-arabic rounded-2xl border outline-none font-bold transition-all  focus:ring-4 focus:ring-emerald-500/10 ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
         } ${className}`}
     />
   </div>

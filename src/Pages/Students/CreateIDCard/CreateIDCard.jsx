@@ -102,7 +102,7 @@ export const CreateIdCard = () => {
                 setStudents(normalizeStudentItems(studentsResult));
                 setMadrassaProfile(profileResult);
             } catch (loadError) {
-                setError(loadError.message || 'ID card data load nahi ho saka.');
+                setError(loadError.message || 'آئی ڈی کارڈ کا ڈیٹا لوڈ نہیں ہو سکا۔');
             } finally {
                 setLoading(false);
             }
@@ -179,7 +179,7 @@ export const CreateIdCard = () => {
 
             if (!serverMatch) {
                 setStudentData(null);
-                setError('Is registration number ya naam ka student nahi mila.');
+                setError('اس رجسٹریشن نمبر یا نام کا طالب علم نہیں ملا۔');
                 return;
             }
 
@@ -192,7 +192,7 @@ export const CreateIdCard = () => {
             selectStudent(serverMatch);
         } catch (searchError) {
             setStudentData(null);
-            setError(searchError.message || 'Student search nahi ho saka.');
+            setError(searchError.message || 'طالب علم تلاش نہیں ہو سکا۔');
         } finally {
             setIsSearching(false);
         }
@@ -306,7 +306,7 @@ export const CreateIdCard = () => {
                 ) : (
                     <div className="max-w-6xl mx-auto rounded-[2rem] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-10 text-center print:hidden">
                         <p className="font-bold text-[var(--color-text-muted)]">
-                            {loading ? 'Students load ho rahe hain...' : 'Student search karein, phir ID card yahan show hoga.'}
+                            {loading ? 'طلبہ لوڈ ہو رہے ہیں...' : 'طالب علم تلاش کریں، پھر آئی ڈی کارڈ یہاں دکھائی دے گا۔'}
                         </p>
                     </div>
                 )}
@@ -362,40 +362,38 @@ const StudentPhoto = ({ data, className, iconSize = 35 }) => (
 );
 
 const HorizontalCard = ({ data }) => (
-    <div style={{ fontFamily: 'Noto Nastaliq Urdu' }} className="w-[85.6mm] h-[60mm] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col text-black font-sans print:shadow-none print:border-gray-400 relative">
+    <div dir="rtl" style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }} className="student-id-card-horizontal w-[85.6mm] h-[60mm] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col text-black print:shadow-none print:border-gray-400 relative">
         <div className="bg-[#002a33] p-2 flex items-center justify-between border-b-2 border-[#00d094]">
             <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-white rounded-lg p-1 shadow-inner">
                     <img src={AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
                 </div>
                 <div>
-                    <h2 className="text-white text-[11px] font-black leading-tight">{data.madrassaName}</h2>
-                    <p className="text-[#00d094] text-[6px] font-bold tracking-wider uppercase">Student Identity Card</p>
+                    <h2 className="id-card-header-title text-white font-black">{data.madrassaName}</h2>
+                    <p className="id-card-header-subtitle text-[#00d094] font-bold">طالب علم شناختی کارڈ</p>
                 </div>
             </div>
-            <span className="text-white bg-white/10 px-2 py-0.5 rounded-full text-[7px] font-black border border-white/10 uppercase tracking-tighter">Student ID</span>
+            <span className="id-card-badge text-white bg-white/10 px-2 py-0.5 rounded-full font-black border border-white/10">طالب علم</span>
         </div>
 
-        <div className="flex flex-1 p-3 gap-3 items-center bg-gradient-to-br from-white to-gray-50">
-            <div className="flex-1 space-y-1.5">
+        <div dir="ltr" className="relative z-10 flex flex-1 items-center gap-3 bg-gradient-to-br from-white to-gray-50 px-3 py-2">
+            <StudentPhoto data={data} className="w-[22mm] h-[27mm] shrink-0 border-2 border-[#002a33] rounded-md overflow-hidden bg-white shadow-md flex items-center justify-center" />
+
+            <div dir="rtl" className="min-w-0 flex-1 space-y-1">
                 <CardLine label="نام" value={data.name} />
                 <CardLine label="ولدیت" value={data.fatherName} />
                 <CardLine label="درجہ" value={data.className} />
                 <CardLine label="سیکشن" value={data.section} />
-                <CardLine label="سیشن" value={data.session} />
-            </div>
-
-            <div className="flex flex-col items-center gap-1">
-                <StudentPhoto data={data} className="w-[22mm] h-[26mm] border-2 border-[#002a33] rounded-md overflow-hidden bg-white shadow-md flex items-center justify-center" />
+                <CardLine label="آئی ڈی نمبر" value={data.idNo} />
             </div>
         </div>
 
         <div className="bg-gray-100 px-3 py-1.5 flex justify-between items-center border-t border-gray-200">
             <div className="flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#00d094]" />
-                <span className="text-[9px] font-black text-[#002a33]">Reg: {data.idNo}</span>
+                <span className="id-card-footer-text font-black text-[#002a33]">آئی ڈی: {data.idNo}</span>
             </div>
-            <span className="text-[8px] font-bold text-gray-500 tracking-tight">{data.mobile}</span>
+            <span dir="ltr" className="id-card-footer-text font-bold text-gray-500">{data.mobile}</span>
         </div>
 
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
@@ -405,7 +403,7 @@ const HorizontalCard = ({ data }) => (
 );
 
 const VerticalCard = ({ data }) => (
-    <div style={{ fontFamily: 'Noto Nastaliq Urdu' }} className="w-[280px] h-[470px] bg-white rounded-xl shadow-2xl border border-gray-300 overflow-hidden flex flex-col text-black font-sans print:shadow-none print:border-gray-400">
+    <div style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }} className="w-[280px] h-[470px] bg-white rounded-xl shadow-2xl border border-gray-300 overflow-hidden flex flex-col text-black font-sans print:shadow-none print:border-gray-400">
         <div className="bg-[#002a33] pt-2 pb-12 px-4 text-center">
             <div className="w-12 h-12 bg-white rounded-lg p-2 mx-auto">
                 <img src={AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
@@ -420,10 +418,9 @@ const VerticalCard = ({ data }) => (
             <p className="text-xs font-bold text-gray-400 mb-2">{data.idNo}</p>
 
             <div className="w-full space-y-1">
-                <VerticalInfo label="Father Name" value={data.fatherName} />
-                <VerticalInfo label="Class" value={data.className} />
-                <VerticalInfo label="Section" value={data.section} />
-                <VerticalInfo label="Session" value={data.session} />
+                <VerticalInfo label="والد کا نام" value={data.fatherName} />
+                <VerticalInfo label="جماعت" value={data.className} />
+                <VerticalInfo label="سیکشن" value={data.section} />
             </div>
         </div>
 
@@ -434,9 +431,9 @@ const VerticalCard = ({ data }) => (
 );
 
 const CardLine = ({ label, value }) => (
-    <div className="flex justify-between items-center border-b border-gray-100 pb-0.5 gap-2">
-        <span className="text-[8px] font-bold text-[#00a876] whitespace-nowrap">{label}</span>
-        <span className="text-[10px] font-bold text-gray-800 truncate">{value}</span>
+    <div className="id-card-line grid grid-cols-[62px_minmax(0,1fr)] items-center gap-2 border-b border-gray-200 text-right">
+        <span className="id-card-label whitespace-nowrap font-black text-[#00a876]">{label}</span>
+        <span className="id-card-value truncate font-black text-gray-800">{value || '---'}</span>
     </div>
 );
 

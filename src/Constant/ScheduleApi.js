@@ -25,6 +25,11 @@ export const createSchedule = async (payload) => {
   return result?.data;
 };
 
+export const updateSchedule = async (id, payload) => {
+  const result = await apiRequest(`/schedules/${id}`, withJson('PUT', payload));
+  return result?.data;
+};
+
 export const deleteSchedule = async (id) => {
   const result = await apiRequest(`/schedules/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;

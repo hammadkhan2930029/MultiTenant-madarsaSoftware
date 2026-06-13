@@ -38,7 +38,7 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
           @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
           @page { size: A5; margin: 0; }
           body { margin: 0; -webkit-print-color-adjust: exact; }
-          .urdu-font { font-family: 'Noto Nastaliq Urdu', serif; }
+          .urdu-font { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; }
           .a5-page {
             width: 148mm;
             min-height: 210mm;

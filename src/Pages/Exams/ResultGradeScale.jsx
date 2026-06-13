@@ -218,7 +218,7 @@ export const ResultGradeScale = () => {
                                     ) : grades.length ? grades.map((grade) => (
                                         <tr key={grade.id}>
                                             <td className="p-4 font-black text-[var(--color-primary)]">{grade.title}</td>
-                                            <td className="p-4 font-sans font-black">{grade.code || '---'}</td>
+                                            <td className="p-4 text-left font-sans font-black" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{grade.code || '---'}</td>
                                             <td className="p-4 font-sans font-black">{grade.from}%</td>
                                             <td className="p-4 font-sans font-black">{grade.to}%</td>
                                             <td className="p-4">
