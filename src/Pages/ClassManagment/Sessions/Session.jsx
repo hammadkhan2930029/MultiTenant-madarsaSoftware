@@ -182,10 +182,11 @@ export const CreateSessions = () => {
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                         <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سیشن نام</label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سیشن نام<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <Calendar size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                                 <input
+                                    required
                                     value={formData.name}
                                     onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                                     placeholder="مثلاً 2026-2027"
@@ -195,8 +196,9 @@ export const CreateSessions = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">شروع تاریخ</label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">شروع تاریخ<span className="text-red-500"> *</span></label>
                             <input
+                                required
                                 type="date"
                                 value={formData.startDate}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
@@ -205,8 +207,9 @@ export const CreateSessions = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">اختتام تاریخ</label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">اختتام تاریخ<span className="text-red-500"> *</span></label>
                             <input
+                                required
                                 type="date"
                                 value={formData.endDate}
                                 onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}

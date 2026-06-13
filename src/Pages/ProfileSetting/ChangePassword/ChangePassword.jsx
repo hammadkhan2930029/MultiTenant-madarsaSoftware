@@ -116,11 +116,12 @@ export const ChangePassword = () => {
 
                         <div className="space-y-2">
                             <label className="text-xs font-black tracking-wide text-[var(--color-text-muted)]">
-                                موجودہ پاس ورڈ
+                                موجودہ پاس ورڈ<span className="text-red-500"> *</span>
                             </label>
                             <div className="relative">
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
+                                    required
                                     type="password"
                                     value={formData.currentPassword}
                                     onChange={(e) => handleChange('currentPassword', e.target.value)}
@@ -132,11 +133,12 @@ export const ChangePassword = () => {
 
                         <div className="space-y-2">
                             <label className="text-xs font-black tracking-wide text-[var(--color-text-muted)]">
-                                نیا پاس ورڈ
+                                نیا پاس ورڈ<span className="text-red-500"> *</span>
                             </label>
                             <div className="relative">
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
+                                    required
                                     type="password"
                                     value={formData.newPassword}
                                     onChange={(e) => handleChange('newPassword', e.target.value)}
@@ -148,11 +150,12 @@ export const ChangePassword = () => {
 
                         <div className="space-y-2">
                             <label className="text-xs font-black tracking-wide text-[var(--color-text-muted)]">
-                                دوبارہ نیا پاس ورڈ
+                                دوبارہ نیا پاس ورڈ<span className="text-red-500"> *</span>
                             </label>
                             <div className="relative">
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
+                                    required
                                     type="password"
                                     value={formData.confirmPassword}
                                     onChange={(e) => handleChange('confirmPassword', e.target.value)}

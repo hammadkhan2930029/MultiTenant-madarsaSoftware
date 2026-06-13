@@ -278,13 +278,14 @@ export const OtherIncomeExpense = () => {
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
                             <DateField
                                 label="تاریخ"
+                                required
                                 value={formData.transactionDate}
                                 onChange={(nextValue) => setFormData({ ...formData, transactionDate: nextValue })}
                                 className="[&_button]:h-[76px] [&_button]:rounded-2xl"
                             />
 
                             <div className="space-y-2">
-                                <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">قسم</label>
+                                <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">قسم<span className="text-red-500"> *</span></label>
                                 <div className="grid h-[76px] grid-cols-2 gap-2 rounded-2xl bg-[var(--color-input)] p-1.5 border border-[var(--color-border)]">
                                     <button
                                         type="button"
@@ -305,9 +306,10 @@ export const OtherIncomeExpense = () => {
 
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
-                                    {formData.type === 'income' ? 'آمدن کی مد' : 'خرچ کی مد'}
+                                    {formData.type === 'income' ? 'آمدن کی مد' : 'خرچ کی مد'}<span className="text-red-500"> *</span>
                                 </label>
                                 <select
+                                    required
                                     value={formData.financeHeadId}
                                     onChange={(event) => setFormData({ ...formData, financeHeadId: event.target.value })}
                                     disabled={isLoading || activeHeads.length === 0}
@@ -324,6 +326,7 @@ export const OtherIncomeExpense = () => {
 
                             <InputField
                                 label="رقم"
+                                required
                                 type="number"
                                 value={formData.amount}
                                 onChange={(event) => setFormData({ ...formData, amount: event.target.value })}
@@ -334,9 +337,10 @@ export const OtherIncomeExpense = () => {
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                             <div className="space-y-2">
                             <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
-                                ادائیگی کا طریقہ {formData.type === 'income' ? '(اختیاری)' : ''}
+                                ادائیگی کا طریقہ {formData.type === 'income' ? '(اختیاری)' : <span className="text-red-500"> *</span>}
                             </label>
                             <select
+                                required={formData.type === 'expense'}
                                 value={formData.paymentMode}
                                 onChange={(event) => setFormData({ ...formData, paymentMode: event.target.value })}
                                 className="h-[76px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] p-4 font-bold outline-none focus:border-[var(--color-primary)]"
@@ -350,9 +354,10 @@ export const OtherIncomeExpense = () => {
 
                             <div className="space-y-2">
                             <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
-                                ادائیگی کی حالت {formData.type === 'income' ? '(اختیاری)' : ''}
+                                ادائیگی کی حالت {formData.type === 'income' ? '(اختیاری)' : <span className="text-red-500"> *</span>}
                             </label>
                             <select
+                                required={formData.type === 'expense'}
                                 value={formData.paymentStatus}
                                 onChange={(event) => setFormData({ ...formData, paymentStatus: event.target.value })}
                                 className="h-[76px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] p-4 font-bold outline-none focus:border-[var(--color-primary)]"

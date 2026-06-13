@@ -6,6 +6,7 @@ import { createWeeklyHifzEntry } from '../../../Constant/HifzApi';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 /* eslint-disable no-sparse-arrays */
 
@@ -62,6 +63,7 @@ const getWeeklyTotalMarks = (row) => {
 
 export const WeeklyJaizaForm = () => {
     const navigate = useNavigate();
+    const notify = useNotifier();
     const [formData, setFormData] = useState(initialFormState);
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
@@ -87,7 +89,7 @@ export const WeeklyJaizaForm = () => {
                     setTeachers(teacherResult.items || []);
                 }
             } catch (error) {
-                alert(error?.message || 'معلومات لوڈ نہیں ہو سکیں۔');
+                notify.error(error?.message || 'معلومات لوڈ نہیں ہو سکیں۔');
             }
         };
 
@@ -166,7 +168,7 @@ export const WeeklyJaizaForm = () => {
         const lastRow = formData.rows[formData.rows.length - 1];
 
         if (!rowHasContent(lastRow)) {
-            alert('پہلے موجودہ طالب علم کی کچھ تفصیل درج کریں، پھر نئی سطر شامل کریں۔');
+            notify.error('پہلے موجودہ طالب علم کی کچھ تفصیل درج کریں، پھر نئی سطر شامل کریں۔');
             return;
         }
 
@@ -229,12 +231,12 @@ export const WeeklyJaizaForm = () => {
         e.preventDefault();
 
         if (!formData.week || !formData.className || !formData.section) {
-            alert('براہ کرم ہفتہ، کلاس اور سیکشن کی معلومات پہلے مکمل کریں۔');
+            notify.error('براہ کرم ہفتہ، کلاس اور سیکشن کی معلومات پہلے مکمل کریں۔');
             return;
         }
 
         if (!formData.rows.some(rowHasContent)) {
-            alert('براہ کرم کم از کم ایک طالب علم کا جائزہ درج کریں۔');
+            notify.error('براہ کرم کم از کم ایک طالب علم کا جائزہ درج کریں۔');
             return;
         }
 
@@ -245,17 +247,17 @@ export const WeeklyJaizaForm = () => {
         });
 
         if (rowWithoutStudent) {
-            alert('براہ کرم ہر سطر میں فہرست سے درست طالب علم منتخب کریں۔');
+            notify.error('براہ کرم ہر سطر میں فہرست سے درست طالب علم منتخب کریں۔');
             return;
         }
 
         try {
             setIsSaving(true);
             await Promise.all(rowsToSave.map((row) => createWeeklyHifzEntry(buildPayload(row))));
-            alert('ہفتہ وار جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
+            notify.success('ہفتہ وار جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
             setFormData(initialFormState);
         } catch (error) {
-            alert(error?.message || 'ہفتہ وار جائزہ محفوظ نہیں ہو سکا۔');
+            notify.error(error?.message || 'ہفتہ وار جائزہ محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -295,10 +297,11 @@ export const WeeklyJaizaForm = () => {
 
                     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">ہفتہ / تاریخ</label>
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">ہفتہ / تاریخ<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <CalendarDays className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
+                                    required
                                     type="text"
                                     value={formData.week}
                                     onChange={(e) => handleFormChange('week', e.target.value)}
@@ -310,8 +313,9 @@ export const WeeklyJaizaForm = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">کلاس</label>
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">کلاس<span className="text-red-500"> *</span></label>
                             <select
+                                required
                                 value={formData.className}
                                 onChange={(e) => handleFormChange('className', e.target.value)}
                                 className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm leading-7 font-bold outline-none focus:border-[var(--color-primary)]"
@@ -324,8 +328,9 @@ export const WeeklyJaizaForm = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن</label>
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن<span className="text-red-500"> *</span></label>
                             <select
+                                required
                                 value={formData.section}
                                 onChange={(e) => handleFormChange('section', e.target.value)}
                                 className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm leading-7 font-bold outline-none focus:border-[var(--color-primary)]"

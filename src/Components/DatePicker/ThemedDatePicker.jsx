@@ -56,6 +56,7 @@ export const ThemedDatePicker = ({
   max,
   className = '',
   size = 'md',
+  required = false,
 }) => {
   const wrapperRef = useRef(null);
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
@@ -188,7 +189,7 @@ export const ThemedDatePicker = ({
     <div ref={wrapperRef} className={`space-y-2 relative ${className}`}>
       {label ? (
         <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
-          {label}
+          {label}{required ? <span className="text-red-500"> *</span> : null}
         </label>
       ) : null}
 

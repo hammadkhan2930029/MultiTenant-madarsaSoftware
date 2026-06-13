@@ -168,6 +168,7 @@ export const CreateBranch = () => {
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <Field
                             label="برانچ نام"
+                            required
                             value={formData.name}
                             onChange={(value) => setFormData((prev) => ({ ...prev, name: value }))}
                             placeholder="مثلاً مین کیمپس"
@@ -313,14 +314,15 @@ export const CreateBranch = () => {
     );
 };
 
-const Field = ({ label, value, onChange, placeholder, icon }) => (
+const Field = ({ label, value, onChange, placeholder, icon, required = false }) => (
     <div className="space-y-2">
         <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-            {label}
+            {label}{required ? <span className="text-red-500"> *</span> : null}
         </label>
         <div className="relative">
             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">{icon}</div>
             <input
+                required={required}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}

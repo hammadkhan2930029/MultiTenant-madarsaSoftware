@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BookOpen, Check, Pencil, Printer, Search, Trash2, UserRound, X } from 'lucide-react';
 import { deactivateMonthlyHifzEntry, getMonthlyHifzEntries, updateMonthlyHifzEntry } from '../../../Constant/HifzApi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const monthOptions = [
     { value: '', label: 'تمام مہینے' },
@@ -74,6 +75,7 @@ const buildUpdatePayload = (row) => ({
 });
 
 export const MonthlyJaizaList = () => {
+    const notify = useNotifier();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMonth, setSelectedMonth] = useState('');
     const [savedRows, setSavedRows] = useState([]);
@@ -99,7 +101,7 @@ export const MonthlyJaizaList = () => {
             const result = await getMonthlyHifzEntries(params.toString());
             setSavedRows((result.items || []).map(mapEntryToRow));
         } catch (error) {
-            alert(error?.message || 'ماہانہ جائزہ فہرست لوڈ نہیں ہو سکی۔');
+            notify.error(error?.message || 'ماہانہ جائزہ فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
@@ -157,8 +159,9 @@ export const MonthlyJaizaList = () => {
             await updateMonthlyHifzEntry(draftRow.apiId || draftRow.id, buildUpdatePayload(draftRow));
             cancelEditing();
             await loadMonthlyEntries();
+            notify.success('ماہانہ جائزہ کامیابی سے اپڈیٹ ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'ماہانہ جائزہ اپڈیٹ نہیں ہو سکا۔');
+            notify.error(error?.message || 'ماہانہ جائزہ اپڈیٹ نہیں ہو سکا۔');
         }
     };
 
@@ -170,8 +173,9 @@ export const MonthlyJaizaList = () => {
             await deactivateMonthlyHifzEntry(deleteRow.apiId || deleteRow.id);
             setDeleteRow(null);
             await loadMonthlyEntries();
+            notify.success('ماہانہ جائزہ کامیابی سے حذف ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'ماہانہ جائزہ حذف نہیں ہو سکا۔');
+            notify.error(error?.message || 'ماہانہ جائزہ حذف نہیں ہو سکا۔');
         } finally {
             setIsDeleting(false);
         }

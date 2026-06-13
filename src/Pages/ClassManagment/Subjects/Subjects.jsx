@@ -171,8 +171,9 @@ export const CreateSubjects = () => {
 
                     <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
                         <div className="space-y-2 text-right">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مضمون کا نام : *</label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مضمون کا نام<span className="text-red-500"> *</span></label>
                             <input
+                                required
                                 type="text"
                                 value={formData.name}
                                 placeholder="نام درج کریں"

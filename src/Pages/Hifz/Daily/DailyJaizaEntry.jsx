@@ -6,6 +6,7 @@ import { getStudents } from '../../../Constant/StudentsApi';
 import { createDailyHifzEntry } from '../../../Constant/HifzApi';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { filterStudentsForHifz, getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const qualityOptions = ['ممتاز', 'بہتر', 'جید', 'مقبول', 'مناسب'];
 
@@ -50,6 +51,7 @@ const hasEntryContent = (entry) => {
 
 export const DailyJaizaEntry = () => {
     const navigate = useNavigate();
+    const notify = useNotifier();
     const [formData, setFormData] = useState(initialFormData);
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
@@ -72,7 +74,7 @@ export const DailyJaizaEntry = () => {
                     setSections(sectionResult.items || []);
                 }
             } catch (error) {
-                alert(error?.message || 'طلبہ لوڈ نہیں ہو سکے۔');
+                notify.error(error?.message || 'طلبہ لوڈ نہیں ہو سکے۔');
             }
         };
 
@@ -143,7 +145,7 @@ export const DailyJaizaEntry = () => {
         const lastEntry = formData.entries[formData.entries.length - 1];
 
         if (!hasEntryContent(lastEntry)) {
-            alert('پہلے موجودہ انٹری کی کچھ تفصیل درج کریں، پھر نئی انٹری شامل کریں۔');
+            notify.error('پہلے موجودہ انٹری کی کچھ تفصیل درج کریں، پھر نئی انٹری شامل کریں۔');
             return;
         }
 
@@ -195,12 +197,12 @@ export const DailyJaizaEntry = () => {
         e.preventDefault();
 
         if (!formData.class || !formData.section || !formData.student) {
-            alert('براہ کرم پہلے کلاس، سیکشن اور طالب علم منتخب کریں۔');
+            notify.error('براہ کرم پہلے کلاس، سیکشن اور طالب علم منتخب کریں۔');
             return;
         }
 
         if (!formData.entries.some(hasEntryContent)) {
-            alert('براہ کرم کم از کم ایک جائزہ انٹری درج کریں۔');
+            notify.error('براہ کرم کم از کم ایک جائزہ انٹری درج کریں۔');
             return;
         }
 
@@ -210,17 +212,17 @@ export const DailyJaizaEntry = () => {
         ));
 
         if (duplicateDate) {
-            alert('ایک طالب علم کے لیے ایک تاریخ پر صرف ایک یومیہ جائزہ محفوظ ہو سکتا ہے۔ ہر انٹری کی تاریخ الگ رکھیں۔');
+            notify.error('ایک طالب علم کے لیے ایک تاریخ پر صرف ایک یومیہ جائزہ محفوظ ہو سکتا ہے۔ ہر انٹری کی تاریخ الگ رکھیں۔');
             return;
         }
 
         try {
             setIsSaving(true);
             await Promise.all(entriesToSave.map((entry) => createDailyHifzEntry(buildPayload(entry))));
-            alert('یومیہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
+            notify.success('یومیہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
             setFormData(initialFormData);
         } catch (error) {
-            alert(error?.message || 'یومیہ جائزہ محفوظ نہیں ہو سکا۔');
+            notify.error(error?.message || 'یومیہ جائزہ محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -254,10 +256,11 @@ export const DailyJaizaEntry = () => {
             <div className="bg-[var(--color-surface)] rounded-[2rem] border border-[var(--color-border)] p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                        <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">کلاس منتخب کریں</label>
+                        <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">کلاس منتخب کریں<span className="text-red-500"> *</span></label>
                         <div className="relative">
                             <School className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                             <select
+                                required
                                 className="w-full appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl py-3 pr-12 pl-4 text-[var(--color-text-main)] font-bold focus:border-[var(--color-primary)] outline-none"
                                 value={formData.class}
                                 onChange={(e) => handleChange('class', e.target.value)}
@@ -271,8 +274,9 @@ export const DailyJaizaEntry = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">سیکشن</label>
+                        <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">سیکشن<span className="text-red-500"> *</span></label>
                         <select
+                            required
                             className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl py-3 px-4 text-[var(--color-text-main)] font-bold focus:border-[var(--color-primary)] outline-none"
                             value={formData.section}
                             onChange={(e) => handleChange('section', e.target.value)}
@@ -285,10 +289,11 @@ export const DailyJaizaEntry = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">طالب علم</label>
+                        <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">طالب علم<span className="text-red-500"> *</span></label>
                         <div className="relative">
                             <User className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                             <select
+                                required
                                 className="w-full appearance-none bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl py-3 pr-12 pl-4 text-[var(--color-text-main)] font-bold focus:border-[var(--color-primary)] outline-none"
                                 value={formData.student}
                                 onChange={(e) => handleChange('student', e.target.value)}
@@ -326,7 +331,7 @@ export const DailyJaizaEntry = () => {
                                 )}
                             </div>
                             <div className="space-y-2 w-full md:max-w-xs">
-                                <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">تاریخ</label>
+                                <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">تاریخ<span className="text-red-500"> *</span></label>
                                 <ThemedDatePicker
                                     value={entry.date}
                                     onChange={(e) => handleEntryFieldChange(entry.id, 'date', e.target.value)}
@@ -486,7 +491,7 @@ export const DailyJaizaEntry = () => {
                     <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] p-6 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-black text-[var(--color-text-muted)]">کیفیت (Quality)</label>
+                                <label className="text-sm font-black text-[var(--color-text-muted)]">کیفیت (Quality)<span className="text-red-500"> *</span></label>
                                 <div className="flex flex-wrap gap-3">
                                     {qualityOptions.map((q) => (
                                         <button

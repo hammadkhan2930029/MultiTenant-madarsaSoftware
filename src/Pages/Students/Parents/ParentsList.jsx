@@ -215,7 +215,7 @@ export const ParentsList = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        <InputField label="والدین کا نام" value={formValues.fullName} onChange={(event) => handleChange('fullName', event.target.value)} placeholder="نام درج کریں" />
+                        <InputField label="والدین کا نام" required value={formValues.fullName} onChange={(event) => handleChange('fullName', event.target.value)} placeholder="نام درج کریں" />
                         <InputField label="فون نمبر" value={formValues.phone} onChange={(event) => handleChange('phone', event.target.value)} placeholder="0300-0000000" />
                         <InputField
                             label="پیشہ"

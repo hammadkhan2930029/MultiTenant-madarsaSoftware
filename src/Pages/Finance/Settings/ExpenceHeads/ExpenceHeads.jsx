@@ -177,7 +177,7 @@ export const ExpenseHeadsSetup = () => {
             </div>
 
             <div className="max-w-5xl space-y-4 mb-12">
-                <h2 className="text-lg font-semibold mb-4 text-right border-r-4 border-emerald-500 pr-3">نئی اقسام شامل کریں</h2>
+                <h2 className="text-lg font-semibold mb-4 text-right border-r-4 border-emerald-500 pr-3">نئی اقسام شامل کریں <span className="text-red-500">*</span></h2>
                 {expenseHeads.map((item, index) => (
                     <div key={item.id} className="flex flex-row-reverse items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-right duration-300"
                         style={{ backgroundColor: 'var(--color-surface)', borderColor: 'rgba(255,255,255,0.05)' }}>
@@ -187,7 +187,7 @@ export const ExpenseHeadsSetup = () => {
                         </div>
 
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <input dir="rtl" type="text" placeholder="خرچ کا نام (مثلاً بجلی کا بل)" value={item.title}
+                            <input dir="rtl" type="text" required placeholder="خرچ کا نام (مثلاً بجلی کا بل)" value={item.title}
                                 onChange={(e) => handleInputChange(item.id, 'title', e.target.value)}
                                 className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                             />
@@ -241,7 +241,7 @@ export const ExpenseHeadsSetup = () => {
                                     <td className="p-4 text-sm">{idx + 1}</td>
                                     <td className="p-4 font-medium text-[var(--color-primary)]">
                                         {editingId === item.id ? (
-                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.title} onChange={(e) => handleEditChange('title', e.target.value)} />
+                                            <input dir="rtl" required className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.title} onChange={(e) => handleEditChange('title', e.target.value)} />
                                         ) : item.title}
                                     </td>
                                     <td className="p-4">

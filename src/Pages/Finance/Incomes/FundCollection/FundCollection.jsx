@@ -374,12 +374,12 @@ export const FundCollection = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold pr-2">رابطہ نمبر</label>
-                            <input type="text" dir="ltr" value={donorInfo.number} onChange={(e) => setDonorInfo({ ...donorInfo, number: formatContactInput(e.target.value) })} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-right" placeholder="03001234567" />
+                            <label className="text-sm font-semibold pr-2">رابطہ نمبر<span className="text-red-500"> *</span></label>
+                            <input required type="text" dir="ltr" value={donorInfo.number} onChange={(e) => setDonorInfo({ ...donorInfo, number: formatContactInput(e.target.value) })} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-right" placeholder="03001234567" />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold pr-2">نام دہندہ</label>
-                            <input type="text" value={donorInfo.name} onChange={(e) => setDonorInfo({ ...donorInfo, name: e.target.value })} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none" placeholder="احمد علی..." />
+                            <label className="text-sm font-semibold pr-2">نام دہندہ<span className="text-red-500"> *</span></label>
+                            <input required type="text" value={donorInfo.name} onChange={(e) => setDonorInfo({ ...donorInfo, name: e.target.value })} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none" placeholder="احمد علی..." />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold pr-2">ولدیت / ولد</label>
@@ -408,8 +408,8 @@ export const FundCollection = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold">ادائیگی کا طریقہ</label>
-                                    <select value={fund.paymentMode} onChange={(e) => updateFund(index, 'paymentMode', e.target.value)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] outline-none">
+                                    <label className="text-sm font-semibold">ادائیگی کا طریقہ<span className="text-red-500"> *</span></label>
+                                    <select required value={fund.paymentMode} onChange={(e) => updateFund(index, 'paymentMode', e.target.value)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] outline-none">
                                         <option value="نقد">نقد</option>
                                         <option value="چیک">چیک</option>
                                         <option value="آن لائن">آن لائن</option>
@@ -417,23 +417,23 @@ export const FundCollection = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold">عطیہ کی قسم</label>
-                                    <select value={fund.donationType} onChange={(e) => updateFund(index, 'donationType', e.target.value)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] outline-none">
+                                    <label className="text-sm font-semibold">عطیہ کی قسم<span className="text-red-500"> *</span></label>
+                                    <select required value={fund.donationType} onChange={(e) => updateFund(index, 'donationType', e.target.value)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] outline-none">
                                         {Object.keys(donationTypes).map((type) => (
                                             <option key={type} value={type}>{type}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-semibold">عطیہ کی ذیلی قسم</label>
-                                    <select value={fund.donationSubType} onChange={(e) => updateFund(index, 'donationSubType', e.target.value)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] outline-none">
+                                    <label className="text-sm font-semibold">عطیہ کی ذیلی قسم<span className="text-red-500"> *</span></label>
+                                    <select required value={fund.donationSubType} onChange={(e) => updateFund(index, 'donationSubType', e.target.value)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)] outline-none">
                                         {(donationTypes[fund.donationType] || []).map((subType) => (
                                             <option key={subType} value={subType}>{subType}</option>
                                         ))}
                                     </select>
                                 </div>
                                 <InputField label='مقصد' placeholder="مثلاً مدرسہ، تعمیرات، طلبہ..." value={fund.purpose} onChange={(e) => updateFund(index, 'purpose', e.target.value)} />
-                                <InputField label='رقم' placeholder="00,000" type="text" value={fund.amount} onChange={(e) => updateFund(index, 'amount', formatAmountInput(e.target.value))} />
+                                <InputField label='رقم' required placeholder="00,000" type="text" value={fund.amount} onChange={(e) => updateFund(index, 'amount', formatAmountInput(e.target.value))} />
                                 <InputField label="رسید نمبر" placeholder="R-101" value={fund.receiptNo} onChange={(e) => updateFund(index, 'receiptNo', e.target.value)} />
                                 <div className="space-y-2 lg:col-span-3">
                                     <InputField label='تفصیل' placeholder="اضافی تفصیل درج کریں..." value={fund.details} onChange={(e) => updateFund(index, 'details', e.target.value)} />

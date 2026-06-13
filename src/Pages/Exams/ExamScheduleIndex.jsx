@@ -3,6 +3,7 @@ import { CalendarDays, Edit3, FileText, Printer, RefreshCcw, Search, Trash2, X }
 import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
 import { deleteExamSchedule, getExamSchedules, updateExamSchedule } from '../../Constant/ExamSchedulesApi';
 import { getAdminSession } from '../../Constant/AdminAuth';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const text = {
     title: 'امتحانی شیڈول فہرست',
@@ -99,6 +100,7 @@ export const ExamScheduleIndex = () => {
     const [deletingId, setDeletingId] = useState(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    useNotificationBridge({ error, success: message });
 
     const filteredSchedules = useMemo(() => {
         const query = filters.search.trim().toLowerCase();
@@ -445,13 +447,13 @@ const EditModal = ({ formData, setFormData, sessionOptions, classOptions, subjec
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <FormInput label="امتحان کا نام" value={formData.examName} onChange={(value) => updateField('examName', value)} className="md:col-span-3" />
-                    <FormSelect label="سیشن" value={formData.sessionId} onChange={(value) => updateField('sessionId', value)} options={sessionOptions} />
-                    <FormSelect label="کلاس" value={formData.classId} onChange={(value) => updateField('classId', value)} options={classOptions} />
-                    <FormSelect label="مضمون" value={formData.subjectId} onChange={(value) => updateField('subjectId', value)} options={subjectOptions} />
-                    <FormInput label="تاریخ" type="date" value={formData.examDate} onChange={(value) => updateField('examDate', value)} />
-                    <FormInput label="شروع وقت" type="time" value={formData.startTime} onChange={(value) => updateField('startTime', value)} />
-                    <FormInput label="اختتام وقت" type="time" value={formData.endTime} onChange={(value) => updateField('endTime', value)} />
+                    <FormInput label="امتحان کا نام" value={formData.examName} onChange={(value) => updateField('examName', value)} className="md:col-span-3" required />
+                    <FormSelect label="سیشن" value={formData.sessionId} onChange={(value) => updateField('sessionId', value)} options={sessionOptions} required />
+                    <FormSelect label="کلاس" value={formData.classId} onChange={(value) => updateField('classId', value)} options={classOptions} required />
+                    <FormSelect label="مضمون" value={formData.subjectId} onChange={(value) => updateField('subjectId', value)} options={subjectOptions} required />
+                    <FormInput label="تاریخ" type="date" value={formData.examDate} onChange={(value) => updateField('examDate', value)} required />
+                    <FormInput label="شروع وقت" type="time" value={formData.startTime} onChange={(value) => updateField('startTime', value)} required />
+                    <FormInput label="اختتام وقت" type="time" value={formData.endTime} onChange={(value) => updateField('endTime', value)} required />
                     <FormInput label="کل نمبر" type="number" value={formData.totalMarks} onChange={(value) => updateField('totalMarks', value)} />
                     <FormInput label="کمرہ" value={formData.room} onChange={(value) => updateField('room', value)} />
                     <FormInput label="نگران" value={formData.invigilator} onChange={(value) => updateField('invigilator', value)} />
@@ -519,19 +521,22 @@ const DeleteModal = ({ schedule, isDeleting, onClose, onConfirm }) => (
     </div>
 );
 
-const FieldLabel = ({ children }) => (
-    <label className="mb-2 mr-2 block text-[11px] font-black text-[var(--color-text-muted)]">{children}</label>
+const FieldLabel = ({ children, required = false }) => (
+    <label className="mb-2 mr-2 block text-[11px] font-black text-[var(--color-text-muted)]">
+        {children}{required ? <span className="text-red-500"> *</span> : null}
+    </label>
 );
 
-const FormInput = ({ label, value, onChange, type = 'text', icon, className = '' }) => (
+const FormInput = ({ label, value, onChange, type = 'text', icon, className = '', required = false }) => (
     <div className={className}>
-        <FieldLabel>{label}</FieldLabel>
+        <FieldLabel required={required}>{label}</FieldLabel>
         <div className="relative">
             {icon ? <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">{icon}</span> : null}
             <input
                 type={type}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
+                required={required}
                 dir={type === 'time' ? 'ltr' : undefined}
                 className={`h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)] ${type === 'time' ? 'exam-native-time text-left font-sans text-[var(--color-text-main)]' : ''} ${icon ? 'pr-10' : ''}`}
             />
@@ -539,10 +544,10 @@ const FormInput = ({ label, value, onChange, type = 'text', icon, className = ''
     </div>
 );
 
-const FormSelect = ({ label, value, onChange, options }) => (
+const FormSelect = ({ label, value, onChange, options, required = false }) => (
     <div>
-        <FieldLabel>{label}</FieldLabel>
-        <select value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]">
+        <FieldLabel required={required}>{label}</FieldLabel>
+        <select value={value} onChange={(event) => onChange(event.target.value)} required={required} className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]">
             <option value="">منتخب کریں</option>
             {options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>

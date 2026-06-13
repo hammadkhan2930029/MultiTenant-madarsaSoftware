@@ -420,33 +420,33 @@ const EditModal = ({ editForm, isSaving, onClose, onSubmit, onChange }) => (
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField label="نام دہندہ" value={editForm.donorName} onChange={(e) => onChange('donorName', e.target.value)} />
-                <InputField label="رابطہ نمبر" value={editForm.phone} onChange={(e) => onChange('phone', e.target.value)} />
+                <InputField label="نام دہندہ" required value={editForm.donorName} onChange={(e) => onChange('donorName', e.target.value)} />
+                <InputField label="رابطہ نمبر" required value={editForm.phone} onChange={(e) => onChange('phone', e.target.value)} />
                 <InputField label="ولدیت / ولد" value={editForm.careOf} onChange={(e) => onChange('careOf', e.target.value)} />
-                <InputField label="رقم" type="number" value={editForm.amount} onChange={(e) => onChange('amount', e.target.value)} />
+                <InputField label="رقم" required type="number" value={editForm.amount} onChange={(e) => onChange('amount', e.target.value)} />
 
                 <div className="space-y-2">
-                    <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ادائیگی کا طریقہ</label>
-                    <select value={editForm.paymentMode} onChange={(e) => onChange('paymentMode', e.target.value)} className="w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]">
+                    <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ادائیگی کا طریقہ<span className="text-red-500"> *</span></label>
+                    <select required value={editForm.paymentMode} onChange={(e) => onChange('paymentMode', e.target.value)} className="w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]">
                         {paymentModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
                     </select>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">عطیہ کی قسم</label>
-                    <select value={editForm.donationType} onChange={(e) => onChange('donationType', e.target.value)} className="w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]">
+                    <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">عطیہ کی قسم<span className="text-red-500"> *</span></label>
+                    <select required value={editForm.donationType} onChange={(e) => onChange('donationType', e.target.value)} className="w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]">
                         {Object.keys(donationTypes).map((type) => <option key={type} value={type}>{type}</option>)}
                     </select>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ذیلی قسم</label>
-                    <select value={editForm.donationSubType} onChange={(e) => onChange('donationSubType', e.target.value)} className="w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]">
+                    <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ذیلی قسم<span className="text-red-500"> *</span></label>
+                    <select required value={editForm.donationSubType} onChange={(e) => onChange('donationSubType', e.target.value)} className="w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]">
                         {(donationTypes[editForm.donationType] || []).map((subType) => <option key={subType} value={subType}>{subType}</option>)}
                     </select>
                 </div>
 
-                <DateField label="تاریخ" value={editForm.paymentDate} onChange={(nextValue) => onChange('paymentDate', nextValue)} />
+                <DateField label="تاریخ" required value={editForm.paymentDate} onChange={(nextValue) => onChange('paymentDate', nextValue)} />
                 <InputField label="مقصد" value={editForm.purpose} onChange={(e) => onChange('purpose', e.target.value)} />
                 <InputField label="رسید نمبر" value={editForm.receiptNo} onChange={(e) => onChange('receiptNo', e.target.value)} />
                 <div className="md:col-span-2">

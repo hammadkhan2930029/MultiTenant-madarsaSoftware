@@ -543,6 +543,10 @@ export const FeesCollection = () => {
 
     const handleSavePayment = async () => {
         if (!paymentTarget) return;
+        if (paymentAmount === '') {
+            setError('ادا شدہ رقم درج کریں۔');
+            return;
+        }
 
         try {
             await saveStudentFeePayment(paymentTarget.id, {
@@ -645,10 +649,10 @@ export const FeesCollection = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-                        <Select label="مہینہ" value={filters.feeMonth} onChange={(value) => handleFilterChange('feeMonth', value)}>
+                        <Select label="مہینہ" value={filters.feeMonth} onChange={(value) => handleFilterChange('feeMonth', value)} required>
                             {monthNames.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
                         </Select>
-                        <Field label="سال" type="number" value={filters.feeYear} onChange={(value) => handleFilterChange('feeYear', value)} />
+                        <Field label="سال" type="number" value={filters.feeYear} onChange={(value) => handleFilterChange('feeYear', value)} required />
                         <Select label="سیشن" value={filters.sessionId} onChange={(value) => handleFilterChange('sessionId', value)}>
                             <option value="">تمام</option>
                             {sessions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -767,7 +771,7 @@ export const FeesCollection = () => {
                         <h3 className="text-xl font-black">فیس ادائیگی</h3>
                         <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">{paymentTarget.student?.fullName} - {paymentTarget.voucherNo}</p>
                         <div className="mt-5 space-y-4">
-                            <Field label="ادا شدہ رقم" type="number" value={paymentAmount} onChange={setPaymentAmount} />
+                            <Field label="ادا شدہ رقم" type="number" value={paymentAmount} onChange={setPaymentAmount} required />
                             <Select label="طریقہ ادائیگی" value={paymentMethod} onChange={setPaymentMethod}>
                                 <option value="Cash">Cash</option>
                                 <option value="Online">Online</option>
@@ -787,24 +791,26 @@ export const FeesCollection = () => {
     );
 };
 
-const Field = ({ label, value, onChange, type = 'text' }) => (
+const Field = ({ label, value, onChange, type = 'text', required = false }) => (
     <label className="block space-y-2">
-        {label ? <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}</span> : null}
+        {label ? <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span> : null}
         <input
             type={type}
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            required={required}
             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text-main)] outline-none"
         />
     </label>
 );
 
-const Select = ({ label, value, onChange, children, compact = false }) => (
+const Select = ({ label, value, onChange, children, compact = false, required = false }) => (
     <label className={`block space-y-2 ${compact ? 'min-w-52' : ''}`}>
-        {label ? <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}</span> : null}
+        {label ? <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span> : null}
         <select
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            required={required}
             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text-main)] outline-none"
         >
             {children}

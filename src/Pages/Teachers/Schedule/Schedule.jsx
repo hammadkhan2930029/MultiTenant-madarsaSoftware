@@ -211,8 +211,9 @@ export const TeachersScheduleManager = () => {
                         <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">بنیادی معلومات</h4>
 
                         <div>
-                            <label className="text-[11px] font-bold opacity-60 block mb-2">تعلیمی سیشن</label>
+                            <label className="text-[11px] font-bold opacity-60 block mb-2">تعلیمی سیشن<span className="text-red-500"> *</span></label>
                             <select
+                                required
                                 className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none appearance-none cursor-pointer"
                                 value={formData.sessionId}
                                 disabled={isLoadingOptions}
@@ -228,8 +229,9 @@ export const TeachersScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[11px] font-bold opacity-60 block mb-2">کلاس منتخب کریں</label>
+                                <label className="text-[11px] font-bold opacity-60 block mb-2">کلاس منتخب کریں<span className="text-red-500"> *</span></label>
                                 <select
+                                    required
                                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
                                     value={formData.classId}
                                     disabled={isLoadingOptions}
@@ -243,8 +245,9 @@ export const TeachersScheduleManager = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-[11px] font-bold opacity-60 block mb-2">سیکشن</label>
+                                <label className="text-[11px] font-bold opacity-60 block mb-2">سیکشن<span className="text-red-500"> *</span></label>
                                 <select
+                                    required
                                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
                                     value={formData.sectionId}
                                     disabled={isLoadingOptions || !formData.classId}
@@ -260,8 +263,9 @@ export const TeachersScheduleManager = () => {
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold opacity-60 block mb-2">استاد منتخب کریں</label>
+                            <label className="text-[11px] font-bold opacity-60 block mb-2">استاد منتخب کریں<span className="text-red-500"> *</span></label>
                             <select
+                                required
                                 className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
                                 value={formData.teacherId}
                                 disabled={isLoadingOptions}
@@ -277,7 +281,7 @@ export const TeachersScheduleManager = () => {
                     </div>
 
                     <div className="flex flex-col space-y-4">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">مضامین کی فہرست</h4>
+                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">مضامین کی فہرست<span className="text-red-500"> *</span></h4>
 
                         <div className="bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-2xl p-4 flex-1 flex flex-col min-h-[200px]">
                             <div className="relative mb-3">
@@ -307,7 +311,7 @@ export const TeachersScheduleManager = () => {
                     </div>
 
                     <div className="space-y-5">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">وقت اور دن</h4>
+                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">وقت اور دن<span className="text-red-500"> *</span></h4>
 
                         <div className="flex flex-wrap gap-1.5">
                             {daysList.map((day) => (
@@ -320,12 +324,12 @@ export const TeachersScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
                             <div>
-                                <label className="text-[10px] opacity-50 block mb-1">کلاس شروع</label>
-                                <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.startTime} onChange={(event) => setFormData({ ...formData, startTime: event.target.value })} />
+                                <label className="text-[10px] opacity-50 block mb-1">کلاس شروع<span className="text-red-500"> *</span></label>
+                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.startTime} onChange={(event) => setFormData({ ...formData, startTime: event.target.value })} />
                             </div>
                             <div>
-                                <label className="text-[10px] opacity-50 block mb-1">کلاس ختم</label>
-                                <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.endTime} onChange={(event) => setFormData({ ...formData, endTime: event.target.value })} />
+                                <label className="text-[10px] opacity-50 block mb-1">کلاس ختم<span className="text-red-500"> *</span></label>
+                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.endTime} onChange={(event) => setFormData({ ...formData, endTime: event.target.value })} />
                             </div>
                         </div>
 

@@ -166,12 +166,14 @@ export const ShiftManagement = () => {
                     <InputField
                         type="text"
                         label="شفٹ کا نام"
+                        required
                         placeholder="مثلاً: مارننگ شفٹ"
                         value={formData.name}
                         onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     />
                     <SelectField
                         label="شفٹ کی قسم"
+                        required
                         options={shiftTypeOptions}
                         value={formData.type}
                         onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
@@ -179,12 +181,14 @@ export const ShiftManagement = () => {
                     <InputField
                         type="time"
                         label="شروع ہونے کا وقت"
+                        required
                         value={formData.startTime}
                         onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))}
                     />
                     <InputField
                         type="time"
                         label="ختم ہونے کا وقت"
+                        required
                         value={formData.endTime}
                         onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))}
                     />

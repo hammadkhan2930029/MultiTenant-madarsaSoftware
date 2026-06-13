@@ -172,7 +172,7 @@ export const StudentAddToClass = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1 space-y-4 bg-[var(--color-surface)] p-5 rounded-[2rem] border border-[var(--color-border)] h-fit">
                     <h3 className="text-sm font-black text-[var(--color-primary)] mb-4 flex items-center gap-2">
-                        <Search size={18} /> مرحلہ 1: طالب علم تلاش کریں
+                        <Search size={18} /> مرحلہ 1: طالب علم تلاش کریں<span className="text-red-500"> *</span>
                     </h3>
 
                     <div className="relative">
@@ -218,15 +218,15 @@ export const StudentAddToClass = () => {
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <SelectField label="سیشن" options={['سیشن منتخب کریں', ...sessionOptions.map((item) => item.name)]} value={sessions.find((item) => String(item.id) === String(filters.sessionId))?.name || 'سیشن منتخب کریں'} onChange={(e) => {
+                        <SelectField required label="سیشن" options={['سیشن منتخب کریں', ...sessionOptions.map((item) => item.name)]} value={sessions.find((item) => String(item.id) === String(filters.sessionId))?.name || 'سیشن منتخب کریں'} onChange={(e) => {
                             const session = sessionOptions.find((item) => item.name === e.target.value);
                             setFilters((current) => ({ ...current, sessionId: session?.id || '' }));
                         }} />
-                        <SelectField label="کلاس" options={['کلاس منتخب کریں', ...classOptions.map((item) => item.name)]} value={classes.find((item) => String(item.id) === String(filters.classId))?.name || 'کلاس منتخب کریں'} onChange={(e) => {
+                        <SelectField required label="کلاس" options={['کلاس منتخب کریں', ...classOptions.map((item) => item.name)]} value={classes.find((item) => String(item.id) === String(filters.classId))?.name || 'کلاس منتخب کریں'} onChange={(e) => {
                             const academicClass = classOptions.find((item) => item.name === e.target.value);
                             setFilters((current) => ({ ...current, classId: academicClass?.id || '', sectionId: '' }));
                         }} />
-                        <SelectField label="سیکشن" options={['سیکشن منتخب کریں', ...sectionOptions.map((item) => item.name)]} value={sections.find((item) => String(item.id) === String(filters.sectionId))?.name || 'سیکشن منتخب کریں'} onChange={(e) => {
+                        <SelectField required label="سیکشن" options={['سیکشن منتخب کریں', ...sectionOptions.map((item) => item.name)]} value={sections.find((item) => String(item.id) === String(filters.sectionId))?.name || 'سیکشن منتخب کریں'} onChange={(e) => {
                             const section = sectionOptions.find((item) => item.name === e.target.value);
                             setFilters((current) => ({ ...current, sectionId: section?.id || '' }));
                         }} />

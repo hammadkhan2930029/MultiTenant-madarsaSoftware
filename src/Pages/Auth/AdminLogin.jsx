@@ -33,6 +33,12 @@ export const AdminLogin = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!formData.username.trim() || !formData.password) {
+            setError('صارف نام اور پاس ورڈ درج کرنا ضروری ہیں۔');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -97,10 +103,11 @@ export const AdminLogin = () => {
                             transition={{ delay: 0.32 }}
                             className="space-y-2"
                         >
-                            <label className="m-2 text-xs font-black tracking-wide text-slate-300">صارف نام</label>
+                            <label className="m-2 text-xs font-black tracking-wide text-slate-300">صارف نام<span className="text-red-500"> *</span></label>
                             <div className="relative mt-3">
                                 <UserRound className="absolute right-4 top-1/2 -translate-y-1/2 text-teal-200" size={18} />
                                 <input
+                                    required
                                     type="text"
                                     value={formData.username}
                                     onChange={(e) => handleChange('username', e.target.value)}
@@ -116,10 +123,11 @@ export const AdminLogin = () => {
                             transition={{ delay: 0.39 }}
                             className="space-y-2"
                         >
-                            <label className="m-2 text-xs font-black tracking-wide text-slate-300">پاس ورڈ</label>
+                            <label className="m-2 text-xs font-black tracking-wide text-slate-300">پاس ورڈ<span className="text-red-500"> *</span></label>
                             <div className="relative mt-3">
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-teal-200" size={18} />
                                 <input
+                                    required
                                     type="password"
                                     value={formData.password}
                                     onChange={(e) => handleChange('password', e.target.value)}

@@ -147,6 +147,11 @@ export const Profile = () => {
     };
 
     const handleSave = async () => {
+        if (!tempData.name?.trim() || !tempData.email?.trim()) {
+            notify.error('ادارے کا نام اور ای میل درج کرنا ضروری ہیں۔', 'نامکمل معلومات');
+            return;
+        }
+
         try {
             setIsSaving(true);
 
@@ -246,8 +251,9 @@ export const Profile = () => {
                     <div className="flex-1 min-w-0 w-full text-center md:text-right">
                         {isEditing ? (
                             <div className="space-y-2 w-full">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-[#00d094] mr-2">ادارے کا نام</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#00d094] mr-2">ادارے کا نام<span className="text-red-500"> *</span></label>
                                 <textarea
+                                    required
                                     value={tempData.name}
                                     onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
                                     rows={2}
@@ -315,7 +321,7 @@ export const Profile = () => {
 
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6">
                     <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">رابطے کی تفصیلات</h3>
-                    <InfoField label="ای میل" icon={<Mail size={16} />} value={madrassaData.email} isEditing={isEditing} tempValue={tempData.email} onChange={(v) => setTempData({ ...tempData, email: v })} />
+                    <InfoField label="ای میل" required icon={<Mail size={16} />} value={madrassaData.email} isEditing={isEditing} tempValue={tempData.email} onChange={(v) => setTempData({ ...tempData, email: v })} />
                     <div className="grid grid-cols-2 gap-6">
                         <InfoField label="فون 1" icon={<Phone size={16} />} value={madrassaData.phone1} isEditing={isEditing} tempValue={tempData.phone1} onChange={(v) => setTempData({ ...tempData, phone1: v })} />
                         <InfoField label="فون 2" icon={<Phone size={16} />} value={madrassaData.phone2} isEditing={isEditing} tempValue={tempData.phone2} onChange={(v) => setTempData({ ...tempData, phone2: v })} />
@@ -383,10 +389,10 @@ export const Profile = () => {
     );
 };
 
-const InfoField = ({ label, value, isEditing, tempValue, onChange, icon }) => (
+const InfoField = ({ label, value, isEditing, tempValue, onChange, icon, required = false }) => (
     <div className="space-y-3">
         <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest flex items-center gap-2">
-            {icon && <span className="text-[#00d094]">{icon}</span>} {label}
+            {icon && <span className="text-[#00d094]">{icon}</span>} {label}{required ? <span className="text-red-500"> *</span> : null}
         </label>
         <div className={`p-4 rounded-2xl border transition-all duration-300 ${
             isEditing
@@ -395,6 +401,7 @@ const InfoField = ({ label, value, isEditing, tempValue, onChange, icon }) => (
         }`}>
             {isEditing ? (
                 <input
+                    required={required}
                     value={tempValue}
                     onChange={(e) => onChange(e.target.value)}
                     className="bg-transparent w-full min-w-0 outline-none font-bold text-[var(--color-text)] focus:text-[#00d094] transition-colors"

@@ -5,6 +5,7 @@ import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicke
 import { createSiparaHifzEntry, getSiparaHifzEntries } from '../../../Constant/HifzApi';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { mapStudentsForHifz } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const siparaRowsTemplate = [
     { paraNo: 30, paraName: 'عم' },
@@ -102,6 +103,7 @@ const mergeRowsWithSavedEntries = (entries = []) => (
 
 export const ParaJaizaEntry = () => {
     const navigate = useNavigate();
+    const notify = useNotifier();
     const [students, setStudents] = useState([]);
     const [formData, setFormData] = useState(createInitialFormData);
     const [showResults, setShowResults] = useState(false);
@@ -118,7 +120,7 @@ export const ParaJaizaEntry = () => {
                     setStudents(mapStudentsForHifz(result.items || []));
                 }
             } catch (error) {
-                alert(error?.message || 'طلبہ لوڈ نہیں ہو سکے۔');
+                notify.error(error?.message || 'طلبہ لوڈ نہیں ہو سکے۔');
             }
         };
 
@@ -165,7 +167,7 @@ export const ParaJaizaEntry = () => {
                 rows: mergeRowsWithSavedEntries(result.items || []),
             }));
         } catch (error) {
-            alert(error?.message || 'محفوظ شدہ سپارہ ریکارڈ لوڈ نہیں ہو سکا۔');
+            notify.error(error?.message || 'محفوظ شدہ سپارہ ریکارڈ لوڈ نہیں ہو سکا۔');
         } finally {
             setIsLoadingSavedRows(false);
         }
@@ -210,24 +212,24 @@ export const ParaJaizaEntry = () => {
         e.preventDefault();
 
         if (!selectedStudent) {
-            alert('براہ کرم پہلے طالب علم منتخب کریں۔');
+            notify.error('براہ کرم پہلے طالب علم منتخب کریں۔');
             return;
         }
 
         const rowsToSave = formData.rows.filter((row) => !row.apiId && rowHasContent(row));
 
         if (!rowsToSave.length) {
-            alert('براہ کرم کم از کم ایک سپارہ کی تفصیل درج کریں۔');
+            notify.error('براہ کرم کم از کم ایک سپارہ کی تفصیل درج کریں۔');
             return;
         }
 
         try {
             setIsSaving(true);
             await Promise.all(rowsToSave.map((row) => createSiparaHifzEntry(buildPayload(row))));
-            alert('سپارہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
+            notify.success('سپارہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
             await loadSavedSiparaRows(formData.studentId);
         } catch (error) {
-            alert(error?.message || 'سپارہ جائزہ محفوظ نہیں ہو سکا۔');
+            notify.error(error?.message || 'سپارہ جائزہ محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -262,6 +264,7 @@ export const ParaJaizaEntry = () => {
 
                     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="relative">
+                            <span className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-red-500">*</span>
                             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                             <input
                                 type="text"

@@ -221,7 +221,7 @@ export const FinanceHeadsSetup = () => {
 
             <div className="max-w-6xl mx-auto space-y-4 mb-12">
                 <h2 className="text-lg font-semibold mb-4 text-right border-r-4 border-[var(--color-primary)] pr-3">
-                    نئی {activeTab === 'income' ? 'آمدنی' : 'اخراجات'} شامل کریں
+                    نئی {activeTab === 'income' ? 'آمدنی' : 'اخراجات'} شامل کریں <span className="text-red-500">*</span>
                 </h2>
 
                 {activeNewRows.map((item, index) => (
@@ -231,7 +231,7 @@ export const FinanceHeadsSetup = () => {
                         </div>
 
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <input dir="rtl" type="text"
+                            <input dir="rtl" type="text" required
                                 placeholder={activeTab === 'income' ? 'آمدنی کا نام' : 'خرچ کا نام'}
                                 value={item.title}
                                 onChange={(e) => handleInputChange(item.id, 'title', e.target.value)}
@@ -293,7 +293,7 @@ export const FinanceHeadsSetup = () => {
                                     <td className="p-4 text-gray-500">{idx + 1}</td>
                                     <td className="p-4 font-medium text-[var(--color-primary)]">
                                         {editingId === item.id ? (
-                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.title} onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))} />
+                                            <input dir="rtl" required className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.title} onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))} />
                                         ) : item.title}
                                     </td>
                                     <td className="p-4">

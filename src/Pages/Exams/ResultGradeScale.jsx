@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Award, Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { createResultGrade, deleteResultGrade, getResultGrades, updateResultGrade } from '../../Constant/ResultGradesApi';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const emptyForm = {
     title: '',
@@ -17,6 +18,7 @@ export const ResultGradeScale = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error, success });
 
     const sortGrades = (items) => (items || []).slice().sort((a, b) => Number(b.from) - Number(a.from));
 
@@ -142,8 +144,9 @@ export const ResultGradeScale = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <FormField label="درجہ / نام">
+                            <FormField label="درجہ / نام" required>
                                 <input
+                                    required
                                     value={formData.title}
                                     onChange={(event) => setFormData((prev) => ({ ...prev, title: event.target.value }))}
                                     placeholder="مثلاً ممتاز، بہتر، جید"
@@ -160,8 +163,9 @@ export const ResultGradeScale = () => {
                                 />
                             </FormField>
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="فیصد سے">
+                                <FormField label="فیصد سے" required>
                                     <input
+                                        required
                                         type="number"
                                         min="0"
                                         max="100"
@@ -171,8 +175,9 @@ export const ResultGradeScale = () => {
                                         className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-center font-bold outline-none focus:border-[var(--color-primary)]"
                                     />
                                 </FormField>
-                                <FormField label="فیصد تک">
+                                <FormField label="فیصد تک" required>
                                     <input
+                                        required
                                         type="number"
                                         min="0"
                                         max="100"
@@ -247,9 +252,11 @@ export const ResultGradeScale = () => {
     );
 };
 
-const FormField = ({ label, children }) => (
+const FormField = ({ label, children, required = false }) => (
     <label className="block">
-        <span className="mb-2 mr-2 block text-[11px] font-black text-[var(--color-text-muted)]">{label}</span>
+        <span className="mb-2 mr-2 block text-[11px] font-black text-[var(--color-text-muted)]">
+            {label}{required ? <span className="text-red-500"> *</span> : null}
+        </span>
         {children}
     </label>
 );

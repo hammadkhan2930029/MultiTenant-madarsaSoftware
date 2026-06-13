@@ -195,6 +195,7 @@ export const AdmissionForm = () => {
     const [savedPrintImagePreview, setSavedPrintImagePreview] = useState(null);
     const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [submitError, setSubmitError] = useState('');
+    const [submitSuccess, setSubmitSuccess] = useState('');
 
     const [parentSearch, setParentSearch] = useState('');
     const [parentResults, setParentResults] = useState([]);
@@ -208,7 +209,7 @@ export const AdmissionForm = () => {
     const [teacherOptions, setTeacherOptions] = useState([]);
     const [selectedRequiredClassId, setSelectedRequiredClassId] = useState(null);
 
-    useNotificationBridge({ error: submitError });
+    useNotificationBridge({ error: submitError, success: submitSuccess });
     useNotificationBridge({ error: parentSearchError });
 
     useEffect(() => {
@@ -399,10 +400,17 @@ export const AdmissionForm = () => {
 
     const handleFormSubmit = async (values, { setSubmitting, resetForm }) => {
         setSubmitError('');
+        setSubmitSuccess('');
 
         try {
             const admissionNumber = values.idNo?.trim() || initialFormValues.idNo || DEFAULT_ADMISSION_NUMBER;
             const submittedValues = { ...values, idNo: admissionNumber };
+
+            if (!admissionNumber || !submittedValues.fullName?.trim() || !submittedValues.fatherName?.trim() || !submittedValues.gender) {
+                setSubmitError('براہ کرم داخلہ نمبر، طالب علم کا نام، والد کا نام اور جنس لازمی مکمل کریں۔');
+                return;
+            }
+
             const parents = [];
             const guardianRelation = submittedValues.relation?.trim() || 'father';
             const guardianIsFather =
@@ -497,6 +505,9 @@ export const AdmissionForm = () => {
                 setSelectedRequiredClassId(null);
                 setIsParentDropdownOpen(false);
             }
+            setSubmitSuccess(editingStudentId
+                ? 'طالب علم کا ریکارڈ کامیابی سے اپڈیٹ ہو گیا۔'
+                : 'طالب علم کا داخلہ کامیابی سے محفوظ ہو گیا۔');
         } catch (error) {
             setSubmitError(error.message || 'طالب علم کا ریکارڈ محفوظ نہیں ہو سکا۔');
         } finally {
@@ -535,6 +546,7 @@ export const AdmissionForm = () => {
                                         <FormikInputField
                                             label="داخلہ نمبر"
                                             name="idNo"
+                                            required
                                             placeholder={isAdmissionNumberLoading ? 'بن رہا ہے...' : ''}
                                             className="text-[var(--color-text-main)]"
                                         />
@@ -620,16 +632,19 @@ export const AdmissionForm = () => {
                                             <FormikInputField
                                                 label="نام طالب علم"
                                                 name="fullName"
+                                                required
                                                 className="admission-urdu-input"
                                             />
                                             <FormikInputField
                                                 label="والد کا نام"
                                                 name="fatherName"
+                                                required
                                                 className="admission-urdu-input"
                                             />
                                             <FormikSelectField
                                                 label="جنس"
                                                 name="gender"
+                                                required
                                                 options={[
                                                     { value: 'male', label: 'مرد' },
                                                     { value: 'female', label: 'خاتون' },
@@ -940,11 +955,12 @@ const FormikInputField = ({ label, name, type = 'text', className = '', ...props
     </Field>
 );
 
-const FormikSelectField = ({ label, name, options }) => (
+const FormikSelectField = ({ label, name, options, required = false }) => (
     <Field name={name}>
         {({ field, form }) => (
             <SelectField
                 label={label}
+                required={required}
                 options={options}
                 value={field.value || options[0]?.value || options[0]}
                 onChange={(event) => form.setFieldValue(name, event.target.value)}

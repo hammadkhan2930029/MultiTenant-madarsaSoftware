@@ -63,6 +63,10 @@ export const StudentFeeDetail = () => {
 
     const handleSavePayment = async () => {
         if (!activeVoucher) return;
+        if (paymentAmount === '') {
+            setError('ادا شدہ رقم درج کریں۔');
+            return;
+        }
 
         try {
             const updated = await saveStudentFeePayment(activeVoucher.id, {
@@ -130,7 +134,7 @@ export const StudentFeeDetail = () => {
                             <Info label="اسٹیٹس" value={statusInfo[activeVoucher.status]?.label || activeVoucher.status} />
                         </div>
                         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-                            <Field label="ادا شدہ رقم" type="number" value={paymentAmount} onChange={setPaymentAmount} />
+                            <Field label="ادا شدہ رقم" type="number" value={paymentAmount} onChange={setPaymentAmount} required />
                             <Select label="ادائیگی کا طریقہ" value={paymentMethod} onChange={setPaymentMethod}>
                                 <option value="Cash">Cash</option>
                                 <option value="Online">Online</option>
@@ -186,10 +190,10 @@ const Info = ({ label, value }) => (
     </div>
 );
 
-const Field = ({ label, value, onChange, type = 'text' }) => (
+const Field = ({ label, value, onChange, type = 'text', required = false }) => (
     <label className="block space-y-2">
-        <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}</span>
-        <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none" />
+        <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span>
+        <input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none" />
     </label>
 );
 

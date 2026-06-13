@@ -3,6 +3,7 @@ import { BookOpen, Check, ChevronDown, Pencil, Printer, Search, Trash2, X } from
 import { deactivateDailyHifzEntry, getDailyHifzEntries, updateDailyHifzEntry } from '../../../Constant/HifzApi';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { formatDateForInput, mapStudentsForHifz } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const registerMeta = {
     campus: 'مدرسہ الہدیٰ',
@@ -145,6 +146,7 @@ const buildUpdatePayload = (row) => ({
 });
 
 export const DailyJaizaList = () => {
+    const notify = useNotifier();
     const [students, setStudents] = useState([]);
     const [savedRows, setSavedRows] = useState([]);
     const [editingRowId, setEditingRowId] = useState('');
@@ -174,7 +176,7 @@ export const DailyJaizaList = () => {
             const result = await getDailyHifzEntries(params.toString());
             setSavedRows((result.items || []).map((entry) => mapDailyEntryToRow(entry, selectedMonth, selectedYear)));
         } catch (error) {
-            alert(error?.message || 'یومیہ جائزے کی فہرست لوڈ نہیں ہو سکی۔');
+            notify.error(error?.message || 'یومیہ جائزے کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
@@ -195,7 +197,7 @@ export const DailyJaizaList = () => {
                     setSavedRows((dailyResult.items || []).map((entry) => mapDailyEntryToRow(entry, selectedMonth, selectedYear)));
                 }
             } catch (error) {
-                alert(error?.message || 'یومیہ جائزے کا ڈیٹا لوڈ نہیں ہو سکا۔');
+                notify.error(error?.message || 'یومیہ جائزے کا ڈیٹا لوڈ نہیں ہو سکا۔');
             }
         };
 
@@ -268,8 +270,9 @@ export const DailyJaizaList = () => {
             await updateDailyHifzEntry(nextRow.apiId || nextRow.id, buildUpdatePayload(nextRow));
             cancelEditing();
             await loadDailyEntries();
+            notify.success('یومیہ جائزہ کامیابی سے اپڈیٹ ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'یومیہ جائزہ اپڈیٹ نہیں ہو سکا۔');
+            notify.error(error?.message || 'یومیہ جائزہ اپڈیٹ نہیں ہو سکا۔');
         }
     };
 
@@ -283,8 +286,9 @@ export const DailyJaizaList = () => {
             await deactivateDailyHifzEntry(deleteRow.apiId || deleteRow.id);
             setDeleteRow(null);
             await loadDailyEntries();
+            notify.success('یومیہ جائزہ کامیابی سے حذف ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'یومیہ جائزہ حذف نہیں ہو سکا۔');
+            notify.error(error?.message || 'یومیہ جائزہ حذف نہیں ہو سکا۔');
         } finally {
             setIsDeleting(false);
         }

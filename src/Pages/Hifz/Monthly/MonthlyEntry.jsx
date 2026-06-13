@@ -6,6 +6,7 @@ import { createMonthlyHifzEntry, getMonthlyHifzEntries } from '../../../Constant
 import { getStudents } from '../../../Constant/StudentsApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { filterStudentsForHifz, getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const hijriMonths = [
     'محرم الحرام',
@@ -105,6 +106,7 @@ const mergeRowsWithSavedEntries = (entries = []) => (
 
 export const MonthlyJaizaEntry = () => {
     const navigate = useNavigate();
+    const notify = useNotifier();
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
@@ -132,7 +134,7 @@ export const MonthlyJaizaEntry = () => {
                     setTeachers(teacherResult.items || []);
                 }
             } catch (error) {
-                alert(error?.message || 'ماہانہ جائزہ کی معلومات لوڈ نہیں ہو سکیں۔');
+                notify.error(error?.message || 'ماہانہ جائزہ کی معلومات لوڈ نہیں ہو سکیں۔');
             }
         };
 
@@ -209,7 +211,7 @@ export const MonthlyJaizaEntry = () => {
                 remarks: savedEntries.find((entry) => entry.remarks)?.remarks || prev.remarks,
             }));
         } catch (error) {
-            alert(error?.message || 'محفوظ شدہ ماہانہ جائزہ لوڈ نہیں ہو سکا۔');
+            notify.error(error?.message || 'محفوظ شدہ ماہانہ جائزہ لوڈ نہیں ہو سکا۔');
         } finally {
             setIsLoadingSavedMonths(false);
         }
@@ -295,24 +297,24 @@ export const MonthlyJaizaEntry = () => {
         e.preventDefault();
 
         if (!formData.className || !formData.section || !formData.studentId) {
-            alert('براہ کرم پہلے کلاس، سیکشن اور طالب علم منتخب کریں۔');
+            notify.error('براہ کرم پہلے کلاس، سیکشن اور طالب علم منتخب کریں۔');
             return;
         }
 
         const rowsToSave = formData.monthlyRows.filter(rowHasContent);
 
         if (!rowsToSave.length) {
-            alert('براہ کرم کم از کم ایک ماہ کی کارکردگی درج کریں۔');
+            notify.error('براہ کرم کم از کم ایک ماہ کی کارکردگی درج کریں۔');
             return;
         }
 
         try {
             setIsSaving(true);
             await Promise.all(rowsToSave.map((row) => createMonthlyHifzEntry(buildPayload(row))));
-            alert('ماہانہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
+            notify.success('ماہانہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
             await loadSavedMonthlyRows(formData.studentId, getYearValue(formData.academicYear));
         } catch (error) {
-            alert(error?.message || 'ماہانہ جائزہ محفوظ نہیں ہو سکا۔');
+            notify.error(error?.message || 'ماہانہ جائزہ محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -351,10 +353,10 @@ export const MonthlyJaizaEntry = () => {
 
                     <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">کلاس</label>
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">کلاس<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <School className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
-                                <select value={formData.className} onChange={(e) => handleFieldChange('className', e.target.value)} className={iconSelectFieldClassName}>
+                                <select required value={formData.className} onChange={(e) => handleFieldChange('className', e.target.value)} className={iconSelectFieldClassName}>
                                     <option value="">کلاس منتخب کریں</option>
                                     {classOptions.map((className) => (
                                         <option key={className} value={className}>{className}</option>
@@ -364,8 +366,8 @@ export const MonthlyJaizaEntry = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن</label>
-                            <select value={formData.section} onChange={(e) => handleFieldChange('section', e.target.value)} className={selectFieldClassName}>
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن<span className="text-red-500"> *</span></label>
+                            <select required value={formData.section} onChange={(e) => handleFieldChange('section', e.target.value)} className={selectFieldClassName}>
                                 <option value="">سیکشن منتخب کریں</option>
                                 {sectionOptions.map((section) => (
                                     <option key={section} value={section}>{section}</option>
@@ -374,10 +376,10 @@ export const MonthlyJaizaEntry = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">طالب علم</label>
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">طالب علم<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <UserRound className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
-                                <select value={formData.studentId} onChange={(e) => handleFieldChange('studentId', e.target.value)} className={iconSelectFieldClassName}>
+                                <select required value={formData.studentId} onChange={(e) => handleFieldChange('studentId', e.target.value)} className={iconSelectFieldClassName}>
                                     <option value="">طالب علم منتخب کریں</option>
                                     {filteredStudents.map((student) => (
                                         <option key={student.id} value={student.id}>
@@ -389,8 +391,8 @@ export const MonthlyJaizaEntry = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">تعلیمی سال</label>
-                            <input type="text" value={formData.academicYear} onChange={(e) => handleFieldChange('academicYear', e.target.value)} placeholder="2026" className={baseFieldClassName} />
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">تعلیمی سال<span className="text-red-500"> *</span></label>
+                            <input required type="text" value={formData.academicYear} onChange={(e) => handleFieldChange('academicYear', e.target.value)} placeholder="2026" className={baseFieldClassName} />
                         </div>
 
                         <div className="space-y-2">

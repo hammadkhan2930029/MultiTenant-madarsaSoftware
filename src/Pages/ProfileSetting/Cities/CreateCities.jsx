@@ -147,7 +147,7 @@ export const CreateCities = () => {
                 <div className="bg-[var(--color-surface)] border border-[#00d094]/20 shadow-2xl rounded-[3rem] p-10 animate-in slide-in-from-top-6 duration-500 relative z-[100]">
                     <div className="max-w-md mx-auto space-y-6 text-right">
                         <div className="space-y-2">
-                            <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 block uppercase tracking-[0.3em]">دستیاب شہر منتخب کریں</label>
+                            <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 block uppercase tracking-[0.3em]">دستیاب شہر منتخب کریں<span className="text-red-500"> *</span></label>
 
                             <div className="relative" ref={dropdownRef}>
                                 <div className="relative group">
@@ -156,6 +156,7 @@ export const CreateCities = () => {
                                     </div>
                                     <input
                                         type="text"
+                                        required
                                         placeholder="شہر کا نام ٹائپ کریں..."
                                         value={searchTerm}
                                         onFocus={() => setIsOpen(true)}

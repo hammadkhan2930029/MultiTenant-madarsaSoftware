@@ -124,6 +124,7 @@ export const DepartmentManagement = () => {
                         <InputField
                             type="text"
                             label={'ڈیپارٹمنٹ کا نام'}
+                            required
                             placeholder="مثلاً: مارکیٹنگ"
                             value={formData.name}
                             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BookOpen, CalendarDays, Check, Pencil, Printer, Search, Trash2, UserRound, X } from 'lucide-react';
 import { deactivateWeeklyHifzEntry, getWeeklyHifzEntries, updateWeeklyHifzEntry } from '../../../Constant/HifzApi';
 import { formatDateForDisplay, formatDateForInput } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const reportMeta = {
     campus: 'مدرسہ الہدیٰ',
@@ -83,6 +84,7 @@ const buildUpdatePayload = (row) => {
 };
 
 export const WeeklyJaizaList = () => {
+    const notify = useNotifier();
     const [searchQuery, setSearchQuery] = useState('');
     const [savedRows, setSavedRows] = useState([]);
     const [editingRowId, setEditingRowId] = useState('');
@@ -97,7 +99,7 @@ export const WeeklyJaizaList = () => {
             const result = await getWeeklyHifzEntries('page=1&limit=100&status=active');
             setSavedRows((result.items || []).map(mapWeeklyEntryToRow));
         } catch (error) {
-            alert(error?.message || 'ہفتہ وار جائزے کی فہرست لوڈ نہیں ہو سکی۔');
+            notify.error(error?.message || 'ہفتہ وار جائزے کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
@@ -149,8 +151,9 @@ export const WeeklyJaizaList = () => {
             await updateWeeklyHifzEntry(draftRow.apiId || draftRow.id, buildUpdatePayload(draftRow));
             cancelEditing();
             await loadWeeklyEntries();
+            notify.success('ہفتہ وار جائزہ کامیابی سے اپڈیٹ ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'ہفتہ وار جائزہ اپڈیٹ نہیں ہو سکا۔');
+            notify.error(error?.message || 'ہفتہ وار جائزہ اپڈیٹ نہیں ہو سکا۔');
         }
     };
 
@@ -164,8 +167,9 @@ export const WeeklyJaizaList = () => {
             await deactivateWeeklyHifzEntry(deleteRow.apiId || deleteRow.id);
             setDeleteRow(null);
             await loadWeeklyEntries();
+            notify.success('ہفتہ وار جائزہ کامیابی سے حذف ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'ہفتہ وار جائزہ حذف نہیں ہو سکا۔');
+            notify.error(error?.message || 'ہفتہ وار جائزہ حذف نہیں ہو سکا۔');
         } finally {
             setIsDeleting(false);
         }

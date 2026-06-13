@@ -38,7 +38,7 @@ export const TeacherAttendance = () => {
         setError('');
         setSuccessMessage('');
 
-        if (!selectedBranchId) {
+        if (!selectedBranchId || !selectedDate) {
             setError('حاضری کے لیے بنیادی سیٹ اپ دستیاب نہیں۔');
             return;
         }
@@ -185,6 +185,7 @@ export const TeacherAttendance = () => {
                                     value={selectedDate}
                                     onChange={(nextValue) => setSelectedDate(nextValue)}
                                     placeholder="تاریخ منتخب کریں"
+                                    required
                                 />
                             </div>
                         </div>

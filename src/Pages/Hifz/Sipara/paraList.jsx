@@ -3,6 +3,7 @@ import { BookOpen, CalendarDays, Check, Pencil, Printer, Search, Trash2, X } fro
 import { deactivateSiparaHifzEntry, getSiparaHifzEntries, updateSiparaHifzEntry } from '../../../Constant/HifzApi';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { mapStudentsForHifz } from '../HifzUi';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const fallbackRows = [
     { paraNo: 30, paraName: 'عم', startDate: '', completionDate: '', totalDays: '', remarks: '' },
@@ -82,6 +83,7 @@ const groupEntriesByStudent = (items, students) => {
 };
 
 export const ParaJaizaList = () => {
+    const notify = useNotifier();
     const [entries, setEntries] = useState([]);
     const [students, setStudents] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -102,7 +104,7 @@ export const ParaJaizaList = () => {
             setStudents(nextStudents);
             setEntries(groupEntriesByStudent(siparaResult.items || [], nextStudents));
         } catch (error) {
-            alert(error?.message || 'Ø³Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û Ø±ÛŒÚ©Ø§Ø±Úˆ Ù„ÙˆÚˆ Ù†ÛÛŒÚº ÛÙˆ Ø³Ú©Ø§Û”');
+            notify.error(error?.message || 'سپارہ جائزہ ریکارڈ لوڈ نہیں ہو سکا۔');
         }
     }, []);
 
@@ -189,8 +191,9 @@ export const ParaJaizaList = () => {
             await updateSiparaHifzEntry(row.apiId || row.id, buildUpdatePayload(selectedEntry, row, draftRow));
             cancelEditing();
             await loadSiparaEntries();
+            notify.success('سپارہ جائزہ کامیابی سے اپڈیٹ ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'Ø³Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û Ø§Ù¾ÚˆÛŒÙ¹ Ù†ÛÛŒÚº ÛÙˆ Ø³Ú©Ø§Û”');
+            notify.error(error?.message || 'سپارہ جائزہ اپڈیٹ نہیں ہو سکا۔');
         }
     };
 
@@ -204,8 +207,9 @@ export const ParaJaizaList = () => {
             await deactivateSiparaHifzEntry(deleteRow.apiId || deleteRow.id);
             setDeleteRow(null);
             await loadSiparaEntries();
+            notify.success('سپارہ جائزہ کامیابی سے حذف ہو گیا۔');
         } catch (error) {
-            alert(error?.message || 'سپارہ جائزہ حذف نہیں ہو سکا۔');
+            notify.error(error?.message || 'سپارہ جائزہ حذف نہیں ہو سکا۔');
         } finally {
             setIsDeleting(false);
         }

@@ -493,7 +493,7 @@ export const ExamResultIndex = () => {
                 {error ? <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm font-bold text-rose-400">{error}</div> : null}
 
                 <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
-                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+                    <div className="flex items-center grid grid-cols-1 gap-3 lg:grid-cols-12">
                         <div className="relative lg:col-span-5">
                             <Search size={17} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                             <input
@@ -647,11 +647,10 @@ const ActionButton = ({ children, label, tone = 'default', disabled, onClick }) 
         disabled={disabled}
         title={label}
         aria-label={label}
-        className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-            tone === 'danger'
+        className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all disabled:cursor-not-allowed disabled:opacity-50 ${tone === 'danger'
                 ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white'
                 : 'bg-emerald-500/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[#0b1120]'
-        }`}
+            }`}
     >
         {children}
     </button>

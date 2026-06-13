@@ -7,6 +7,7 @@ import { getStudentExamResult, saveExamResult, updateExamResult } from '../../Co
 import { defaultResultGrades, getResultGradeLabel } from '../../Constant/ResultGrades';
 import { getResultGrades } from '../../Constant/ResultGradesApi';
 import { useNotifier } from '../../Components/Notifications/useNotifier';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const emptySubjectRow = () => ({
     id: crypto.randomUUID(),
@@ -65,6 +66,7 @@ export const ExamResult = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    useNotificationBridge({ error });
 
     useEffect(() => {
         const loadData = async () => {
@@ -264,7 +266,7 @@ export const ExamResult = () => {
                     <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xl xl:col-span-4">
                         <div className="mb-4 flex items-center gap-2 text-lg font-black">
                             <Search size={20} className="text-[var(--color-primary)]" />
-                            طالب علم تلاش کریں
+                            طالب علم تلاش کریں <span className="text-red-500">*</span>
                         </div>
                         <div className="relative">
                             <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -342,9 +344,9 @@ export const ExamResult = () => {
                                 <table className="w-full min-w-[680px] text-right text-sm">
                                     <thead className="bg-[var(--color-bg)] text-xs font-black text-[var(--color-text-muted)]">
                                         <tr>
-                                            <th className="p-4">مضمون</th>
-                                            <th className="p-4">کل نمبر</th>
-                                            <th className="p-4">حاصل کردہ نمبر</th>
+                                            <th className="p-4">مضمون <span className="text-red-500">*</span></th>
+                                            <th className="p-4">کل نمبر <span className="text-red-500">*</span></th>
+                                            <th className="p-4">حاصل کردہ نمبر <span className="text-red-500">*</span></th>
                                             <th className="p-4">فیصد</th>
                                             <th className="p-4 text-center">ایکشن</th>
                                         </tr>
@@ -361,16 +363,16 @@ export const ExamResult = () => {
                                             return (
                                                 <tr key={row.id}>
                                                     <td className="p-3">
-                                                        <select value={row.subjectId} onChange={(event) => updateRow(row.id, 'subjectId', event.target.value)} className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 font-bold outline-none focus:border-[var(--color-primary)]">
+                                                        <select value={row.subjectId} onChange={(event) => updateRow(row.id, 'subjectId', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 font-bold outline-none focus:border-[var(--color-primary)]">
                                                             <option value="">مضمون منتخب کریں</option>
                                                             {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
                                                         </select>
                                                     </td>
                                                     <td className="p-3">
-                                                        <input type="number" min="1" value={row.totalMarks} onChange={(event) => updateRow(row.id, 'totalMarks', event.target.value)} className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
+                                                        <input type="number" min="1" value={row.totalMarks} onChange={(event) => updateRow(row.id, 'totalMarks', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
                                                     </td>
                                                     <td className="p-3">
-                                                        <input type="number" min="0" max={row.totalMarks || undefined} value={row.obtainedMarks} onChange={(event) => updateRow(row.id, 'obtainedMarks', event.target.value)} className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
+                                                        <input type="number" min="0" max={row.totalMarks || undefined} value={row.obtainedMarks} onChange={(event) => updateRow(row.id, 'obtainedMarks', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
                                                     </td>
                                                     <td className="p-3 font-sans font-black">{rowPercentage ? `${rowPercentage.toFixed(2)}%` : '---'}</td>
                                                     <td className="p-3 text-center">

@@ -34,7 +34,7 @@ const readMonthParts = (value) => {
 const toUrduSalaryError = (message, fallback) => {
     if (!message) return fallback;
     if (/already exists|duplicate|another salary/i.test(message)) {
-        return 'اس استاد کی اس مہینے کی تنخواہ پہلے سے محفوظ ہے۔';
+        return 'اس عملہ / استاد کی اس مہینے کی تنخواہ پہلے سے محفوظ ہے۔';
     }
     if (/teacher not found/i.test(message)) return 'منتخب استاد نہیں ملا۔';
     if (/finance head not found/i.test(message)) return 'منتخب خرچ کی مد نہیں ملی۔';
@@ -222,7 +222,7 @@ export const SalaryEntry = () => {
                                 <div className="p-2 bg-[var(--color-primary)] rounded-lg text-[#0b1120]">
                                     {editingEntry ? <Edit2 size={20} /> : <Plus size={20} />}
                                 </div>
-                                <h2 className="text-xl font-bold text-[var(--color-primary)]">
+                                <h2 className="text-2xl font-bold text-[var(--color-primary)]">
                                     {editingEntry ? 'تنخواہ تبدیل کریں' : 'تنخواہ کی انٹری'}
                                 </h2>
                             </div>
@@ -239,12 +239,12 @@ export const SalaryEntry = () => {
                         </div>
 
                         <div className="mb-6 relative">
-                            <label className="block text-xs text-[var(--color-text-muted)] mb-2 mr-2">استاد تلاش کریں</label>
+                            <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">عملہ / استاد تلاش کریں<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                                 <input
                                     type="text"
-                                    className="w-full pr-10 pl-4 py-3 rounded-xl border border-[var(--color-primary)] bg-[var(--color-input)] text-sm focus:outline-none"
+                                    className="w-full pr-10 pl-4 py-3 rounded-xl border border-[var(--color-primary)] bg-[var(--color-input)] text-base focus:outline-none"
                                     placeholder="نام، مضمون یا نمبر..."
                                     value={searchQuery}
                                     onChange={(event) => {
@@ -264,11 +264,11 @@ export const SalaryEntry = () => {
                                             onClick={() => handleSelectTeacher(teacher)}
                                             className="w-full p-3 hover:bg-[var(--color-primary)] hover:text-[#0b1120] cursor-pointer flex justify-between items-center transition-colors border-b border-[var(--color-border)] last:border-0 text-right"
                                         >
-                                            <span className="font-bold text-sm">{teacher.fullName}</span>
-                                            <span className="text-[10px] opacity-70 px-2 py-0.5 rounded-md border border-current">{teacher.subject || '---'}</span>
+                                            <span className="font-bold text-base">{teacher.fullName}</span>
+                                            <span className="text-sm opacity-70 px-2 py-0.5 rounded-md border border-current">{teacher.subject || '---'}</span>
                                         </button>
                                     )) : (
-                                        <div className="p-3 text-xs text-center text-[var(--color-text-muted)]">کوئی استاد نہیں ملا</div>
+                                        <div className="p-3 text-sm text-center text-[var(--color-text-muted)]">کوئی عملہ / استاد نہیں ملا</div>
                                     )}
                                 </div>
                             ) : null}
@@ -276,15 +276,16 @@ export const SalaryEntry = () => {
 
                         <form onSubmit={handleSave} className="space-y-4">
                             <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-dashed border-[var(--color-border)]">
-                                <p className="text-[10px] text-[var(--color-text-muted)] mb-1">منتخب استاد:</p>
-                                <p className="font-bold text-[var(--color-primary)]">{selectedTeacher?.fullName || searchQuery || '---'}</p>
-                                <p className="text-[10px] text-[var(--color-text-muted)] mt-1">{selectedTeacher?.subject || '---'}</p>
+                                <p className="text-sm font-bold text-[var(--color-text-muted)] mb-1">منتخب عملہ / استاد:</p>
+                                <p className="text-lg font-bold text-[var(--color-primary)]">{selectedTeacher?.fullName || searchQuery || '---'}</p>
+                                <p className="text-sm text-[var(--color-text-muted)] mt-1">{selectedTeacher?.subject || '---'}</p>
                             </div>
 
                             <div>
-                                <label className="block text-xs text-[var(--color-text-muted)] mb-2 mr-2">خرچ کی مد</label>
+                                <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">خرچ کی مد<span className="text-red-500"> *</span></label>
                                 <select
-                                    className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-sm focus:outline-none"
+                                    required
+                                    className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none"
                                     value={formData.financeHeadId}
                                     onChange={(event) => setFormData({ ...formData, financeHeadId: event.target.value })}
                                 >
@@ -297,40 +298,45 @@ export const SalaryEntry = () => {
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs text-[var(--color-text-muted)] mb-2 mr-2">رقم</label>
+                                    <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">رقم<span className="text-red-500"> *</span></label>
                                     <input
+                                        required
                                         type="number"
-                                        className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-sm focus:outline-none"
+                                        className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none"
                                         value={formData.amount}
                                         onChange={(event) => setFormData({ ...formData, amount: event.target.value })}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-[var(--color-text-muted)] mb-2 mr-2">مہینہ</label>
+                                    <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">مہینہ<span className="text-red-500"> *</span></label>
                                     <input
+                                        required
                                         type="month"
-                                        className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-sm focus:outline-none [color-scheme:dark]"
+                                        className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none [color-scheme:dark]"
                                         value={formData.salaryMonth}
                                         onChange={(event) => setFormData({ ...formData, salaryMonth: event.target.value })}
                                     />
                                 </div>
                             </div>
 
-                            <DateField
-                                label="ادائیگی کی تاریخ"
-                                value={formData.paymentDate}
-                                onChange={(nextValue) => setFormData({ ...formData, paymentDate: nextValue })}
-                            />
+                            <div className="[&_label]:!text-base">
+                                <DateField
+                                    label="ادائیگی کی تاریخ"
+                                    required
+                                    value={formData.paymentDate}
+                                    onChange={(nextValue) => setFormData({ ...formData, paymentDate: nextValue })}
+                                />
+                            </div>
 
                             <textarea
                                 rows={3}
-                                className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-sm focus:outline-none resize-none"
+                                className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none resize-none"
                                 placeholder="تفصیل / نوٹ"
                                 value={formData.remarks}
                                 onChange={(event) => setFormData({ ...formData, remarks: event.target.value })}
                             />
 
-                            <button disabled={isSaving || isLoading} className="w-full py-4 rounded-xl font-bold bg-[var(--color-primary)] text-[#0b1120] hover:bg-[var(--color-primary-hover)] shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <button disabled={isSaving || isLoading} className="w-full py-4 rounded-xl text-lg font-bold bg-[var(--color-primary)] text-[#0b1120] hover:bg-[var(--color-primary-hover)] shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
                                 <Save size={18} />
                                 {isSaving ? 'محفوظ ہو رہی ہے...' : editingEntry ? 'تبدیلی محفوظ کریں' : 'تنخواہ جاری کریں'}
                             </button>
@@ -341,14 +347,14 @@ export const SalaryEntry = () => {
                 <div className="lg:col-span-2">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
                         <div>
-                            <h2 className="text-xl font-bold">حالیہ تنخواہ ریکارڈز</h2>
-                            <p className="text-xs text-[var(--color-text-muted)] mt-1">کل رقم: {formatAmount(totalPaid)}/-</p>
+                            <h2 className="text-2xl font-bold">حالیہ تنخواہ ریکارڈز</h2>
+                            <p className="text-base text-[var(--color-text-muted)] mt-1">کل رقم: {formatAmount(totalPaid)}/-</p>
                         </div>
                         <button
                             type="button"
                             onClick={loadData}
                             disabled={isLoading}
-                            className="flex items-center justify-center gap-2 text-xs bg-[var(--color-surface)] px-4 py-2 rounded-full border border-[var(--color-border)] disabled:opacity-60"
+                            className="flex items-center justify-center gap-2 text-base bg-[var(--color-surface)] px-4 py-2 rounded-full border border-[var(--color-border)] disabled:opacity-60"
                         >
                             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
                             {entries.length} انٹریز
@@ -367,23 +373,23 @@ export const SalaryEntry = () => {
                                         <User size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold">{entry.teacher?.fullName || '---'}</h3>
-                                        <p className="text-[10px] text-[var(--color-text-muted)]">{entry.teacher?.subject || entry.financeHead?.name || '---'}</p>
+                                        <h3 className="text-lg font-bold">{entry.teacher?.fullName || '---'}</h3>
+                                        <p className="text-sm text-[var(--color-text-muted)]">{entry.teacher?.subject || entry.financeHead?.name || '---'}</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-1 justify-between md:justify-around items-center w-full md:w-auto px-4">
-                                    <div className="flex items-center gap-2 text-[var(--color-text-muted)] text-sm">
+                                    <div className="flex items-center gap-2 text-[var(--color-text-muted)] text-base">
                                         <Calendar size={14} />
                                         <span>{formatMonth(entry.salaryMonth, entry.salaryYear)}</span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-[var(--color-text-muted)] text-sm">
+                                    <div className="flex items-center gap-2 text-[var(--color-text-muted)] text-base">
                                         <FileText size={14} />
                                         <span>{formatDate(entry.paymentDate)}</span>
                                     </div>
                                     <div className="text-[var(--color-primary)] font-extrabold text-lg">{formatAmount(entry.amount)}/-</div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="px-4 py-1 rounded-full text-[10px] font-bold bg-[var(--color-primary)] text-[#0b1120] flex items-center gap-1">
+                                    <span className="px-4 py-1 rounded-full text-sm font-bold bg-[var(--color-primary)] text-[#0b1120] flex items-center gap-1">
                                         <Wallet size={12} />
                                         جاری
                                     </span>

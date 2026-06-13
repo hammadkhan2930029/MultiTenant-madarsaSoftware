@@ -207,10 +207,11 @@ export const CreateIdCard = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     <div className="flex flex-col gap-2 relative">
-                        <label className="text-xs font-bold text-[var(--color-text-muted)] mr-2">رجسٹریشن نمبر یا نام</label>
+                        <label className="text-xs font-bold text-[var(--color-text-muted)] mr-2">رجسٹریشن نمبر یا نام<span className="text-red-500"> *</span></label>
                         <div className="relative">
                             <input
                                 type="text"
+                                required
                                 value={searchId}
                                 onChange={(event) => {
                                     setSearchId(event.target.value);

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock, FileText, Layers, Plus, Printer, Search, Trash2, Users } from 'lucide-react';
+import { CalendarDays, Clock, Edit3, FileText, Layers, Plus, Printer, Search, Trash2, Users, X } from 'lucide-react';
 import { DateField } from '../../Components/HR/FormElements';
 import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
-import { createExamSchedule, deleteExamSchedule, getExamSchedules } from '../../Constant/ExamSchedulesApi';
+import { createExamSchedule, deleteExamSchedule, getExamSchedules, updateExamSchedule } from '../../Constant/ExamSchedulesApi';
 import { getAdminSession } from '../../Constant/AdminAuth';
+import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const text = {
     title: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644',
@@ -24,6 +25,9 @@ const text = {
     notes: '\u0646\u0648\u0679',
     select: '\u0645\u0646\u062a\u062e\u0628 \u06a9\u0631\u06cc\u06ba',
     save: '\u0634\u06cc\u0688\u0648\u0644 \u0645\u062d\u0641\u0648\u0638 \u06a9\u0631\u06cc\u06ba',
+    update: 'تبدیلی محفوظ کریں',
+    updated: 'امتحانی شیڈول اپڈیٹ ہو گیا۔',
+    cancelEdit: 'ترمیم منسوخ کریں',
     saving: '\u0645\u062d\u0641\u0648\u0638 \u06c1\u0648 \u0631\u06c1\u0627 \u06c1\u06d2...',
     print: 'پرنٹ',
     required: '\u0628\u0631\u0627\u06c1 \u06a9\u0631\u0645 \u0627\u0645\u062a\u062d\u0627\u0646\u060c \u0633\u06cc\u0634\u0646\u060c \u06a9\u0644\u0627\u0633\u060c \u0645\u0636\u0645\u0648\u0646\u060c \u062a\u0627\u0631\u06cc\u062e \u0627\u0648\u0631 \u0648\u0642\u062a \u0645\u06a9\u0645\u0644 \u06a9\u0631\u06cc\u06ba\u06d4',
@@ -47,8 +51,8 @@ const today = () => new Date().toISOString().split('T')[0];
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ur-PK') : '---');
 const toDateInputValue = (value) => (value ? new Date(value).toISOString().split('T')[0] : '');
 const getFieldValue = (valueOrEvent) => valueOrEvent?.target?.value ?? valueOrEvent ?? '';
-const compactDateFieldClass = '[&_button]:h-[64px] [&_button]:min-h-[64px] [&_button]:rounded-xl [&_button]:border-[var(--color-border)] [&_button]:py-0 [&_button]:px-4 [&_button]:gap-3 [&_button_span]:overflow-visible [&_button_span]:text-clip [&_button_span]:whitespace-nowrap [&_button_span]:leading-[1.5] [&_button_span]:text-center [&_button_svg]:shrink-0';
-const timeControlClass = 'exam-native-time h-[64px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-5 text-left font-sans text-base font-black text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]';
+const compactDateFieldClass = '[&>label]:!mb-3 [&>label]:!flex [&>label]:h-[36px] [&>label]:items-center [&>label]:leading-[2] [&_button]:h-[64px] [&_button]:min-h-[64px] [&_button]:rounded-xl [&_button]:border-[var(--color-border)] [&_button]:py-0 [&_button]:px-4 [&_button]:gap-3 [&_button_span]:overflow-visible [&_button_span]:text-clip [&_button_span]:whitespace-nowrap [&_button_span]:leading-[1.5] [&_button_span]:text-center [&_button_svg]:shrink-0';
+const timeControlClass = 'exam-native-time h-[64px] w-full min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-left font-sans text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]';
 
 const createEmptyForm = () => ({
     examName: '',
@@ -93,8 +97,10 @@ export const ExamSchedule = () => {
     const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
+    const [editingId, setEditingId] = useState(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    useNotificationBridge({ error, success: message });
 
     const filteredSchedules = useMemo(() => {
         const query = filters.search.trim().toLowerCase();
@@ -164,7 +170,7 @@ export const ExamSchedule = () => {
 
         setIsSaving(true);
         try {
-            const savedSchedule = await createExamSchedule({
+            const payload = {
                 examName: formData.examName.trim(),
                 sessionId: Number(formData.sessionId),
                 classId: Number(formData.classId),
@@ -177,20 +183,56 @@ export const ExamSchedule = () => {
                 invigilator: formData.invigilator.trim() || undefined,
                 notes: formData.notes.trim() || undefined,
                 status: 'active',
-            });
+            };
+            const savedSchedule = editingId
+                ? await updateExamSchedule(editingId, payload)
+                : await createExamSchedule(payload);
+            const mappedSchedule = mapScheduleFromApi(savedSchedule);
 
-            setSchedules((current) => [mapScheduleFromApi(savedSchedule), ...current].sort((a, b) => `${a.examDate} ${a.startTime}`.localeCompare(`${b.examDate} ${b.startTime}`)));
+            setSchedules((current) => (
+                editingId
+                    ? current.map((schedule) => (schedule.id === editingId ? mappedSchedule : schedule))
+                    : [mappedSchedule, ...current]
+            ).sort((a, b) => `${a.examDate} ${a.startTime}`.localeCompare(`${b.examDate} ${b.startTime}`)));
             setFormData((prev) => ({
                 ...createEmptyForm(),
                 sessionId: prev.sessionId,
                 classId: prev.classId,
             }));
-            setMessage(text.saved);
+            setMessage(editingId ? text.updated : text.saved);
+            setEditingId(null);
         } catch (saveError) {
             setError(saveError.message || text.loadError);
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEdit = (schedule) => {
+        setEditingId(schedule.id);
+        setFormData({
+            examName: schedule.examName,
+            sessionId: schedule.sessionId,
+            classId: schedule.classId,
+            subjectId: schedule.subjectId,
+            examDate: schedule.examDate,
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            totalMarks: schedule.totalMarks,
+            room: schedule.room,
+            invigilator: schedule.invigilator,
+            notes: schedule.notes,
+        });
+        setMessage('');
+        setError('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setFormData(createEmptyForm());
+        setMessage('');
+        setError('');
     };
 
     const handleDelete = async (id) => {
@@ -297,8 +339,8 @@ export const ExamSchedule = () => {
                 <div className="flex flex-row items-center justify-between mb-8 p-6 rounded-3xl border"
                     style={{ backgroundColor: 'var(--color-surface)', borderColor: 'rgba(255,255,255,0.05)' }}>
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-[var(--color-primary)]">{text.title}</h1>
-                        <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">{text.subtitle}</p>
+                        <h1 className="text-3xl md:text-4xl font-black text-[var(--color-primary)]">{text.title}</h1>
+                        <p className="mt-5 text-base font-bold text-[var(--color-text-muted)]">{text.subtitle}</p>
                     </div>
                 </div>
 
@@ -308,56 +350,57 @@ export const ExamSchedule = () => {
                     <StatCard icon={<Users size={22} />} label={text.classes} value={stats.classes} />
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-                    <form onSubmit={handleSubmit} className="xl:col-span-5 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:p-5 shadow-xl space-y-4">
+                <div className="space-y-6">
+                    <form onSubmit={handleSubmit} className="w-full rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:p-5 shadow-xl space-y-4">
                         <div className="flex items-center gap-3 border-b border-[var(--color-border)] pb-4">
                             <div className="rounded-xl bg-[var(--color-primary)] p-3 text-[#0b1120]">
                                 <Plus size={20} />
                             </div>
-                            <h2 className="text-xl font-black">{text.formTitle}</h2>
+                            <h2 className="text-2xl font-black">{editingId ? 'شیڈول ترمیم کریں' : text.formTitle}</h2>
+                            {editingId ? (
+                                <button type="button" onClick={cancelEdit} className="mr-auto rounded-lg bg-rose-500/10 p-2 text-rose-400" title={text.cancelEdit} aria-label={text.cancelEdit}>
+                                    <X size={18} />
+                                </button>
+                            ) : null}
                         </div>
 
                         {error ? <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm font-bold text-rose-400">{error}</div> : null}
                         {message ? <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-bold text-emerald-400">{message}</div> : null}
 
                         <div>
-                            <FieldLabel>{text.examName}</FieldLabel>
+                            <FieldLabel required>{text.examName}</FieldLabel>
                             <input
+                                required
                                 value={formData.examName}
                                 onChange={(event) => updateForm('examName', event.target.value)}
                                 placeholder={text.examNamePlaceholder}
-                                className="h-[52px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                                className="h-[64px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <SelectField label={text.session} value={formData.sessionId} onChange={(value) => updateForm('sessionId', value)} disabled={isLoading}>
+                        <div className="grid grid-cols-1 items-start gap-x-4 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
+                            <SelectField required label={text.session} value={formData.sessionId} onChange={(value) => updateForm('sessionId', value)} disabled={isLoading}>
                                 <option value="">{text.select}</option>
                                 {sessionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                             </SelectField>
-                            <SelectField label={text.class} value={formData.classId} onChange={(value) => updateForm('classId', value)} disabled={isLoading}>
+                            <SelectField required label={text.class} value={formData.classId} onChange={(value) => updateForm('classId', value)} disabled={isLoading}>
                                 <option value="">{text.select}</option>
                                 {classOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                             </SelectField>
-                            <SelectField label={text.subject} value={formData.subjectId} onChange={(value) => updateForm('subjectId', value)} disabled={isLoading}>
+                            <SelectField required label={text.subject} value={formData.subjectId} onChange={(value) => updateForm('subjectId', value)} disabled={isLoading}>
                                 <option value="">{text.select}</option>
                                 {subjectOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                             </SelectField>
-                        </div>
-
-                        <div className="flex items-center grid grid-cols-1 gap-3 md:grid-cols-3 ">
                             <DateField
                                 label={text.date}
+                                required
                                 value={formData.examDate}
                                 onChange={(nextValue) => updateForm('examDate', getFieldValue(nextValue))}
                                 size="sm"
                                 className={compactDateFieldClass}
                             />
-                            <TimeInput label={text.startTime} value={formData.startTime} onChange={(value) => updateForm('startTime', value)} />
-                            <TimeInput label={text.endTime} value={formData.endTime} onChange={(value) => updateForm('endTime', value)} />
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <TimeInput required label={text.startTime} value={formData.startTime} onChange={(value) => updateForm('startTime', value)} />
+                            <TimeInput required label={text.endTime} value={formData.endTime} onChange={(value) => updateForm('endTime', value)} />
                             <TextInput label={text.marks} value={formData.totalMarks} onChange={(value) => updateForm('totalMarks', value)} type="number" />
                             <TextInput label={text.room} value={formData.room} onChange={(value) => updateForm('room', value)} />
                             <TextInput label={text.invigilator} value={formData.invigilator} onChange={(value) => updateForm('invigilator', value)} />
@@ -377,19 +420,19 @@ export const ExamSchedule = () => {
                             disabled={isSaving || isLoading}
                             className="flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-black text-[#0b1120] shadow-lg transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
                         >
-                            <Plus size={18} />
-                            {isSaving ? text.saving : text.save}
+                            {editingId ? <Edit3 size={18} /> : <Plus size={18} />}
+                            {isSaving ? text.saving : editingId ? text.update : text.save}
                         </button>
                     </form>
 
-                    <div className="xl:col-span-7 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
+                    <div className="w-full rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
                         <div className="border-b border-[var(--color-border)] p-4 md:p-5">
                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded-xl bg-emerald-500/10 p-3 text-[var(--color-primary)]">
                                         <Layers size={20} />
                                     </div>
-                                    <h2 className="text-xl font-black">{text.listTitle}</h2>
+                                    <h2 className="text-2xl font-black">{text.listTitle}</h2>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-bold text-[var(--color-text-muted)]">{filteredSchedules.length} / {schedules.length}</span>
@@ -403,20 +446,20 @@ export const ExamSchedule = () => {
                                     </button>
                                 </div>
                             </div>
-                            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-12">
-                                <div className="relative md:col-span-6">
+                            <div className="mt-4 grid grid-cols-1 items-start gap-3 md:grid-cols-12">
+                                <div className="relative h-14 self-start md:col-span-6">
                                     <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                                     <input
                                         value={filters.search}
                                         onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
                                         placeholder={text.searchPlaceholder}
-                                        className="h-[46px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] pr-10 pl-4 text-xs font-bold outline-none focus:border-[var(--color-primary)]"
+                                        className="block h-14 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] pr-10 pl-4 text-xs font-bold leading-none outline-none focus:border-[var(--color-primary)]"
                                     />
                                 </div>
                                 <select
                                     value={filters.sessionId}
                                     onChange={(event) => setFilters((prev) => ({ ...prev, sessionId: event.target.value }))}
-                                    className="h-[46px] rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-xs font-bold outline-none md:col-span-3"
+                                    className="block h-14 w-full self-start rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-xs font-bold leading-none outline-none md:col-span-3"
                                 >
                                     <option value="">{text.allSessions}</option>
                                     {sessionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -424,7 +467,7 @@ export const ExamSchedule = () => {
                                 <select
                                     value={filters.classId}
                                     onChange={(event) => setFilters((prev) => ({ ...prev, classId: event.target.value }))}
-                                    className="h-[46px] rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-xs font-bold outline-none md:col-span-3"
+                                    className="block h-14 w-full self-start rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-xs font-bold leading-none outline-none md:col-span-3"
                                 >
                                     <option value="">{text.allClasses}</option>
                                     {classOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -436,7 +479,7 @@ export const ExamSchedule = () => {
                             {filteredSchedules.length ? (
                                 <div className="divide-y divide-[var(--color-border)]">
                                     {filteredSchedules.map((schedule) => (
-                                        <ScheduleRow key={schedule.id} schedule={schedule} deletingId={deletingId} onDelete={handleDelete} onPrint={handlePrint} />
+                                        <ScheduleRow key={schedule.id} schedule={schedule} deletingId={deletingId} onDelete={handleDelete} onEdit={handleEdit} onPrint={handlePrint} />
                                     ))}
                                 </div>
                             ) : isLoadingSchedules ? (
@@ -452,18 +495,21 @@ export const ExamSchedule = () => {
     );
 };
 
-const FieldLabel = ({ children }) => (
-    <label className="mb-2 mr-2 block text-[11px] font-black text-[var(--color-text-muted)]">{children}</label>
+const FieldLabel = ({ children, required = false }) => (
+    <label className="mb-3 mr-2 flex h-[36px] items-center text-[11px] font-black leading-[2] text-[var(--color-text-muted)]">
+        {children}{required ? <span className="text-red-500"> *</span> : null}
+    </label>
 );
 
-const SelectField = ({ label, value, onChange, children, disabled }) => (
-    <div>
-        <FieldLabel>{label}</FieldLabel>
+const SelectField = ({ label, value, onChange, children, disabled, required = false }) => (
+    <div className="w-full">
+        <FieldLabel required={required}>{label}</FieldLabel>
         <select
+            required={required}
             value={value}
             onChange={(event) => onChange(event.target.value)}
             disabled={disabled}
-            className="h-[52px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
+            className="h-[64px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
         >
             {children}
         </select>
@@ -471,21 +517,22 @@ const SelectField = ({ label, value, onChange, children, disabled }) => (
 );
 
 const TextInput = ({ label, value, onChange, type = 'text' }) => (
-    <div>
+    <div className="w-full">
         <FieldLabel>{label}</FieldLabel>
         <input
             type={type}
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            className="h-[52px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+            className="h-[64px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
         />
     </div>
 );
 
-const TimeInput = ({ label, value, onChange }) => (
-    <div>
-        <FieldLabel>{label}</FieldLabel>
+const TimeInput = ({ label, value, onChange, required = false }) => (
+    <div className="w-full">
+        <FieldLabel required={required}>{label}</FieldLabel>
         <input
+            required={required}
             type="time"
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -509,7 +556,7 @@ const StatCard = ({ icon, label, value }) => (
     </div>
 );
 
-const ScheduleRow = ({ schedule, deletingId, onDelete, onPrint }) => (
+const ScheduleRow = ({ schedule, deletingId, onDelete, onEdit, onPrint }) => (
     <div className="p-4 transition-colors hover:bg-[var(--color-bg)]/50">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="min-w-0 text-right">
@@ -523,7 +570,6 @@ const ScheduleRow = ({ schedule, deletingId, onDelete, onPrint }) => (
                     <span>{schedule.room || '---'}</span>
                     <span>{schedule.invigilator || '---'}</span>
                 </div>
-                {schedule.notes ? <p className="mt-3 text-sm font-bold text-[var(--color-text-muted)]">{schedule.notes}</p> : null}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(3,minmax(116px,1fr))_auto] lg:min-w-[460px] lg:justify-end">
                 <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-right">
@@ -538,7 +584,7 @@ const ScheduleRow = ({ schedule, deletingId, onDelete, onPrint }) => (
                     <p className="text-[10px] font-black text-[var(--color-text-muted)]">{text.marks}</p>
                     <p className="mt-1 text-sm font-black">{schedule.totalMarks || '---'}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                     <button
                         type="button"
                         onClick={() => onPrint(schedule)}
@@ -547,6 +593,15 @@ const ScheduleRow = ({ schedule, deletingId, onDelete, onPrint }) => (
                         title="اس کلاس کا مکمل شیڈول پرنٹ کریں"
                     >
                         <Printer size={17} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onEdit(schedule)}
+                        className="flex min-h-[62px] items-center justify-center rounded-xl bg-blue-500/10 p-3 text-blue-400 transition-all hover:bg-blue-500 hover:text-white"
+                        aria-label="ترمیم کریں"
+                        title="ترمیم کریں"
+                    >
+                        <Edit3 size={17} />
                     </button>
                     <button
                         type="button"
@@ -559,6 +614,12 @@ const ScheduleRow = ({ schedule, deletingId, onDelete, onPrint }) => (
                     </button>
                 </div>
             </div>
+            {schedule.notes ? (
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-right lg:col-span-2">
+                    <span className="font-black text-[var(--color-primary)]">نوٹ: </span>
+                    <span className="text-sm font-bold text-[var(--color-text-muted)]">{schedule.notes}</span>
+                </div>
+            ) : null}
         </div>
     </div>
 );

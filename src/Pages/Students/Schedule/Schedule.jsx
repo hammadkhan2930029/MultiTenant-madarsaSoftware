@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { getClasses, getSections, getSessions, getSubjects } from '../../../Constant/AcademicSetupApi';
 import { createSchedule, deleteSchedule, getSchedules, updateSchedule } from '../../../Constant/ScheduleApi';
+import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
 
@@ -51,6 +52,7 @@ export const StudentScheduleManager = () => {
     const [editingScheduleId, setEditingScheduleId] = useState(null);
     const [setupError, setSetupError] = useState('');
     const [scheduleMessage, setScheduleMessage] = useState('');
+    useNotificationBridge({ error: setupError, success: scheduleMessage });
     const [formData, setFormData] = useState({
         sessionId: '',
         session: '',

@@ -256,6 +256,7 @@ export const AttendancePage = () => {
                 <div className="w-full md:w-64 bg-[var(--color-input)] p-1 rounded-2xl border border-[var(--color-border)]">
                     <DateField
                         label="تاریخ"
+                        required
                         value={searchFilters.date}
                         onChange={(nextValue) => handleFilterChange('date', nextValue)}
                     />
@@ -266,18 +267,21 @@ export const AttendancePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     <SelectField
                         label="سیشن"
+                        required
                         value={searchFilters.sessionId}
                         onChange={(e) => handleFilterChange('sessionId', e.target.value)}
                         options={formatOptions(sessions, 'سیشن منتخب کریں')}
                     />
                     <SelectField
                         label="کلاس"
+                        required
                         value={searchFilters.classId}
                         onChange={(e) => handleFilterChange('classId', e.target.value)}
                         options={formatOptions(classes, 'کلاس منتخب کریں')}
                     />
                     <SelectField
                         label="سیکشن"
+                        required
                         value={searchFilters.sectionId}
                         onChange={(e) => handleFilterChange('sectionId', e.target.value)}
                         options={formatOptions(sections, 'سیکشن منتخب کریں')}

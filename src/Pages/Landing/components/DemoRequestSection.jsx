@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNotifier } from '../../../Components/Notifications/useNotifier'
 
 const initialForm = {
   name: '',
@@ -8,6 +9,7 @@ const initialForm = {
 }
 
 function DemoRequestSection() {
+  const notify = useNotifier()
   const [form, setForm] = useState(initialForm)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
@@ -19,6 +21,7 @@ function DemoRequestSection() {
   const handleSubmit = (event) => {
     event.preventDefault()
     setIsSubmitted(true)
+    notify.success('آپ کی ڈیمو درخواست کامیابی سے جمع ہو گئی ہے۔')
   }
 
   return (

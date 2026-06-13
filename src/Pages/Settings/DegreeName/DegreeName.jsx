@@ -129,6 +129,7 @@ export const QualificationManagement = () => {
                         <InputField
                             type="text"
                             label={'سند / ڈگری کا نام'}
+                            required
                             placeholder="مثلاً: بی ایس سی ایس"
                             value={formData.title}
                             onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}

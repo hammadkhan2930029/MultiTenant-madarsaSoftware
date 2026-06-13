@@ -314,7 +314,8 @@ export const SideBar = () => {
             path: '/HRManagement',
             subMenu: [
                 { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
-                { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' }
+                { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
+                { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' }
             ]
         },
         {
@@ -323,8 +324,8 @@ export const SideBar = () => {
             icon: ExamIcon,
             path: '/exams',
             subMenu: [
-                { id: 'exam_schedule_list', label: 'امتحانی شیڈول فہرست', path: '/exams/schedule-list' },
                 { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' },
+                { id: 'exam_schedule_list', label: 'امتحانی شیڈول فہرست', path: '/exams/schedule-list' },
                 { id: 'exam_result', label: 'امتحانی رزلٹ', path: '/exams/result' },
                 { id: 'exam_result_list', label: 'رزلٹ فہرست', path: '/exams/result-list' }
             ]
@@ -422,9 +423,9 @@ export const SideBar = () => {
                 </div>
                 {/* //--------------------------------------------------------------// */}
 
-                <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] vip-scrollbar px-1 ">
+                <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] vip-scrollbar px-1 "  dir="ltr">
                     {menuItems.filter((item) => !item.hidden).map((item) => (
-                        <div key={item.id}>
+                        <div key={item.id} dir="rtl">
                             {/* --- Level 1: Main Menu --- */}
                             <div
                                 onClick={() => item.subMenu ? toggleSubMenu(item.id) : (navigate(item.path), setIsSidebarOpen(false))}
