@@ -424,7 +424,6 @@ export const FeesCollection = () => {
     const [paymentTarget, setPaymentTarget] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
-    const [isPrintPending, setIsPrintPending] = useState(false);
     const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -818,7 +817,7 @@ const Select = ({ label, value, onChange, children, compact = false, required = 
     </label>
 );
 
-const SummaryCard = ({ icon: Icon, label, value, danger }) => (
+const SummaryCard = ({ icon, label, value, danger }) => (
     <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
         <div className="flex items-center justify-between">
             <div>
@@ -826,7 +825,7 @@ const SummaryCard = ({ icon: Icon, label, value, danger }) => (
                 <h3 className={`mt-2 text-2xl font-black ${danger ? 'text-rose-500' : 'text-[var(--color-text-main)]'}`}>{value}</h3>
             </div>
             <div className="rounded-2xl bg-[var(--color-primary)]/10 p-3 text-[var(--color-primary)]">
-                <Icon size={24} />
+                {React.createElement(icon, { size: 24 })}
             </div>
         </div>
     </div>

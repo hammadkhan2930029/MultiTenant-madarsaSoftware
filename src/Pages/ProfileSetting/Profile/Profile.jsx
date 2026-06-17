@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
 import { fetchMadrassaProfile, resolveApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
+import { getCities } from '../../../Constant/CityApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 export const Profile = () => {
@@ -12,13 +13,13 @@ export const Profile = () => {
     const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
     const [citySearch, setCitySearch] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [isCitiesLoading, setIsCitiesLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [cities, setCities] = useState([]);
     const [logoPreview, setLogoPreview] = useState(AppImages.logo);
     const dropdownRef = useRef(null);
     const fileInputRef = useRef(null);
     const notify = useNotifier();
-
-    const allCities = ['کراچی', 'لاہور', 'اسلام آباد', 'راولپنڈی', 'فیصل آباد', 'ملتان', 'پشاور', 'کوئٹہ'];
 
     const [madrassaData, setMadrassaData] = useState({
         name: 'جامعہ انوار القرآن',
@@ -80,6 +81,35 @@ export const Profile = () => {
         };
 
         loadProfile();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [notify]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadCities = async () => {
+            try {
+                setIsCitiesLoading(true);
+                const result = await getCities();
+                if (!isMounted) return;
+
+                setCities((result.items || []).filter((city) => city.status === 'active'));
+            } catch (error) {
+                if (isMounted) {
+                    notify.error(error?.message || 'شہروں کی فہرست لوڈ نہیں ہو سکی۔', 'لوڈنگ میں مسئلہ پیش آیا');
+                    setCities([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsCitiesLoading(false);
+                }
+            }
+        };
+
+        loadCities();
 
         return () => {
             isMounted = false;
@@ -205,7 +235,7 @@ export const Profile = () => {
         }
     };
 
-    const filteredCities = allCities.filter((c) => c.includes(citySearch));
+    const filteredCities = cities.filter((city) => city.name?.includes(citySearch));
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10 px-4" dir="rtl">
@@ -341,7 +371,7 @@ export const Profile = () => {
                                         onClick={() => setIsCityDropdownOpen(!isCityDropdownOpen)}
                                         className="flex items-center justify-between p-4 bg-[var(--color-bg)] border border-[#00d094]/30 rounded-2xl cursor-pointer hover:border-[#00d094] transition-all"
                                     >
-                                        <span className="font-bold text-[var(--color-text)]">{tempData.city}</span>
+                                        <span className="font-bold text-[var(--color-text)]">{tempData.city || 'شہر منتخب کریں'}</span>
                                         <ChevronDown size={18} className="text-[#00d094]" />
                                     </div>
 
@@ -351,26 +381,38 @@ export const Profile = () => {
                                                 <Search size={16} className="text-[var(--color-text-muted)]" />
                                                 <input
                                                     placeholder="تلاش کریں..."
+                                                    value={citySearch}
                                                     className="w-full bg-transparent text-sm outline-none text-[var(--color-text)] font-bold"
                                                     onChange={(e) => setCitySearch(e.target.value)}
                                                 />
                                             </div>
                                             <div className="overflow-y-auto max-h-48 p-2 custom-scrollbar">
-                                                {filteredCities.map((city) => (
-                                                    <div
-                                                        key={city}
-                                                        onClick={() => {
-                                                            setTempData({ ...tempData, city });
-                                                            setIsCityDropdownOpen(false);
-                                                        }}
-                                                        className={`p-3 rounded-xl cursor-pointer font-bold text-sm flex justify-between items-center transition-all mb-1 ${
-                                                            tempData.city === city ? 'bg-[#00d094]/20 text-[#00d094]' : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
-                                                        }`}
-                                                    >
-                                                        {city}
-                                                        {tempData.city === city && <Check size={16} />}
+                                                {isCitiesLoading ? (
+                                                    <div className="p-4 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                                        شہر لوڈ ہو رہے ہیں...
                                                     </div>
-                                                ))}
+                                                ) : filteredCities.length > 0 ? (
+                                                    filteredCities.map((city) => (
+                                                        <div
+                                                            key={city.id}
+                                                            onClick={() => {
+                                                                setTempData({ ...tempData, city: city.name });
+                                                                setIsCityDropdownOpen(false);
+                                                                setCitySearch('');
+                                                            }}
+                                                            className={`p-3 rounded-xl cursor-pointer font-bold text-sm flex justify-between items-center transition-all mb-1 ${
+                                                                tempData.city === city.name ? 'bg-[#00d094]/20 text-[#00d094]' : 'text-[var(--color-text)] hover:bg-[var(--color-bg)]'
+                                                            }`}
+                                                        >
+                                                            {city.name}
+                                                            {tempData.city === city.name && <Check size={16} />}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <div className="p-4 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                                        کوئی شہر نہیں ملا
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}

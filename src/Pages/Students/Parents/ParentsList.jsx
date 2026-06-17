@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Eye, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InputField } from '../../../Components/HR/FormElements';
@@ -78,19 +78,28 @@ export const ParentsList = () => {
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
 
-    const loadParents = async () => {
+    const loadParents = useCallback(async () => {
         try {
             const result = await getParents('page=1&limit=100');
             setParents(result.items || []);
         } catch (loadError) {
             setError(loadError.message || 'والدین کی فہرست لوڈ نہیں ہو سکی۔');
         }
-    };
+    }, []);
 
     useEffect(() => {
+        let isMounted = true;
         window.scrollTo(0, 0);
-        loadParents();
-    }, []);
+        Promise.resolve().then(() => {
+            if (isMounted) {
+                loadParents();
+            }
+        });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [loadParents]);
 
     const handleChange = (fieldName, fieldValue) => {
         setFormValues((currentValues) => ({

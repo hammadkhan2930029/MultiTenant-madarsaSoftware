@@ -59,9 +59,21 @@ export const StorePurchases = () => {
 
     const loadDependencies = async () => {
         setError('');
-        const [itemsResult, suppliersResult] = await Promise.all([getStoreItems(), getStoreSuppliers()]);
-        setItems(itemsResult.items || []);
-        setSuppliers(suppliersResult.items || []);
+        const [itemsResult, suppliersResult] = await Promise.allSettled([getStoreItems(), getStoreSuppliers()]);
+
+        if (itemsResult.status === 'fulfilled') {
+            setItems(itemsResult.value.items || []);
+        } else {
+            setItems([]);
+            setError(itemsResult.reason?.message || 'اشیاء لوڈ نہیں ہو سکیں۔');
+        }
+
+        if (suppliersResult.status === 'fulfilled') {
+            setSuppliers(suppliersResult.value.items || []);
+        } else {
+            setSuppliers([]);
+            setError(suppliersResult.reason?.message || 'سپلائرز لوڈ نہیں ہو سکے۔');
+        }
     };
 
     const loadPurchases = async () => {
@@ -348,7 +360,7 @@ export const StorePurchases = () => {
                         {formData.items.map((purchaseItem, index) => (
                             <div key={index} className="grid grid-cols-1 gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                                 <select value={purchaseItem.itemId} onChange={(event) => updatePurchaseItem(index, 'itemId', event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">
-                                    <option value="">شے منتخب کریں</option>
+                                    <option value="">{items.length ? 'شے منتخب کریں' : 'کوئی شے موجود نہیں'}</option>
                                     {items.map((item) => <option key={item.id} value={item.id}>{item.itemName}</option>)}
                                 </select>
                                 <input type="number" min="0" value={purchaseItem.quantity} onChange={(event) => updatePurchaseItem(index, 'quantity', event.target.value)} placeholder="مقدار" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />

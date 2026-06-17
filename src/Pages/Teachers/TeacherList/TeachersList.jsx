@@ -38,6 +38,9 @@ const formatDate = (value) => {
     return date.toISOString().split('T')[0];
 };
 
+const getTeacherShiftLabel = (teacher) =>
+    teacher?.shift?.name || teacher?.shiftName || teacher?.shiftTitle || (teacher?.shiftId ? `شفٹ #${teacher.shiftId}` : '---');
+
 const knownExportKeys = new Set([
     'id',
     'staffType',
@@ -51,6 +54,12 @@ const knownExportKeys = new Set([
     'educationYear',
     'specialization',
     'address',
+    'shift',
+    'shiftId',
+    'shiftName',
+    'shiftTitle',
+    'shiftStartTime',
+    'shiftEndTime',
     'basicSalary',
     'bankName',
     'accountTitle',
@@ -85,6 +94,10 @@ const mapTeacherForExport = (teacher) => ({
     educationYear: teacher.educationYear,
     specialization: teacher.specialization,
     address: teacher.address,
+    shift: getTeacherShiftLabel(teacher),
+    shiftId: teacher.shiftId || teacher.shift?.id,
+    shiftStartTime: teacher.shiftStartTime || teacher.shift?.startTime,
+    shiftEndTime: teacher.shiftEndTime || teacher.shift?.endTime,
     basicSalary: teacher.basicSalary,
     bankName: teacher.bankName,
     accountTitle: teacher.accountTitle,
@@ -131,7 +144,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     const filteredTeachers = useMemo(
         () =>
             teachers.filter((teacher) =>
-                [teacher.fullName, teacher.subject, teacher.phone, teacher.cnic, teacher.email, teacher.jobTitle, teacher.department]
+                [teacher.fullName, teacher.subject, teacher.phone, teacher.cnic, teacher.email, teacher.jobTitle, teacher.department, getTeacherShiftLabel(teacher)]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
@@ -153,6 +166,10 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
         { header: 'Education Year', accessor: 'educationYear' },
         { header: 'Specialization', accessor: 'specialization' },
         { header: 'Address', accessor: 'address' },
+        { header: 'Shift', accessor: 'shift' },
+        { header: 'Shift ID', accessor: 'shiftId' },
+        { header: 'Shift Start', accessor: 'shiftStartTime' },
+        { header: 'Shift End', accessor: 'shiftEndTime' },
         { header: 'Basic Salary', accessor: 'basicSalary' },
         { header: 'Bank Name', accessor: 'bankName' },
         { header: 'Account Title', accessor: 'accountTitle' },
@@ -257,6 +274,10 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                     <p className="text-[var(--color-text-muted)] text-[11px] mb-1">رابطہ</p>
                                     <p className="font-medium" dir="ltr">{teacher.phone || '---'}</p>
                                 </div>
+                                <div>
+                                    <p className="text-[var(--color-text-muted)] text-[11px] mb-1">شفٹ</p>
+                                    <p className="font-medium">{getTeacherShiftLabel(teacher)}</p>
+                                </div>
                             </div>
 
                             <div className="flex gap-2 pt-2">
@@ -287,6 +308,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">نمبر</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">نام</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">{config.subjectLabel}</th>
+                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">شفٹ</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">رابطہ</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">حالت</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">کارروائی</th>
@@ -305,6 +327,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                         </div>
                                     </td>
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{teacher.subject || '---'}</td>
+                                    <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{getTeacherShiftLabel(teacher)}</td>
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]" dir="ltr">{teacher.phone || '---'}</td>
                                     <td className="p-5 text-center">
                                         <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${teacher.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>

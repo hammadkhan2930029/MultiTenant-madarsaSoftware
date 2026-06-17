@@ -128,6 +128,7 @@ export const FundCollection = () => {
         return details.join(' | ').slice(0, 255);
     };
 
+    // eslint-disable-next-line no-unused-vars
     const handlePrint = () => {
         const printWindow = window.open('', '_blank');
         const session = getAdminSession();

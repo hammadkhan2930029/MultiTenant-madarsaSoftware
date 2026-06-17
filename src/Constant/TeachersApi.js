@@ -25,6 +25,21 @@ export const getTeacherById = async (id) => {
   return result?.data || null;
 };
 
+export const getTeacherIncrements = async (id) => {
+  const result = await apiRequest(`/teachers/${id}/increments`, withToken({ method: 'GET' }));
+  return result?.data || [];
+};
+
+export const getAllTeacherIncrements = async (query = '') => {
+  const result = await apiRequest(`/teachers/increments${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const createTeacherIncrement = async (id, payload) => {
+  const result = await apiRequest(`/teachers/${id}/increments`, withJson('POST', payload));
+  return result?.data || null;
+};
+
 export const createTeacher = async (payload) => {
   const formData = new FormData();
 

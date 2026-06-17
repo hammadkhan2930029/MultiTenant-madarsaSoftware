@@ -22,6 +22,9 @@ const formatDateKey = (date) => {
     return `${year}-${month}-${day}`;
 };
 
+const getTeacherShiftLabel = (teacher) =>
+    teacher?.shift?.name || teacher?.shiftName || teacher?.shiftTitle || (teacher?.shiftId ? `شفٹ #${teacher.shiftId}` : '---');
+
 export const TeacherAttendance = () => {
     const navigate = useNavigate();
     const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
@@ -140,7 +143,7 @@ export const TeacherAttendance = () => {
     const filteredTeachers = useMemo(
         () =>
             teachers.filter((teacher) =>
-                [teacher.fullName, teacher.phone, teacher.subject]
+                [teacher.fullName, teacher.phone, teacher.subject, getTeacherShiftLabel(teacher)]
                     .filter(Boolean)
                     .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())),
             ),
@@ -161,6 +164,7 @@ export const TeacherAttendance = () => {
         { header: 'ID', accessor: 'id' },
         { header: 'Name', accessor: 'fullName' },
         { header: 'Subject', accessor: 'subject' },
+        { header: 'Shift', accessor: getTeacherShiftLabel },
         { header: 'Phone', accessor: 'phone' },
         { header: 'Date', accessor: () => selectedDate },
         { header: 'Status', accessor: (teacher) => STATUS_OPTIONS.find((status) => status.value === teacher.status)?.label || teacher.status },
@@ -224,6 +228,7 @@ export const TeacherAttendance = () => {
                                 <th className="p-4">نمبر</th>
                                 <th className="p-4">نام</th>
                                 <th className="p-4">مضمون</th>
+                                <th className="p-4">شفٹ</th>
                                 <th className="p-4">موبائل نمبر</th>
                                 <th className="p-4 text-center">حاضری</th>
                                 <th className="p-4 text-center">کارروائی</th>
@@ -235,6 +240,7 @@ export const TeacherAttendance = () => {
                                     <td className="p-4 font-mono text-sm">{teacher.id}</td>
                                     <td className="p-4 font-bold text-[var(--text-color)]">{teacher.fullName}</td>
                                     <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{teacher.subject || '---'}</td>
+                                    <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{getTeacherShiftLabel(teacher)}</td>
                                     <td className="p-4 text-sm font-sans text-[var(--text-color)] opacity-80" dir="ltr">{teacher.phone || '---'}</td>
                                     <td className="p-4">
                                         <div className="flex justify-center">
@@ -276,6 +282,10 @@ export const TeacherAttendance = () => {
                                 <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
                                     <BookOpen size={16} className="text-[var(--color-primary)]" />
                                     <span>{teacher.subject || '---'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
+                                    <Clock size={16} className="text-[var(--color-primary)]" />
+                                    <span>{getTeacherShiftLabel(teacher)}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70" dir="ltr">
                                     <Phone size={16} className="text-[var(--color-primary)]" />

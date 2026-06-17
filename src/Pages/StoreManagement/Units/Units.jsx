@@ -104,7 +104,7 @@ export const StoreUnits = () => {
             await deleteStoreUnit(deleteTarget.id);
             if (editMode === deleteTarget.id) resetForm();
             setDeleteTarget(null);
-            setSuccess('اکائی غیر فعال کر دی گئی۔');
+            setSuccess('اکائی حذف کر دی گئی۔');
             await loadUnits();
         } catch (deleteError) {
             setError(deleteError.message || 'اکائی حذف نہیں ہو سکی۔');
@@ -221,7 +221,7 @@ export const StoreUnits = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-start gap-2">
                                                 <button type="button" onClick={() => handleEdit(unit)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="ترمیم"><Edit2 size={16} /></button>
-                                                <button type="button" onClick={() => setDeleteTarget(unit)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white" title="غیر فعال"><Trash2 size={16} /></button>
+                                                <button type="button" onClick={() => setDeleteTarget(unit)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white" title="حذف"><Trash2 size={16} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -239,14 +239,14 @@ export const StoreUnits = () => {
                     <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
                         <div className="flex items-start justify-between gap-4">
                             <div className="text-right">
-                                <h3 className="text-xl font-black text-[var(--color-text)]">اکائی غیر فعال کرنے کی تصدیق</h3>
-                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کو غیر فعال کرنا چاہتے ہیں؟</p>
+                                <h3 className="text-xl font-black text-[var(--color-text)]">اکائی حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کو حذف کرنا چاہتے ہیں؟</p>
                             </div>
                             <button type="button" onClick={() => !isDeleting && setDeleteTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"><X size={18} /></button>
                         </div>
                         <div className="mt-8 flex justify-end gap-3">
                             <button type="button" onClick={() => setDeleteTarget(null)} disabled={isDeleting} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60">منسوخ کریں</button>
-                            <button type="button" onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">{isDeleting ? 'غیر فعال ہو رہی ہے...' : 'تصدیق کریں'}</button>
+                            <button type="button" onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">{isDeleting ? 'حذف ہو رہی ہے...' : 'حذف کریں'}</button>
                         </div>
                     </div>
                 </div>

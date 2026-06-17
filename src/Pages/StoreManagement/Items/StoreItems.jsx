@@ -221,22 +221,24 @@ export const StoreItems = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
-            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
-                <div className="text-right">
-                    <div className="mb-3 inline-flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-2 text-sm font-black text-[#00d094]">
+            <div className="grid gap-4 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                <div className="flex flex-col gap-3 text-right sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-2 text-sm font-black text-[#00d094]">
                         <Boxes size={18} />
                         اسٹور مینجمنٹ
                     </div>
                     <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">اشیاء مینجمنٹ</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل اشیاء: {items.length}</p>
+                    </div>
+                    <p className="text-sm font-medium text-[var(--color-text-muted)]">کل اشیاء: {items.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:justify-end">
-                    <div className="flex rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-1">
+                <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="flex h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-1">
                         <button
                             type="button"
                             onClick={() => setViewMode('table')}
-                            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all ${viewMode === 'table' ? 'bg-[#00d094] text-white' : 'text-[var(--color-text-muted)]'}`}
+                            className={`flex h-10 flex-1 items-center justify-center rounded-xl transition-all ${viewMode === 'table' ? 'bg-[#00d094] text-white' : 'text-[var(--color-text-muted)]'}`}
                             title="فہرست"
                         >
                             <List size={18} />
@@ -244,14 +246,14 @@ export const StoreItems = () => {
                         <button
                             type="button"
                             onClick={() => setViewMode('card')}
-                            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all ${viewMode === 'card' ? 'bg-[#00d094] text-white' : 'text-[var(--color-text-muted)]'}`}
+                            className={`flex h-10 flex-1 items-center justify-center rounded-xl transition-all ${viewMode === 'card' ? 'bg-[#00d094] text-white' : 'text-[var(--color-text-muted)]'}`}
                             title="کارڈ"
                         >
                             <Grid2X2 size={18} />
                         </button>
                     </div>
 
-                    <div className="relative md:w-72">
+                    <div className="relative min-w-0">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
@@ -264,7 +266,7 @@ export const StoreItems = () => {
                     <select
                         value={categoryFilter}
                         onChange={(event) => setCategoryFilter(event.target.value)}
-                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:w-56"
+                        className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none"
                     >
                         <option value="">تمام کیٹیگریز</option>
                         {categoryOptions.map((category) => (
@@ -274,24 +276,24 @@ export const StoreItems = () => {
                         ))}
                     </select>
 
-                    <label className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
+                    <label className="flex h-12 min-w-0 w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
                         <input type="checkbox" checked={lowStockOnly} onChange={(event) => { setLowStockOnly(event.target.checked); if (event.target.checked) setOutOfStockOnly(false); }} className="h-4 w-4 accent-[#00d094]" />
                         کم اسٹاک
                     </label>
 
-                    <label className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
+                    <label className="flex h-12 min-w-0 w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
                         <input type="checkbox" checked={outOfStockOnly} onChange={(event) => { setOutOfStockOnly(event.target.checked); if (event.target.checked) setLowStockOnly(false); }} className="h-4 w-4 accent-[#00d094]" />
                         ختم اسٹاک
                     </label>
 
-                    <button type="button" onClick={resetFilters} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-sm font-black text-[var(--color-text)]">
+                    <button type="button" onClick={resetFilters} className="h-12 w-full whitespace-nowrap rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-sm font-black text-[var(--color-text)]">
                         فلٹر صاف کریں
                     </button>
 
                     <button
                         type="button"
                         onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))}
-                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all active:scale-95 ${
+                        className={`flex h-12 w-full items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-6 text-sm font-black transition-all active:scale-95 ${
                             isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white shadow-lg shadow-emerald-500/20'
                         }`}
                     >

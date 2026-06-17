@@ -4,7 +4,7 @@ import {
     BookOpen, Wallet, Settings, LogOut, Search,
     Bell, MessageSquare, Menu, ChevronDown,
     ClipboardList, GraduationCap as ExamIcon, HeartHandshake,
-    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, Settings2, KeyRound
+    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, Settings2, KeyRound, Sparkles
 } from 'lucide-react';
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -233,6 +233,7 @@ export const SideBar = () => {
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
                 { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
+                { id: 't_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
                 { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' },
             ]
         },
@@ -315,6 +316,7 @@ export const SideBar = () => {
             subMenu: [
                 { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
                 { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
+                { id: 'staff_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
                 { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' }
             ]
         },
@@ -368,6 +370,8 @@ export const SideBar = () => {
         { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
         // { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
         { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck },
+        { id: 'support', label: 'سپورٹ', path: '/Profile/support', icon: MessageSquare },
+        { id: 'suggestions', label: 'تجاویز', path: '/Profile/suggestions', icon: Sparkles },
     ];
 
     // const toggleSubMenu = (id) => setOpenSubMenu(openSubMenu === id ? null : id);
@@ -524,26 +528,26 @@ export const SideBar = () => {
                                     borderColor: 'var(--color-border)',
                                     color: 'var(--color-text-main)'
                                 }}
-                                className="absolute top-0 -right-72 lg:right-12 md:right-8 w-72 max-h-[80vh] overflow-y-auto backdrop-blur-xl border shadow-2xl rounded-[2rem] p-3 animate-in slide-in-from-left-5 fade-in duration-300"
+                                className="absolute top-0 -right-72 lg:right-12 md:right-8 w-72 max-h-[80vh] overflow-y-auto backdrop-blur-xl border shadow-2xl rounded-[2rem] p-4 animate-in slide-in-from-left-5 fade-in duration-300"
                             >
                                 <p
                                     style={{ color: 'var(--color-primary)' }}
-                                    className="text-[10px] font-black uppercase tracking-widest mb-3 px-3"
+                                    className="text-base font-black mb-4 px-3"
                                 >
                                     فوری اختیارات
                                 </p>
 
-                                <div className="space-y-1">
+                                <div className="space-y-2">
                                     {setting[0].subMenu.map((sub) => (
                                         <button
                                             key={sub.id}
                                             onClick={() => { navigate(sub.path); setOpenSubMenu(null); }}
                                             style={{ '--hover-bg': 'var(--color-bg)' }}
-                                            className="w-full flex items-center justify-between p-3 rounded-xl transition-all group/item hover:bg-[var(--hover-bg)]"
+                                            className="w-full flex items-center justify-between px-3 py-3.5 rounded-xl transition-all group/item hover:bg-[var(--hover-bg)]"
                                         >
                                             <span
                                                 style={{ color: 'var(--color-text-main)' }}
-                                                className="text-xs font-bold group-hover/item:text-[var(--color-primary)] transition-colors"
+                                                className="text-base font-bold group-hover/item:text-[var(--color-primary)] transition-colors"
                                             >
                                                 {sub.label}
                                             </span>
@@ -560,11 +564,11 @@ export const SideBar = () => {
                                     <button
                                         onClick={() => { navigate('/exams/result-grades'); setOpenSubMenu(null); }}
                                         style={{ '--hover-bg': 'var(--color-bg)' }}
-                                        className="w-full flex items-center justify-between p-3 rounded-xl transition-all group/item hover:bg-[var(--hover-bg)]"
+                                        className="w-full flex items-center justify-between px-3 py-3.5 rounded-xl transition-all group/item hover:bg-[var(--hover-bg)]"
                                     >
                                         <span
                                             style={{ color: 'var(--color-text-main)' }}
-                                            className="text-xs font-bold group-hover/item:text-[var(--color-primary)] transition-colors"
+                                            className="text-base font-bold group-hover/item:text-[var(--color-primary)] transition-colors"
                                         >
                                             رزلٹ فیصد رینج
                                         </span>

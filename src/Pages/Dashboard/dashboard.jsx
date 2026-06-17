@@ -472,7 +472,11 @@ export const Dashboard = () => {
                 ]
                     .sort((a, b) => b.sortDate - a.sortDate)
                     .slice(0, 30)
-                    .map(({ sortDate, ...activity }) => activity);
+                    .map((activity) => {
+                        const activityWithoutSortDate = { ...activity };
+                        delete activityWithoutSortDate.sortDate;
+                        return activityWithoutSortDate;
+                    });
 
                 setRecentActivities(nextActivities);
 

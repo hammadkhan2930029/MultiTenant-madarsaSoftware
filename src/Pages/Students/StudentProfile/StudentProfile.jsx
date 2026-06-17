@@ -22,11 +22,11 @@ const InfoGrid = ({ items }) => (
     </div>
 );
 
-const SectionCard = ({ title, icon: Icon, children }) => (
+const SectionCard = ({ title, icon, children }) => (
     <section className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] shadow-sm p-6 md:p-8 space-y-5">
         <div className="flex items-center gap-3 text-[var(--color-primary)]">
             <div className="p-3 rounded-2xl bg-[var(--color-primary)]/10">
-                <Icon size={22} />
+                {React.createElement(icon, { size: 22 })}
             </div>
             <h2 className="text-xl font-black text-[var(--color-text-main)] flex-1">{title}</h2>
         </div>

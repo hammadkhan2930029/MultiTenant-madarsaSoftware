@@ -3,6 +3,8 @@ import { Briefcase, Camera, ChevronLeft, ChevronRight, GraduationCap, Save, User
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { createTeacher, getTeacherById, updateTeacher } from '../../Constant/TeachersApi';
 import { getQualifications } from '../../Constant/QualificationApi';
+import { getShifts } from '../../Constant/ShiftApi';
+import { getDepartments } from '../../Constant/DepartmentApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -15,6 +17,10 @@ const INITIAL_VALUES = {
   subject: '',
   qualification: '',
   address: '',
+  shiftId: '',
+  shiftName: '',
+  shiftStartTime: '',
+  shiftEndTime: '',
   basicSalary: '',
   educationInstitute: '',
   educationYear: '',
@@ -39,6 +45,29 @@ const tabs = [
   { id: 'service', label: 'تقرر / تجربہ', icon: Briefcase },
 ];
 
+const formatShiftClock = (time) => {
+  const match = String(time || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return time || '';
+
+  const hour = Number(match[1]);
+  const minute = match[2];
+  const hour12 = hour % 12 || 12;
+  const period = hour < 12 ? 'AM' : 'PM';
+
+  return `${String(hour12).padStart(2, '0')}:${minute} ${period}`;
+};
+
+const formatShiftRange = (startTime, endTime) => {
+  const range = `${formatShiftClock(startTime)} - ${formatShiftClock(endTime)}`;
+  return `‎${range}‎`;
+};
+
+const getShiftDisplayLabel = (shift) => {
+  const shiftName = shift?.name || '';
+  if (!shift?.startTime || !shift?.endTime) return shiftName;
+  return `${shiftName} | ${formatShiftRange(shift.startTime, shift.endTime)}`;
+};
+
 export const HRManagement = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -53,6 +82,10 @@ export const HRManagement = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [qualificationOptions, setQualificationOptions] = useState([]);
   const [isLoadingQualifications, setIsLoadingQualifications] = useState(true);
+  const [shiftOptions, setShiftOptions] = useState([]);
+  const [isLoadingShifts, setIsLoadingShifts] = useState(true);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
   useNotificationBridge({ error, success });
 
   const activeTabIndex = useMemo(() => tabs.findIndex((tab) => tab.id === activeTab), [activeTab]);
@@ -81,6 +114,40 @@ export const HRManagement = () => {
   }, []);
 
   useEffect(() => {
+    const loadShifts = async () => {
+      setIsLoadingShifts(true);
+
+      try {
+        const result = await getShifts('page=1&limit=100');
+        setShiftOptions(result.items || []);
+      } catch (loadError) {
+        setError(loadError.message || 'شفٹس لوڈ نہیں ہو سکیں۔');
+      } finally {
+        setIsLoadingShifts(false);
+      }
+    };
+
+    loadShifts();
+  }, []);
+
+  useEffect(() => {
+    const loadDepartments = async () => {
+      setIsLoadingDepartments(true);
+
+      try {
+        const result = await getDepartments('page=1&limit=100');
+        setDepartmentOptions((result.items || []).filter((department) => department.status === 'active'));
+      } catch (loadError) {
+        setError(loadError.message || 'شعبہ جات لوڈ نہیں ہو سکے۔');
+      } finally {
+        setIsLoadingDepartments(false);
+      }
+    };
+
+    loadDepartments();
+  }, []);
+
+  useEffect(() => {
     if (!teacherId) return;
 
     const loadTeacher = async () => {
@@ -97,6 +164,10 @@ export const HRManagement = () => {
           subject: teacher?.subject || '',
           qualification: teacher?.qualification || '',
           address: teacher?.address || '',
+          shiftId: String(teacher?.shiftId || teacher?.shift?.id || ''),
+          shiftName: teacher?.shiftName || teacher?.shift?.name || '',
+          shiftStartTime: teacher?.shiftStartTime || teacher?.shift?.startTime || '',
+          shiftEndTime: teacher?.shiftEndTime || teacher?.shift?.endTime || '',
           basicSalary: teacher?.basicSalary ? String(teacher.basicSalary) : '',
           staffType: teacher?.staffType || 'teacher',
           educationInstitute: teacher?.educationInstitute || '',
@@ -125,6 +196,18 @@ export const HRManagement = () => {
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleShiftChange = (shiftId) => {
+    const selectedShift = shiftOptions.find((shift) => String(shift.id) === String(shiftId));
+
+    setFormData((prev) => ({
+      ...prev,
+      shiftId,
+      shiftName: selectedShift?.name || '',
+      shiftStartTime: selectedShift?.startTime || '',
+      shiftEndTime: selectedShift?.endTime || '',
+    }));
   };
 
   const goToTab = (direction) => {
@@ -163,6 +246,10 @@ export const HRManagement = () => {
         educationYear: formData.educationYear,
         specialization: formData.specialization,
         address: formData.address,
+        shiftId: formData.shiftId ? Number(formData.shiftId) : '',
+        shiftName: formData.shiftName,
+        shiftStartTime: formData.shiftStartTime,
+        shiftEndTime: formData.shiftEndTime,
         basicSalary: Number(formData.basicSalary || 0),
         bankName: formData.bankName,
         accountTitle: formData.accountTitle,
@@ -248,7 +335,15 @@ export const HRManagement = () => {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
           <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:p-7">
             {activeTab === 'personal' ? (
-              <PersonalStep formData={formData} imagePreview={imagePreview} imageFile={imageFile} onChange={handleChange} onImageChange={(file, preview) => {
+              <PersonalStep
+                formData={formData}
+                imagePreview={imagePreview}
+                imageFile={imageFile}
+                shiftOptions={shiftOptions}
+                isLoadingShifts={isLoadingShifts}
+                onChange={handleChange}
+                onShiftChange={handleShiftChange}
+                onImageChange={(file, preview) => {
                 setImageFile(file);
                 setImagePreview(preview);
               }} />
@@ -268,7 +363,12 @@ export const HRManagement = () => {
             ) : null}
 
             {activeTab === 'service' ? (
-              <ServiceStep formData={formData} onChange={handleChange} />
+              <ServiceStep
+                formData={formData}
+                departmentOptions={departmentOptions}
+                isLoadingDepartments={isLoadingDepartments}
+                onChange={handleChange}
+              />
             ) : null}
 
             <div className="mt-8 flex flex-col gap-3 border-t border-[var(--color-border)] pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -318,8 +418,8 @@ export const HRManagement = () => {
               <div className="grid w-full grid-cols-2 gap-2 text-xs font-black">
                 <SummaryBox label="تعلیم" value={formData.qualification || '---'} />
                 <SummaryBox label="تنخواہ" value={formData.basicSalary || '---'} />
+                <SummaryBox label="شفٹ" value={formData.shiftName || '---'} />
                 <SummaryBox label="فون" value={formData.phone || '---'} />
-                <SummaryBox label="اکاؤنٹ" value={formData.accountNumber || '---'} />
               </div>
             </div>
           </div>
@@ -329,7 +429,7 @@ export const HRManagement = () => {
   );
 };
 
-const PersonalStep = ({ formData, imagePreview, imageFile, onChange, onImageChange }) => (
+const PersonalStep = ({ formData, imagePreview, imageFile, shiftOptions, isLoadingShifts, onChange, onShiftChange, onImageChange }) => (
   <div className="space-y-6">
     <StepHeading title="ذاتی معلومات" description="نام، رابطہ، شناخت اور تصویر درج کریں۔" />
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -347,6 +447,19 @@ const PersonalStep = ({ formData, imagePreview, imageFile, onChange, onImageChan
       <InputField label="ای میل" type="email" value={formData.email} onChange={(event) => onChange('email', event.target.value)} />
       <InputField label="شناختی کارڈ نمبر" required value={formData.cnic} onChange={(event) => onChange('cnic', event.target.value)} />
       <InputField label="پتہ" required value={formData.address} onChange={(event) => onChange('address', event.target.value)} />
+      <SelectField
+        label="شفٹ کا انتخاب"
+        value={formData.shiftId}
+        onChange={(event) => onShiftChange(event.target.value)}
+        disabled={isLoadingShifts}
+        options={[
+          { value: '', label: isLoadingShifts ? 'شفٹس لوڈ ہو رہی ہیں...' : 'شفٹ منتخب کریں' },
+          ...shiftOptions.map((shift) => ({
+            value: shift.id,
+            label: getShiftDisplayLabel(shift),
+          })),
+        ]}
+      />
     </div>
     <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-[var(--color-primary)]/10 px-6 py-3 text-lg font-black text-[var(--color-primary)]">
       <Camera size={18} /> {imageFile || imagePreview ? 'تصویر تبدیل کریں' : 'تصویر اپ لوڈ کریں'}
@@ -407,12 +520,24 @@ const AccountStep = ({ formData, onChange }) => (
   </div>
 );
 
-const ServiceStep = ({ formData, onChange }) => (
+const ServiceStep = ({ formData, departmentOptions, isLoadingDepartments, onChange }) => (
   <div className="space-y-6">
     <StepHeading title="تقرر، تجربہ اور اضافی معلومات" description="ملازمت کی نوعیت، تاریخیں، تجربہ اور نوٹس درج کریں۔" />
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <InputField label="عہدہ" value={formData.jobTitle} onChange={(event) => onChange('jobTitle', event.target.value)} />
-      <InputField label="شعبہ" value={formData.department} onChange={(event) => onChange('department', event.target.value)} />
+      <SelectField
+        label="شعبہ"
+        value={formData.department}
+        onChange={(event) => onChange('department', event.target.value)}
+        disabled={isLoadingDepartments}
+        options={[
+          { value: '', label: isLoadingDepartments ? 'شعبہ جات لوڈ ہو رہے ہیں...' : 'شعبہ منتخب کریں' },
+          ...(!departmentOptions.some((department) => department.name === formData.department) && formData.department
+            ? [{ value: formData.department, label: formData.department }]
+            : []),
+          ...departmentOptions.map((department) => ({ value: department.name, label: department.name })),
+        ]}
+      />
       <SelectField
         label="ملازمت کی نوعیت"
         value={formData.employmentType}
