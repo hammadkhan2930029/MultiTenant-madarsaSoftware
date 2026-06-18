@@ -68,8 +68,8 @@ function Navbar({ theme, onThemeToggle, onNavigate }) {
 
         <div className="hidden items-center gap-3 md:flex">
           <a
-            href="/admin"
-            onClick={(event) => handleRouteClick(event, '/admin')}
+            // href="/admin"
+            // onClick={(event) => handleRouteClick(event, '/admin')}
             className="rounded-md border border-themeBorder bg-themeSurface px-4 py-2 text-theme-button font-bold text-themeText shadow-card-theme transition hover:border-themePrimary hover:text-themePrimary"
           >
             لاگ اِن

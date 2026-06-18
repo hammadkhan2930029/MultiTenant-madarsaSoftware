@@ -11,21 +11,22 @@ import { StoreSupplierDetail } from '../Pages/StoreManagement/Suppliers/StoreSup
 import { StoreSuppliers } from '../Pages/StoreManagement/Suppliers/StoreSuppliers';
 import { StoreStockIssues } from '../Pages/StoreManagement/StockIssues/StoreStockIssues';
 import { StoreUnits } from '../Pages/StoreManagement/Units/Units';
+import { withPermission } from '../Components/Auth/RequirePermission';
 
 export const StoreRoutes = (
     <Route path="store">
         <Route index element={<Navigate to="/store/dashboard" replace />} />
-        <Route path="approvals" element={<StoreApprovals />} />
-        <Route path="categories" element={<StoreCategories />} />
-        <Route path="dashboard" element={<StoreDashboard />} />
-        <Route path="damaged-stock" element={<StoreDamagedStock />} />
-        <Route path="items" element={<StoreItems />} />
-        <Route path="purchases" element={<StorePurchases />} />
-        <Route path="reports" element={<StoreReports />} />
-        <Route path="stock-issues" element={<StoreStockIssues />} />
-        <Route path="returns" element={<StoreReturns />} />
-        <Route path="suppliers" element={<StoreSuppliers />} />
-        <Route path="suppliers/:supplierId" element={<StoreSupplierDetail />} />
-        <Route path="units" element={<StoreUnits />} />
+        <Route path="approvals" element={withPermission(<StoreApprovals />, 'store.approve')} />
+        <Route path="categories" element={withPermission(<StoreCategories />, 'store.categories.view')} />
+        <Route path="dashboard" element={withPermission(<StoreDashboard />, 'store.view')} />
+        <Route path="damaged-stock" element={withPermission(<StoreDamagedStock />, 'store.damaged_stock.view')} />
+        <Route path="items" element={withPermission(<StoreItems />, 'store.items.view')} />
+        <Route path="purchases" element={withPermission(<StorePurchases />, 'store.purchases.view')} />
+        <Route path="reports" element={withPermission(<StoreReports />, 'store.reports')} />
+        <Route path="stock-issues" element={withPermission(<StoreStockIssues />, 'store.stock_issues.view')} />
+        <Route path="returns" element={withPermission(<StoreReturns />, 'store.returns.view')} />
+        <Route path="suppliers" element={withPermission(<StoreSuppliers />, 'store.suppliers.view')} />
+        <Route path="suppliers/:supplierId" element={withPermission(<StoreSupplierDetail />, 'store.suppliers.view')} />
+        <Route path="units" element={withPermission(<StoreUnits />, 'store.units.view')} />
     </Route>
 );

@@ -10,20 +10,21 @@ import { StudentFeeDetail } from '../Pages/Students/FeeGeneration/StudentFeeDeta
 import { StudentProfile } from '../Pages/Students/StudentProfile/StudentProfile';
 import { ParentsList } from '../Pages/Students/Parents/ParentsList';
 import { ParentProfile } from '../Pages/Students/Parents/ParentProfile';
+import { withPermission } from '../Components/Auth/RequirePermission';
 
 
 export const StudentRoutes = (
     <Route path="students">
-        <Route path="list" element={<StudentList />} />
-        <Route path="admission" element={<AdmissionForm />} />
-        <Route path="create-id-card" element={<CreateIdCard />} />
-        <Route path="parents" element={<ParentsList />} />
-        <Route path="parents/profile/:id" element={<ParentProfile />} />
-        <Route path="attendance" element={<AttendancePage />} />
-        <Route path="class_asign" element={<StudentAddToClass />} />
-        <Route path="schedule" element={<StudentScheduleManager />} />
-        <Route path="fees" element={<FeesCollection />} />
-        <Route path="profile/:id" element={<StudentProfile />} />
-        <Route path="details/:id" element={<StudentFeeDetail />} />
+        <Route path="list" element={withPermission(<StudentList />, 'students.view')} />
+        <Route path="admission" element={withPermission(<AdmissionForm />, 'students.create')} />
+        <Route path="create-id-card" element={withPermission(<CreateIdCard />, 'students.id_card.view')} />
+        <Route path="parents" element={withPermission(<ParentsList />, 'parents.view')} />
+        <Route path="parents/profile/:id" element={withPermission(<ParentProfile />, 'parents.view')} />
+        <Route path="attendance" element={withPermission(<AttendancePage />, 'attendance.view')} />
+        <Route path="class_asign" element={withPermission(<StudentAddToClass />, 'students.assign_class')} />
+        <Route path="schedule" element={withPermission(<StudentScheduleManager />, 'students.schedule.view')} />
+        <Route path="fees" element={withPermission(<FeesCollection />, 'fees.view')} />
+        <Route path="profile/:id" element={withPermission(<StudentProfile />, 'students.profile.view')} />
+        <Route path="details/:id" element={withPermission(<StudentFeeDetail />, 'fees.details.view')} />
     </Route>
 );

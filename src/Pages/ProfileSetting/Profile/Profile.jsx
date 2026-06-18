@@ -4,7 +4,7 @@ import {
     Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
-import { fetchMadrassaProfile, resolveApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
+import { fetchMadrassaProfile, getAdminRole, isSuperAdmin as isSuperAdminSession, resolveApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
 import { getCities } from '../../../Constant/CityApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
@@ -20,6 +20,9 @@ export const Profile = () => {
     const dropdownRef = useRef(null);
     const fileInputRef = useRef(null);
     const notify = useNotifier();
+    const sessionRole = getAdminRole();
+    const sessionRoleName = typeof sessionRole === 'string' ? sessionRole : sessionRole?.roleName || sessionRole?.role_name;
+    const canEditMadrassaProfile = isSuperAdminSession() || sessionRoleName === 'admin';
 
     const [madrassaData, setMadrassaData] = useState({
         name: 'جامعہ انوار القرآن',
@@ -133,10 +136,12 @@ export const Profile = () => {
     }, [logoPreview]);
 
     const handleLogoPick = () => {
+        if (!canEditMadrassaProfile) return;
         fileInputRef.current?.click();
     };
 
     const handleLogoChange = (event) => {
+        if (!canEditMadrassaProfile) return;
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -177,6 +182,11 @@ export const Profile = () => {
     };
 
     const handleSave = async () => {
+        if (!canEditMadrassaProfile) {
+            notify.error('آپ کو مدرسہ پروفائل میں ترمیم کی اجازت نہیں ہے۔', 'اجازت نہیں');
+            return;
+        }
+
         if (!tempData.name?.trim() || !tempData.email?.trim()) {
             notify.error('ادارے کا نام اور ای میل درج کرنا ضروری ہیں۔', 'نامکمل معلومات');
             return;
@@ -260,7 +270,7 @@ export const Profile = () => {
                                 onChange={handleLogoChange}
                                 className="hidden"
                             />
-                            {isEditing && (
+                            {isEditing && canEditMadrassaProfile && (
                                 <button
                                     type="button"
                                     onClick={handleLogoPick}
@@ -271,7 +281,7 @@ export const Profile = () => {
                                 </button>
                             )}
                         </div>
-                        {isEditing && (
+                        {isEditing && canEditMadrassaProfile && (
                             <p className="mt-4 max-w-48 text-xs font-bold leading-5 text-white/70">
                                 بہترین سائز: 512 × 512 پکسل، مربع PNG یا JPG، زیادہ سے زیادہ 5 MB
                             </p>
@@ -301,6 +311,7 @@ export const Profile = () => {
                         )}
                     </div>
 
+                    {canEditMadrassaProfile ? (
                     <div className="flex gap-3 mt-4 md:mt-0 shrink-0 self-center md:self-start">
                         {isEditing && (
                             <button onClick={resetEditingState} className="p-4 bg-rose-500/20 text-rose-200 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/30">
@@ -317,6 +328,7 @@ export const Profile = () => {
                             {isEditing ? <><Save size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</> : <><Edit3 size={20} /> ایڈٹ کریں</>}
                         </button>
                     </div>
+                    ) : null}
                 </div>
             </div>
 

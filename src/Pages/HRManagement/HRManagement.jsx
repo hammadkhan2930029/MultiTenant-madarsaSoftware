@@ -265,6 +265,8 @@ export const HRManagement = () => {
         image: imageFile,
       };
 
+      const isStaffRecord = formData.staffType === 'staff';
+
       if (teacherId) {
         await updateTeacher(teacherId, payload);
       } else {
@@ -276,7 +278,7 @@ export const HRManagement = () => {
       setActiveTab('personal');
       setImagePreview(null);
       setImageFile(null);
-      navigate('/teachers/list');
+      navigate(isStaffRecord ? '/staff/list' : '/teachers/list');
     } catch (saveError) {
       setError(saveError.message || 'استاد محفوظ نہیں ہو سکا۔');
     } finally {

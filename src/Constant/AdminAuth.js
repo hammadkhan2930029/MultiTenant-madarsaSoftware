@@ -1,4 +1,5 @@
 import { API_BASE_URL, apiRequest } from './Api';
+import { SUPER_ADMIN_ROLE } from './Permissions';
 
 const AUTH_KEY = 'madarsa_admin_auth';
 export const MADRASSA_PROFILE_UPDATED_EVENT = 'madarsa:madrassa-profile-updated';
@@ -28,6 +29,36 @@ const writeSession = (session) => {
   window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
 };
 
+const normalizePermissions = (permissions) => {
+  if (!Array.isArray(permissions)) return [];
+
+  return permissions
+    .map((permission) => {
+      if (typeof permission === 'string') return permission;
+      return permission?.permissionKey || permission?.permission_key || '';
+    })
+    .filter(Boolean);
+};
+
+const buildSessionFromAuthData = (data, currentSession = null) => {
+  const admin = data?.admin || data?.user || currentSession?.admin || null;
+  const role = data?.role || admin?.roleDetails || admin?.role || currentSession?.role || null;
+  const permissions = normalizePermissions(
+    data?.permissions || admin?.permissions || currentSession?.permissions || [],
+  );
+
+  return {
+    ...(currentSession || {}),
+    isAuthenticated: true,
+    token: data?.token || currentSession?.token,
+    admin,
+    user: data?.user || admin,
+    role,
+    permissions,
+    loginAt: currentSession?.loginAt || new Date().toISOString(),
+  };
+};
+
 const notifyMadrassaProfileUpdated = (profile) => {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(
@@ -45,6 +76,43 @@ export const getAdminToken = () => readSession()?.token || '';
 
 export const isAdminAuthenticated = () => Boolean(getAdminToken());
 
+export const getAdminRole = () => {
+  const session = readSession();
+  return session?.role || session?.admin?.roleDetails || session?.admin?.role || null;
+};
+
+export const getAdminPermissions = () => {
+  const session = readSession();
+  return normalizePermissions(session?.permissions || session?.admin?.permissions || []);
+};
+
+export const isSuperAdmin = () => {
+  const role = getAdminRole();
+  const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
+  const legacyRoleName = readSession()?.admin?.role;
+
+  return roleName === SUPER_ADMIN_ROLE || legacyRoleName === SUPER_ADMIN_ROLE;
+};
+
+export const hasPermission = (permission) => {
+  if (!permission || isSuperAdmin()) return true;
+  return getAdminPermissions().includes(permission);
+};
+
+export const hasAnyPermission = (permissions = []) => {
+  if (isSuperAdmin()) return true;
+  if (!permissions.length) return true;
+  const availablePermissions = getAdminPermissions();
+  return permissions.some((permission) => availablePermissions.includes(permission));
+};
+
+export const hasAllPermissions = (permissions = []) => {
+  if (isSuperAdmin()) return true;
+  if (!permissions.length) return true;
+  const availablePermissions = getAdminPermissions();
+  return permissions.every((permission) => availablePermissions.includes(permission));
+};
+
 export const loginAdmin = async ({ username, password }) => {
   const result = await apiRequest('/auth/login', {
     method: 'POST',
@@ -57,12 +125,7 @@ export const loginAdmin = async ({ username, password }) => {
     }),
   });
 
-  const session = {
-    isAuthenticated: true,
-    token: result?.data?.token,
-    admin: result?.data?.admin || null,
-    loginAt: new Date().toISOString(),
-  };
+  const session = buildSessionFromAuthData(result?.data);
 
   if (!session.token) {
     throw new Error('لاگ اِن ٹوکن نہیں ملا۔ براہ کرم دوبارہ کوشش کریں۔');
@@ -86,12 +149,16 @@ export const fetchCurrentAdminProfile = async () => {
   });
 
   const currentSession = readSession();
-  const nextSession = {
-    ...(currentSession || {}),
-    isAuthenticated: true,
-    token,
-    admin: result?.data || null,
-  };
+  const nextSession = buildSessionFromAuthData(
+    {
+      token,
+      admin: result?.data || null,
+      user: result?.data || null,
+      role: result?.data?.roleDetails || result?.data?.role || null,
+      permissions: result?.data?.permissions || [],
+    },
+    currentSession,
+  );
 
   writeSession(nextSession);
 

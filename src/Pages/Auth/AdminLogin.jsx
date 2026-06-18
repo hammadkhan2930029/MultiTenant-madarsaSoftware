@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, LockKeyhole, Sparkles, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -161,7 +161,7 @@ export const AdminLogin = () => {
                                 ڈیفالٹ پاس ورڈ:
                                 <span className="text-white"> {credentials.password} </span>
                             </span>
-                            <span className="block text-slate-400">لاگ اِن اب بیک اینڈ API اور JWT ٹوکن کے ذریعے ہو گا۔</span>
+                            <span className="block text-slate-400">لاگ اِن بیک اینڈ API اور JWT ٹوکن کے ذریعے ہوگا۔</span>
                         </MotionDiv>
                     </div>
                 </MotionForm>
