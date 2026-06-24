@@ -42,7 +42,7 @@ const ProtectedAppShell = () => {
   const location = useLocation();
 
   if (!isAdminAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate to="/admin" replace state={{ from: location }} />;
   }
 
   return <SideBar />;
@@ -51,8 +51,8 @@ const ProtectedAppShell = () => {
 export const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/contact" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/admin" replace />} />
+      <Route path="/contact" element={<Navigate to="/admin" replace />} />
       <Route path="/admin" element={<LoginRoute />} />
       <Route path="/login" element={<UserLoginRoute />} />
 
@@ -83,7 +83,7 @@ export const AppRoutes = () => {
         {StoreRoutes}
       </Route>
 
-      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/admin'} replace />} />
     </Routes>
   );
 };
