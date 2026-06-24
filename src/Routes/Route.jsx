@@ -13,27 +13,36 @@ import { FinanceRoutes } from './FinanceRoutes';
 import { HifzRoutes } from './HifzRoutes';
 import { ExamRoutes } from './ExamRoutes';
 import { StoreRoutes } from './StoreRoutes';
-import { AdminLogin } from '../Pages/Auth/AdminLogin';
-import { isAdminAuthenticated } from '../Constant/AdminAuth';
-import LandingPage from '../Pages/Landing/LandingPage';
+import { AdminLogin, UserLogin } from '../Pages/Auth/AdminLogin';
+import { getDefaultRouteForSession } from '../Pages/Auth/authLandingRoutes';
+import { getAdminSession, isAdminAuthenticated } from '../Constant/AdminAuth';
 import { StudentAttendanceHistory } from '../Pages/Students/AttendancePage/StudentAttendanceHistory';
-import { RequirePermission, withPermission } from '../Components/Auth/RequirePermission';
+import { RequirePermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getDefaultRouteForSession(getAdminSession())} replace />;
   }
 
   return <AdminLogin />;
+};
+
+const UserLoginRoute = () => {
+  if (isAdminAuthenticated()) {
+    return <Navigate to={getDefaultRouteForSession(getAdminSession())} replace />;
+  }
+
+  return <UserLogin />;
 };
 
 const ProtectedAppShell = () => {
   const location = useLocation();
 
   if (!isAdminAuthenticated()) {
-    return <Navigate to="/admin" replace state={{ from: location }} />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return <SideBar />;
@@ -42,10 +51,10 @@ const ProtectedAppShell = () => {
 export const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/contact" element={<LandingPage />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/contact" element={<Navigate to="/login" replace />} />
       <Route path="/admin" element={<LoginRoute />} />
-      <Route path="/login" element={<Navigate to="/admin" replace />} />
+      <Route path="/login" element={<UserLoginRoute />} />
 
       <Route path="/" element={<ProtectedAppShell />}>
         <Route path="dashboard" element={withPermission(<Dashboard />, 'dashboard.view')} />
@@ -74,7 +83,7 @@ export const AppRoutes = () => {
         {StoreRoutes}
       </Route>
 
-      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/'} replace />} />
+      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/login'} replace />} />
     </Routes>
   );
 };
