@@ -1,8 +1,10 @@
-import { API_BASE_URL, apiRequest } from './Api';
+import { API_BASE_URL, SESSION_EXPIRED_MESSAGE_KEY, apiRequest } from './Api';
 import { SUPER_ADMIN_ROLE } from './Permissions';
 
 const AUTH_KEY = 'madarsa_admin_auth';
 export const MADRASSA_PROFILE_UPDATED_EVENT = 'madarsa:madrassa-profile-updated';
+export const TENANT_BRANDING_UPDATED_EVENT = 'madarsa:tenant-branding-updated';
+const TENANT_SESSION_EXPIRED_MESSAGE = 'آپ کا سیشن اس مدرسہ ڈومین کے لیے درست نہیں ہے۔ براہ کرم دوبارہ لاگ اِن کریں۔';
 
 export const defaultAdminCredentials = {
   username: 'admin',
@@ -27,6 +29,16 @@ const readSession = () => {
 const writeSession = (session) => {
   if (!canUseStorage) return;
   window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+};
+
+const getSessionTenantId = (session) => {
+  const value = session?.admin?.tenantId ?? session?.user?.tenantId ?? session?.tenantId ?? null;
+  return value === null || value === undefined || value === '' ? null : Number(value);
+};
+
+const getCurrentTenantId = (tenantBranding) => {
+  const value = tenantBranding?.tenant?.id ?? tenantBranding?.tenantId ?? null;
+  return value === null || value === undefined || value === '' ? null : Number(value);
 };
 
 const normalizePermissions = (permissions) => {
@@ -68,6 +80,54 @@ const notifyMadrassaProfileUpdated = (profile) => {
   );
 };
 
+const notifyTenantBrandingUpdated = (branding) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent(TENANT_BRANDING_UPDATED_EVENT, {
+      detail: branding,
+    }),
+  );
+};
+
+const getRoleNameFromSession = (session) => {
+  const role = session?.role || session?.admin?.roleDetails || session?.admin?.role || null;
+  const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
+  return roleName || session?.admin?.role || session?.user?.role || '';
+};
+
+const expireSession = (message = TENANT_SESSION_EXPIRED_MESSAGE) => {
+  if (!canUseStorage) return;
+  window.localStorage.removeItem(AUTH_KEY);
+  window.sessionStorage?.setItem(SESSION_EXPIRED_MESSAGE_KEY, message);
+};
+
+const attachTenantBrandingToSession = (brandingData) => {
+  const currentSession = readSession();
+  if (!currentSession) return;
+
+  writeSession({
+    ...currentSession,
+    currentTenant: brandingData?.tenant || null,
+    tenantBranding: brandingData?.branding || null,
+  });
+};
+
+const assertSessionMatchesTenant = (session, tenantBranding) => {
+  if (!session?.token || !tenantBranding?.tenant) return;
+
+  const currentTenantId = getCurrentTenantId(tenantBranding);
+  const sessionTenantId = getSessionTenantId(session);
+  const roleName = String(getRoleNameFromSession(session)).trim().toLowerCase();
+  const isGlobalSuperAdmin = roleName === SUPER_ADMIN_ROLE && !sessionTenantId;
+
+  if (isGlobalSuperAdmin) return;
+
+  if (!sessionTenantId || (currentTenantId && sessionTenantId !== currentTenantId)) {
+    expireSession();
+    throw new Error(TENANT_SESSION_EXPIRED_MESSAGE);
+  }
+};
+
 export const getAdminCredentials = () => defaultAdminCredentials;
 
 export const getAdminSession = () => readSession();
@@ -94,28 +154,38 @@ export const isSuperAdmin = () => {
   return roleName === SUPER_ADMIN_ROLE || legacyRoleName === SUPER_ADMIN_ROLE;
 };
 
+export const isTenantAdmin = () => {
+  const role = getAdminRole();
+  const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
+  const legacyRoleName = readSession()?.admin?.role;
+
+  return roleName === 'admin' || legacyRoleName === 'admin';
+};
+
 export const hasPermission = (permission) => {
-  if (!permission || isSuperAdmin()) return true;
+  if (!permission || isSuperAdmin() || isTenantAdmin()) return true;
   return getAdminPermissions().includes(permission);
 };
 
 export const hasAnyPermission = (permissions = []) => {
-  if (isSuperAdmin()) return true;
+  if (isSuperAdmin() || isTenantAdmin()) return true;
   if (!permissions.length) return true;
   const availablePermissions = getAdminPermissions();
   return permissions.some((permission) => availablePermissions.includes(permission));
 };
 
 export const hasAllPermissions = (permissions = []) => {
-  if (isSuperAdmin()) return true;
+  if (isSuperAdmin() || isTenantAdmin()) return true;
   if (!permissions.length) return true;
   const availablePermissions = getAdminPermissions();
   return permissions.every((permission) => availablePermissions.includes(permission));
 };
 
 export const loginAdmin = async ({ username, password }) => {
+  const tenantBranding = await fetchCurrentTenantBranding();
   const result = await apiRequest('/auth/login', {
     method: 'POST',
+    skipAuth: true,
     headers: {
       'Content-Type': 'application/json',
     },
@@ -131,9 +201,23 @@ export const loginAdmin = async ({ username, password }) => {
     throw new Error('لاگ اِن ٹوکن نہیں ملا۔ براہ کرم دوبارہ کوشش کریں۔');
   }
 
+  assertSessionMatchesTenant(session, tenantBranding);
   writeSession(session);
+  attachTenantBrandingToSession(tenantBranding);
 
   return { success: true, session };
+};
+
+export const validateCurrentTenantSession = async () => {
+  const session = readSession();
+  const tenantBranding = await fetchCurrentTenantBranding();
+
+  if (session?.token) {
+    assertSessionMatchesTenant(session, tenantBranding);
+    attachTenantBrandingToSession(tenantBranding);
+  }
+
+  return tenantBranding;
 };
 
 export const fetchCurrentAdminProfile = async () => {
@@ -189,6 +273,18 @@ export const fetchMadrassaProfile = async () => {
   }
 
   return profile;
+};
+
+export const fetchCurrentTenantBranding = async () => {
+  const result = await apiRequest('/tenant/current', {
+    method: 'GET',
+    skipAuth: true,
+  });
+
+  const brandingData = result?.data || null;
+  attachTenantBrandingToSession(brandingData);
+  notifyTenantBrandingUpdated(brandingData);
+  return brandingData;
 };
 
 export const getApiAssetUrl = (assetPath) => {

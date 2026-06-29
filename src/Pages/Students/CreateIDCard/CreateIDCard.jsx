@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CreditCard, GraduationCap, Layout, Printer, Search, Smartphone, User } from 'lucide-react';
 /* eslint-disable-next-line no-unused-vars */
 import { motion, AnimatePresence } from 'framer-motion';
@@ -201,7 +201,7 @@ export const CreateIdCard = () => {
     return (
         <div className="min-h-screen bg-[var(--color-bg)] p-4 md:p-8" dir="rtl">
             <div className="max-w-6xl mx-auto bg-[var(--color-surface)] p-6 rounded-[2rem] shadow-xl border border-[var(--color-border)] mb-10 print:hidden">
-                <h2 className="text-2xl font-black mb-6 flex items-center gap-3 text-[var(--color-text-main)]">
+                <h2 className="text-3xl font-black mb-6 flex items-center gap-3 text-[var(--color-text-main)]">
                     <CreditCard className="text-[var(--color-primary)]" /> آئی ڈی کارڈ جنریٹر
                 </h2>
 
@@ -405,23 +405,23 @@ const HorizontalCard = ({ data }) => (
 
 const VerticalCard = ({ data }) => (
     <div style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }} className="w-[280px] h-[470px] bg-white rounded-xl shadow-2xl border border-gray-300 overflow-hidden flex flex-col text-black font-sans print:shadow-none print:border-gray-400">
-        <div className="bg-[#002a33] pt-2 pb-12 px-4 text-center">
-            <div className="w-12 h-12 bg-white rounded-lg p-2 mx-auto">
+        <div className="bg-[#002a33] pt-3 pb-14 px-4 text-center">
+            <div className="w-11 h-11 bg-white rounded-lg p-2 mx-auto">
                 <img src={AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
             </div>
-            <h2 className="text-white text-lg font-bold leading-tight mt-1">{data.madrassaName}</h2>
-            <div className="bg-[#00d094] inline-block px-3 py-0.5 rounded-full text-[9px] font-black text-[#002a33] mt-1 uppercase">Student ID</div>
+            <h2 className="text-white text-lg font-bold leading-tight mt-2">{data.madrassaName}</h2>
         </div>
 
-        <div className="flex-1 flex flex-col items-center px-6 -mt-10">
+        <div className="flex-1 flex flex-col items-center px-5 pb-5 -mt-12">
             <StudentPhoto data={data} className="w-24 h-24 border-4 border-white shadow-lg rounded-full overflow-hidden bg-gray-50 z-10 flex items-center justify-center" iconSize={40} />
-            <h3 className="text-lg font-black text-[#002a33] mt-2 text-center">{data.name}</h3>
-            <p className="text-xs font-bold text-gray-400 mb-2">{data.idNo}</p>
+            <h3 className="text-lg font-black text-[#002a33] mt-2 text-center leading-tight">{data.name}</h3>
+            <p className="text-[11px] font-bold text-gray-400 ">{data.idNo}</p>
 
-            <div className="w-full space-y-1">
+            <div className="mt-auto w-full space-y-1  ">
                 <VerticalInfo label="والد کا نام" value={data.fatherName} />
-                <VerticalInfo label="جماعت" value={data.className} />
+                <VerticalInfo label="درجہ" value={data.className} />
                 <VerticalInfo label="سیکشن" value={data.section} />
+                <VerticalInfo label="آئی ڈی نمبر" value={data.idNo} />
             </div>
         </div>
 
@@ -439,8 +439,10 @@ const CardLine = ({ label, value }) => (
 );
 
 const VerticalInfo = ({ label, value }) => (
-    <div className="text-center">
-        <p className="text-[9px] font-bold text-[#00a876] uppercase">{label}</p>
-        <p className="text-[13px] font-bold text-gray-800">{value}</p>
+    <div className="grid grid-cols-[74px_minmax(0,1fr)] flex items-center gap-2 border-b border-gray-200 py-1 text-center">
+        <p className="text-[12px] font-bold text-[#00a876]">{label}</p>
+        <p className="truncate text-center text-[12px] font-bold leading-tight text-gray-800">{value || '---'}</p>
     </div>
 );
+
+

@@ -54,7 +54,7 @@ export const ParentProfile = () => {
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="min-w-0">
                                 <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[var(--color-text-muted)]">Parent Profile</p>
-                                <h1 className="mt-2 break-words py-2 text-2xl font-black leading-[1.8] text-[var(--color-text-main)] sm:text-3xl md:text-4xl">
+                                <h1 className="mt-2 break-words py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {parent.fullName}
                                 </h1>
                             </div>

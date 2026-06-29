@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Clock, Edit3, FileText, Layers, Plus, Printer, Search, Trash2, Users, X } from 'lucide-react';
 import { DateField } from '../../Components/HR/FormElements';
 import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
@@ -633,3 +633,5 @@ const EmptyState = () => (
         <p className="mt-2 max-w-sm text-sm font-bold text-[var(--color-text-muted)]">{text.emptyText}</p>
     </div>
 );
+
+

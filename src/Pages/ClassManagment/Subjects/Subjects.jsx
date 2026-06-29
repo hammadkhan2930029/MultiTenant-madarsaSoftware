@@ -134,11 +134,11 @@ export const CreateSubjects = () => {
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col items-center justify-between gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm backdrop-blur-sm md:flex-row">
                 <div className="text-right">
-                    <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">مضامین کی فہرست</h2>
+                    <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">مضامین کی فہرست</h2>
                     <p className="mt-4 text-right text-sm font-medium text-[var(--color-text-muted)]">کل ریکارڈ: {filteredSubjects.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row items-center">
                     <ExportExcelButton rows={filteredSubjects} columns={exportColumns} fileName="subjects-list" className="w-full md:w-auto" />
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -166,7 +166,7 @@ export const CreateSubjects = () => {
                 <div className="animate-in slide-in-from-top rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl duration-500">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span>{editMode ? 'مضمون تبدیل کریں' : 'نیا مضمون'}</span>
+                        <span className='text-3xl'>{editMode ? 'مضمون تبدیل کریں' : 'نیا مضمون'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">

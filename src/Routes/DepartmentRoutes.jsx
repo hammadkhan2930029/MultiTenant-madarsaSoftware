@@ -3,7 +3,7 @@ import { CreateClasses } from '../Pages/ClassManagment/CreateClass/CreateClass';
 import { CreateSections } from '../Pages/ClassManagment/Sections/Section';
 import { CreateSessions } from '../Pages/ClassManagment/Sessions/Session';
 import { CreateSubjects } from '../Pages/ClassManagment/Subjects/Subjects'
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const DepartmentRoutes = (
     <>

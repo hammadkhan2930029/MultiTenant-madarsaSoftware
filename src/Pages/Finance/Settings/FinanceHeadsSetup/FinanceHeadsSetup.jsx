@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Save, Wallet, Receipt, AlertCircle, Edit2, X } from 'lucide-react';
 import { createFinanceHead, deactivateFinanceHead, getFinanceHeads, updateFinanceHead } from '../../../../Constant/FinanceHeadsApi';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
+import { createClientId } from '../../../../Utils/createClientId';
 
-const createIncomeHead = () => ({ id: crypto.randomUUID(), title: '', description: '' });
-const createExpenseHead = () => ({ id: crypto.randomUUID(), title: '', category: 'عام اخراجات', budgetLimit: '' });
+const createIncomeHead = () => ({ id: createClientId(), title: '', description: '' });
+const createExpenseHead = () => ({ id: createClientId(), title: '', category: 'عام اخراجات', budgetLimit: '' });
 
 const buildExpenseDescription = (item) => {
     const parts = [`کیٹیگری: ${item.category || 'عام اخراجات'}`];

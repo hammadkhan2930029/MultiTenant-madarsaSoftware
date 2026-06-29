@@ -10,7 +10,7 @@ import { MonthlyJaizaEntry } from '../Pages/Hifz/Monthly/MonthlyEntry';
 import { MonthlyJaizaList } from '../Pages/Hifz/Monthly/MonthlyList';
 import { ParaJaizaEntry } from '../Pages/Hifz/Sipara/paraEntry';
 import { ParaJaizaList } from '../Pages/Hifz/Sipara/paraList';
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const HifzRoutes = () => {
     return (

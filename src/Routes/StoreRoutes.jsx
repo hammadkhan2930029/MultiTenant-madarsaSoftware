@@ -11,7 +11,7 @@ import { StoreSupplierDetail } from '../Pages/StoreManagement/Suppliers/StoreSup
 import { StoreSuppliers } from '../Pages/StoreManagement/Suppliers/StoreSuppliers';
 import { StoreStockIssues } from '../Pages/StoreManagement/StockIssues/StoreStockIssues';
 import { StoreUnits } from '../Pages/StoreManagement/Units/Units';
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const StoreRoutes = (
     <Route path="store">

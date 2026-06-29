@@ -41,7 +41,3 @@ export const RequirePermission = ({ permission, anyPermissions, allPermissions, 
 
   return children;
 };
-
-export const withPermission = (element, permission) => (
-  <RequirePermission permission={permission}>{element}</RequirePermission>
-);

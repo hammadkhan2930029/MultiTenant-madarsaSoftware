@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, User, School, BookOpen, Save, ArrowRight, ClipboardCheck, Plus, Trash2 } from 'lucide-react';
+import { Calendar, User, School, BookOpen, Save, ArrowRight, ClipboardCheck, Plus, Trash2, Grid2x2Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicker';
 import { getStudents } from '../../../Constant/StudentsApi';
@@ -7,11 +7,12 @@ import { createDailyHifzEntry } from '../../../Constant/HifzApi';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { filterStudentsForHifz, getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { createClientId } from '../../../Utils/createClientId';
 
 const qualityOptions = ['ممتاز', 'بہتر', 'جید', 'مقبول', 'مناسب'];
 
 const createEntry = () => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     date: new Date().toISOString().split('T')[0],
     sabaq: { para: '', ruku: '', ayatFrom: '', ayatTo: '', mistake: '', atkann: '', teacher: '' },
     sabqi: { para: '', ruku: '', ayatFrom: '', ayatTo: '', mistake: '', atkann: '' },
@@ -250,7 +251,7 @@ export const DailyJaizaEntry = () => {
                             <ClipboardCheck size={30} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-[var(--color-text-main)]">یومیہ جائزہ اندراج</h1>
+                            <h1 className="text-3xl font-black text-[var(--color-text-main)]">یومیہ جائزہ اندراج</h1>
                             <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">طالب علم کی روزانہ کی کارکردگی درج کریں</p>
                         </div>
                     </div>
@@ -261,7 +262,7 @@ export const DailyJaizaEntry = () => {
             </div>
 
             <div className="bg-[var(--color-surface)] rounded-[2rem] border border-[var(--color-border)] p-6 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">کلاس منتخب کریں<span className="text-red-500"> *</span></label>
                         <div className="relative">
@@ -282,6 +283,7 @@ export const DailyJaizaEntry = () => {
 
                     <div className="space-y-2">
                         <label className="text-xs font-black text-[var(--color-text-muted)] mr-2">سیکشن<span className="text-red-500"> *</span></label>
+
                         <select
                             required
                             className="w-full bg-[var(--color-bg)] border border-[var(--color-border)] rounded-2xl py-3 px-4 text-[var(--color-text-main)] font-bold focus:border-[var(--color-primary)] outline-none"

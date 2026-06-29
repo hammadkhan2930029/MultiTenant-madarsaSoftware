@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Edit3, FileText, Printer, RefreshCcw, Search, Trash2, X } from 'lucide-react';
 import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
 import { deleteExamSchedule, getExamSchedules, updateExamSchedule } from '../../Constant/ExamSchedulesApi';
@@ -553,3 +553,5 @@ const FormSelect = ({ label, value, onChange, options, required = false }) => (
         </select>
     </div>
 );
+
+

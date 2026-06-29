@@ -261,13 +261,13 @@ export const StudentList = () => {
             <div className="flex flex-col gap-6 rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 md:p-10 shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)]">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h2 className="text-xl md:text-3xl font-black text-themeText flex items-center gap-3">
+                        <h2 className="text-3xl font-black text-themeText flex items-center gap-3">
                             <div className="p-3 bg-[var(--color-primary)]/10 rounded-2xl text-[var(--color-primary)]">
                                 <GraduationCap size={28} />
                             </div>
                             طلباء کی فہرست
                         </h2>
-                        <p className="text-[var(--color-text-muted)] text-xs font-bold mt-2 mr-14">کل رجسٹرڈ طلباء: {filteredStudents.length}</p>
+                        <p className="text-[var(--color-text-muted)] text-sm font-bold mt-2 mr-14">کل رجسٹرڈ طلباء: {filteredStudents.length}</p>
                     </div>
                     <button
                         onClick={() => navigate('/students/admission')}

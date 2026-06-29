@@ -7,7 +7,7 @@ import { FundList } from '../Pages/Finance/Incomes/FundList/FundList';
 import { SalaryEntry } from '../Pages/Finance/Expence/Salary/salary';
 import { OtherIncomeExpense } from '../Pages/Finance/Transactions/OtherIncomeExpense';
 import { FinancialStatement } from '../Pages/Finance/Reports/FinancialStatement';
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const FinanceRoutes = () => {
     return (

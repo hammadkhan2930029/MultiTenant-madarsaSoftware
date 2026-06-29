@@ -10,7 +10,7 @@ import { StudentFeeDetail } from '../Pages/Students/FeeGeneration/StudentFeeDeta
 import { StudentProfile } from '../Pages/Students/StudentProfile/StudentProfile';
 import { ParentsList } from '../Pages/Students/Parents/ParentsList';
 import { ParentProfile } from '../Pages/Students/Parents/ParentProfile';
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 
 export const StudentRoutes = (

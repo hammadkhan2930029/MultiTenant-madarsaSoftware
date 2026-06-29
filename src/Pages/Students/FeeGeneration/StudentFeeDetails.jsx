@@ -95,7 +95,7 @@ export const StudentFeeDetail = () => {
                     <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[var(--color-text-muted)] transition-all hover:text-[var(--color-primary)]">
                         <ArrowRight size={20} /> واپس جائیں
                     </button>
-                    <h2 className="text-xl font-black">طالب علم فیس پروفائل</h2>
+                    <h2 className="text-3xl font-black">طالب علم فیس پروفائل</h2>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

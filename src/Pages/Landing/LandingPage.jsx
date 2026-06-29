@@ -60,7 +60,7 @@ function LandingPage() {
       <div className="site-pattern pointer-events-none absolute inset-0 z-0" />
       <div className="site-scan pointer-events-none absolute inset-x-0 top-0 z-0 h-full" />
 
-      {isSplashVisible && <SplashScreen />}
+      {isSplashVisible && <SplashScreen theme={theme} />}
       <Navbar theme={theme} onThemeToggle={toggleTheme} onNavigate={handleNavigate} />
       {isContactPage ? (
         <ContactPage />
@@ -72,7 +72,7 @@ function LandingPage() {
           <DemoRequestSection />
         </>
       )}
-      <Footer onNavigate={handleNavigate} />
+      <Footer theme={theme} onNavigate={handleNavigate} />
     </main>
   )
 }

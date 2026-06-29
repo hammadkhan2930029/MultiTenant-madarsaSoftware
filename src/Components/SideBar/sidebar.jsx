@@ -4,7 +4,7 @@ import {
     BookOpen, Wallet, Settings, LogOut, Search,
     Bell, MessageSquare, Menu, ChevronDown,
     ClipboardList, GraduationCap as ExamIcon, HeartHandshake,
-    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, Settings2, KeyRound, Sparkles
+    BadgeCent, Library, Store, X, Moon, Sun, UserPlus, TrendingUp, TrendingDown, Landmark, Settings2, KeyRound, Sparkles, Building2
 } from 'lucide-react';
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -148,7 +148,6 @@ export const SideBar = () => {
     const currentSession = getAdminSession();
     const madrassaName = madrassaProfile?.name?.trim() || currentSession?.madrassaProfile?.name?.trim() || 'Madarsa Management';
     const sidebarTitle = madrassaName;
-    const profileName = adminProfile?.name || currentSession?.admin?.name || currentSession?.user?.name || 'صارف';
     const profileRoleNameRaw = isSuperAdmin
         ? SUPER_ADMIN_ROLE
         : adminProfile?.roleDetails?.roleName
@@ -203,109 +202,116 @@ export const SideBar = () => {
     //--------------------------------------------------------------------
 
     const menuItems = [
+        ...(isSuperAdmin ? [{
+            id: 'tenant_management',
+            label: 'مدارس کا انتظام',
+            icon: Building2,
+            path: '/tenant-management',
+            permission: 'tenant_management.view',
+        }] : []),
         {
             id: 'dashboard',
-            label: 'ÚˆÛŒØ´ Ø¨ÙˆØ±Úˆ',
+            label: 'ڈیش بورڈ',
             icon: LayoutDashboard,
             path: '/dashboard'
         },
         {
             id: 'class_mgmt',
-            label: 'Ú©Ù„Ø§Ø³ Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹',
+            label: 'کلاس مینجمنٹ',
             icon: ClipboardList,
             subMenu: [
-                { id: 'classes', label: ' Ø¬Ù…Ø§Ø¹Øª', path: '/class-management/Classes' },
-                { id: 'sections', label: 'Ø¬Ù…Ø§Ø¹Øª Ø³ÛŒÚ©Ø´Ù†Ø²', path: '/class-management/sections' },
-                { id: 'session', label: 'Ø³ÛŒØ´Ù† ', path: '/class-management/session' },
-                { id: 'subjects', label: 'Ù…Ø¸Ø§Ù…ÛŒÙ† ', path: '/class-management/subjects' },
+                { id: 'classes', label: ' جماعت', path: '/class-management/Classes' },
+                { id: 'sections', label: 'جماعت سیکشنز', path: '/class-management/sections' },
+                { id: 'session', label: 'سیشن ', path: '/class-management/session' },
+                { id: 'subjects', label: 'مظامین ', path: '/class-management/subjects' },
             ]
         },
         {
 
             id: 'hifz',
-            label: 'Ø´Ø¹Ø¨Û Ø­ÙØ¸',
+            label: 'شعبہ حفظ',
             icon: HeartHandshake,
             path: '/hifz',
             subMenu: [
 
                 {
                     id: 'hifz_daily',
-                    label: 'ÛŒÙˆÙ…ÛŒÛ Ø¬Ø§Ø¦Ø²Û',
+                    label: 'یومیہ جائزہ',
                     path: '/hifz/daily',
                     subSubMenu: [
-                        { id: 'daily_entry', label: 'ÛŒÙˆÙ…ÛŒÛ Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬', path: '/hifz/daily/entry' },
-                        { id: 'daily_list', label: 'ÛŒÙˆÙ…ÛŒÛ Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª', path: '/hifz/daily/list' }
+                        { id: 'daily_entry', label: 'یومیہ جائزے کا اندراج', path: '/hifz/daily/entry' },
+                        { id: 'daily_list', label: 'یومیہ جائزے کی فہرست', path: '/hifz/daily/list' }
                     ]
                 },
 
                 {
                     id: 'hifz_weekly',
-                    label: 'ÛÙØªÛ ÙˆØ§Ø± Ø¬Ø§Ø¦Ø²Û',
+                    label: 'ہفتہ وار جائزہ',
                     subSubMenu: [
-                        { id: 'weekly_entry', label: 'ÛÙØªÛ ÙˆØ§Ø± Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬', path: '/hifz/weekly/entry' },
-                        { id: 'weekly_list', label: 'ÛÙØªÛ ÙˆØ§Ø± Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª', path: '/hifz/weekly/list' }
+                        { id: 'weekly_entry', label: 'ہفتہ وار جائزے کا اندراج', path: '/hifz/weekly/entry' },
+                        { id: 'weekly_list', label: 'ہفتہ وار جائزے کی فہرست', path: '/hifz/weekly/list' }
                     ]
                 },
 
                 {
                     id: 'hifz_monthly',
-                    label: 'Ù…Ø§ÛØ§Ù†Û Ø¬Ø§Ø¦Ø²Û',
+                    label: 'ماہانہ جائزہ',
                     subSubMenu: [
-                        { id: 'monthly_entry', label: 'Ù…Ø§ÛØ§Ù†Û Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬', path: '/hifz/monthly/entry' },
-                        { id: 'monthly_list', label: 'Ù…Ø§ÛØ§Ù†Û Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª', path: '/hifz/monthly/list' }
+                        { id: 'monthly_entry', label: 'ماہانہ جائزے کا اندراج', path: '/hifz/monthly/entry' },
+                        { id: 'monthly_list', label: 'ماہانہ جائزے کی فہرست', path: '/hifz/monthly/list' }
                     ]
                 },
 
                 {
                     id: 'hifz_para',
-                    label: 'Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û',
+                    label: 'پارہ جائزہ',
                     subSubMenu: [
-                        { id: 'para_entry', label: 'Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬', path: '/hifz/para/entry' },
-                        { id: 'para_list', label: 'Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª', path: '/hifz/para/list' }
+                        { id: 'para_entry', label: 'پارہ جائزے کا اندراج', path: '/hifz/para/entry' },
+                        { id: 'para_list', label: 'پارہ جائزے کی فہرست', path: '/hifz/para/list' }
                     ]
                 },
             ]
         },
         {
             id: 'students',
-            label: 'Ø·Ù„Ø¨Ø§Ø¡',
+            label: 'طلباء',
             icon: GraduationCap,
             subMenu: [
-                { id: 'std_parents', label: 'ÙˆØ§Ù„Ø¯ÛŒÙ†', path: '/students/parents' },
-                { id: 'std_admission', label: 'Ø¯Ø§Ø®Ù„Û ÙØ§Ø±Ù…', path: '/students/admission' },
-                { id: 'std_list', label: 'Ø·Ù„Ø¨Ø§Ø¡ Ú©ÛŒ ÙÛØ±Ø³Øª', path: '/students/list' },
-                { id: 'std_id_card', label: 'Ø¢Ø¦ÛŒ ÚˆÛŒ Ú©Ø§Ø±Úˆ Ø¨Ù†Ø§Ø¦ÛŒÚº', path: '/students/create-id-card' },
-                { id: 'std_attendance', label: 'Ø·Ù„Ø¨Û Ú©ÛŒ Ø­Ø§Ø¶Ø±ÛŒ', path: '/students/attendance' },
-                { id: 'std_class_asign', label: 'Ø·Ù„Ø¨Û Ú©Ùˆ Ú©Ù„Ø§Ø³ Ù…ÛŒÚº Ø§ÛŒÚˆ Ú©Ø±ÛŒÚº', path: '/students/class_asign' },
-                { id: 'std_schedule ', label: 'Ù†Ø¸Ø§Ù… Ø§Ù„Ø§ÙˆÙ‚Ø§Øª', path: '/students/schedule' },
-                { id: 'std_fees ', label: 'ÙÛŒØ³ Ø¬ÛŒÙ†Ø±ÛŒØ´Ù†', path: '/students/fees' },
+                { id: 'std_parents', label: 'والدین', path: '/students/parents' },
+                { id: 'std_admission', label: 'داخلہ فارم', path: '/students/admission' },
+                { id: 'std_list', label: 'طلباء کی فہرست', path: '/students/list' },
+                { id: 'std_id_card', label: 'آئی ڈی کارڈ بنائیں', path: '/students/create-id-card' },
+                { id: 'std_attendance', label: 'طلبہ کی حاضری', path: '/students/attendance' },
+                { id: 'std_class_asign', label: 'طلبہ کو کلاس میں ایڈ کریں', path: '/students/class_asign' },
+                { id: 'std_schedule ', label: 'نظام الاوقات', path: '/students/schedule' },
+                { id: 'std_fees ', label: 'فیس جینریشن', path: '/students/fees' },
 
             ]
         },
         {
             id: 'teachers',
-            label: 'Ø§Ø³Ø§ØªØ°Û',
+            label: 'اساتذہ',
             icon: UserCheck,
             subMenu: [
-                { id: 't_add', label: 'Ù†ÛŒØ§ Ø§Ø³ØªØ§Ø¯ Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº', path: '/HRManagement' },
-                { id: 't_list', label: 'ÙÛØ±Ø³Øª Ø§Ø³Ø§ØªØ°Û', path: '/teachers/list' },
-                { id: 't_attendance', label: 'Ø­Ø§Ø¶Ø±ÛŒ', path: '/teachers/attendance' },
-                { id: 't_schedule ', label: 'Ù†Ø¸Ø§Ù… Ø§Ù„Ø§ÙˆÙ‚Ø§Øª', path: '/teachers/schedule' },
-                { id: 't_salary_increment', label: 'ØªÙ†Ø®ÙˆØ§Û Ø§Ù†Ú©Ø±ÛŒÙ…Ù†Ù¹', path: '/teachers/salary-increments' },
-                { id: 't_salary', label: 'ØªÙ†Ø®ÙˆØ§Û Ú©ÛŒ Ø§Ø¯Ø§Ø¦ÛŒÚ¯ÛŒ', path: '/finance/expenses/payroll' },
+                { id: 't_add', label: 'نیا استاد شامل کریں', path: '/HRManagement' },
+                { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
+                { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
+                { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
+                { id: 't_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
+                { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' },
             ]
         },
 
         //----------------------------------------------------------------------------------------
         {
             id: 'finance',
-            label: 'Ù…Ø§Ù„ÛŒØ§Øª',
+            label: 'مالیات',
             icon: Wallet,
             path: '/finance',
             subMenu: [
                 {
                     id: 'income-heads-config',
-                    label: 'Ø¢Ù…Ø¯Ù† Ùˆ Ø®Ø±Ú† Ø³ÛŒÙ¹ Ø§ÙŽÙ¾',
+                    label: 'آمدن و خرچ سیٹ اَپ',
                     icon: Settings2,
                     path: '/finance/setup/income-expence',
                     heads: ['Yahan admin naye purpose add kare ga']
@@ -313,25 +319,25 @@ export const SideBar = () => {
                 // --- Income Section ---
                 {
                     id: 'income',
-                    label: 'Ø¹Ø·ÛŒØ§Øª',
+                    label: 'عطیات',
                     icon: TrendingUp,
                     path: '/finance/income',
                     subSubMenu: [
                         {
                             id: 'fee-collection',
-                            label: 'ÙÙ†Úˆ ÙˆØµÙˆÙ„ÛŒ',
+                            label: 'فنڈ وصولی',
                             path: '/finance/income/fund-collection',
                             heads: ['Monthly Fee', 'Admission Fee', 'Exam Fee', 'Transport Fee', 'Late Fee Fine']
                         },
                         {
                             id: 'fund-list',
-                            label: 'Ø¹Ø·ÛŒØ§Øª Ú©ÛŒ ÙÛØ±Ø³Øª',
+                            label: 'عطیات کی فہرست',
                             path: '/finance/income/fund-list',
                             heads: ['Donations', 'Books & Uniform Sale', 'Bank Interest', 'Event Fund']
                         }
                         // {
                         //     id: 'other-income',
-                        //     label: 'Ø¯ÛŒÚ¯Ø± Ø¢Ù…Ø¯Ù†ÛŒ',
+                        //     label: 'دیگر آمدنی',
                         //     path: '/finance/income/other-income',
                         //     heads: ['Donations', 'Books & Uniform Sale', 'Bank Interest', 'Event Fund']
                         // }
@@ -340,25 +346,25 @@ export const SideBar = () => {
                 // --- Expenses Section ---
                 {
                     id: 'expenses',
-                    label: 'Ø¯ÛŒÚ¯Ø± Ø¢Ù…Ø¯Ù† Ùˆ Ø®Ø±Ú†',
+                    label: 'دیگر آمدن و خرچ',
                     icon: TrendingDown,
                     path: '/finance/other-income-expense'
                 },
                 {
                     id: 'accounts',
-                    label: 'Ø¨ÛŒÙ†Ú© Ø§ÙˆØ± Ú©ÛŒØ´',
+                    label: 'بینک اور کیش',
                     icon: Landmark,
                     hidden: true,
                     path: '/finance/accounts',
                     subSubMenu: [
                         {
                             id: 'cash-management',
-                            label: 'Ú©ÛŒØ´ Ù…ÛŒÙ†ÛŒØ¬Ù…Ù†Ù¹',
+                            label: 'کیش مینیجمنٹ',
                             path: '/finance/accounts/cash-management'
                         },
                         {
                             id: 'bank-management',
-                            label: 'Ø¨ÛŒÙ†Ú© Ø§Ú©Ø§Ø¤Ù†Ù¹Ø³',
+                            label: 'بینک اکاؤنٹس',
                             path: '/finance/accounts/bank-management'
                         }
                     ]
@@ -368,68 +374,67 @@ export const SideBar = () => {
         //--------------------------------------------------------------------------------------
         {
             id: 'HRManagement',
-            label: 'Ø¹Ù…Ù„Û',
+            label: 'عملہ',
             icon: UserPlus,
             path: '/HRManagement',
             subMenu: [
-                { id: 'staff_add', label: 'Ù†ÛŒØ§ Ø¹Ù…Ù„Û Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº', path: '/HRManagement?staffType=staff' },
-                { id: 'staff_list', label: 'Ø¯ÛŒÚ¯Ø± Ø¹Ù…Ù„Û ÙÛØ±Ø³Øª', path: '/staff/list' },
-                { id: 'staff_salary_increment', label: 'ØªÙ†Ø®ÙˆØ§Û Ø§Ù†Ú©Ø±ÛŒÙ…Ù†Ù¹', path: '/teachers/salary-increments' },
-                { id: 'staff_salary', label: 'ØªÙ†Ø®ÙˆØ§Û Ú©ÛŒ Ø§Ø¯Ø§Ø¦ÛŒÚ¯ÛŒ', path: '/finance/expenses/payroll' }
+                { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
+                { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
+                { id: 'staff_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
+                { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' }
             ]
         },
         {
             id: 'exams',
-            label: 'Ø§Ù…ØªØ­Ø§Ù†',
+            label: 'امتحان',
             icon: ExamIcon,
             path: '/exams',
             subMenu: [
                 { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' },
-                { id: 'exam_schedule_list', label: 'Ø§Ù…ØªØ­Ø§Ù†ÛŒ Ø´ÛŒÚˆÙˆÙ„ ÙÛØ±Ø³Øª', path: '/exams/schedule-list' },
-                { id: 'exam_result', label: 'Ø§Ù…ØªØ­Ø§Ù†ÛŒ Ø±Ø²Ù„Ù¹', path: '/exams/result' },
-                { id: 'exam_result_list', label: 'Ø±Ø²Ù„Ù¹ ÙÛØ±Ø³Øª', path: '/exams/result-list' }
+                { id: 'exam_schedule_list', label: 'امتحانی شیڈول فہرست', path: '/exams/schedule-list' },
+                { id: 'exam_result', label: 'امتحانی رزلٹ', path: '/exams/result' },
+                { id: 'exam_result_list', label: 'رزلٹ فہرست', path: '/exams/result-list' }
             ]
         },
         {
             id: 'store',
-            label: 'Ø§Ø³Ù¹ÙˆØ±',
+            label: 'اسٹور',
             icon: Store,
             path: '/store',
             subMenu: [
-                { id: 'store_dashboard', label: 'ÚˆÛŒØ´ Ø¨ÙˆØ±Úˆ', path: '/store/dashboard' },
-                { id: 'store_items', label: 'Ø§Ø´ÛŒØ§Ø¡', path: '/store/items' },
-                { id: 'store_units', label: 'Ø§Ú©Ø§Ø¦ÛŒØ§Úº', path: '/store/units' },
-                { id: 'store_categories', label: 'Ú©ÛŒÙ¹ÛŒÚ¯Ø±ÛŒØ²', path: '/store/categories' },
-                { id: 'store_purchases', label: 'Ø®Ø±ÛŒØ¯Ø§Ø±ÛŒ', path: '/store/purchases' },
-                { id: 'store_stock_issues', label: 'Ø§Ø³Ù¹Ø§Ú© Ø§Ø¬Ø±Ø§Ø¡', path: '/store/stock-issues' },
-                { id: 'store_returns', label: 'ÙˆØ§Ù¾Ø³ÛŒ', path: '/store/returns' },
-                { id: 'store_damaged_stock', label: 'Ø®Ø±Ø§Ø¨ / Ú¯Ù… Ø´Ø¯Û Ø§Ø³Ù¹Ø§Ú©', path: '/store/damaged-stock' },
-                { id: 'store_approvals', label: 'Ù…Ù†Ø¸ÙˆØ±ÛŒØ§Úº', path: '/store/approvals' },
-                { id: 'store_reports', label: 'Ø±Ù¾ÙˆØ±Ù¹Ø³', path: '/store/reports' },
-                { id: 'store_suppliers', label: 'Ø³Ù¾Ù„Ø§Ø¦Ø±Ø²', path: '/store/suppliers' },
+                { id: 'store_dashboard', label: 'ڈیش بورڈ', path: '/store/dashboard' },
+                { id: 'store_items', label: 'اشیاء', path: '/store/items' },
+                { id: 'store_units', label: 'اکائیاں', path: '/store/units' },
+                { id: 'store_categories', label: 'کیٹیگریز', path: '/store/categories' },
+                { id: 'store_purchases', label: 'خریداری', path: '/store/purchases' },
+                { id: 'store_stock_issues', label: 'اسٹاک اجراء', path: '/store/stock-issues' },
+                { id: 'store_returns', label: 'واپسی', path: '/store/returns' },
+                { id: 'store_damaged_stock', label: 'خراب / گم شدہ اسٹاک', path: '/store/damaged-stock' },
+                { id: 'store_approvals', label: 'منظوریاں', path: '/store/approvals' },
+                { id: 'store_reports', label: 'رپورٹس', path: '/store/reports' },
+                { id: 'store_suppliers', label: 'سپلائرز', path: '/store/suppliers' },
             ]
         },
         {
             id: 'scholarship',
-            label: 'ÙˆØ¸ÛŒÙÛ',
+            label: 'وظیفہ',
             icon: BadgeCent,
             path: '/scholarship'
         },
         {
             id: 'books',
-            label: 'Ú©ØªØ§Ø¨',
+            label: 'کتاب',
             icon: Library,
             path: '/books'
         },
-
     ];
     //--------------------------------------------------------------------
     const profileMenuItems = [
-        { id: 'settings', label: 'Ù¾Ø±ÙˆÙØ§Ø¦Ù„ Ø³ÛŒÙ¹Ù†Ú¯', path: '/Profile/setting', icon: Settings },
-        // { id: 'change_password', label: 'Ù¾Ø§Ø³ ÙˆØ±Úˆ ØªØ¨Ø¯ÛŒÙ„ Ú©Ø±ÛŒÚº', path: '/Profile/change-password', icon: KeyRound },
-        { id: 'cities', label: 'Ø´ÛØ±', path: '/Profile/cities', icon: UserCheck },
-        { id: 'support', label: 'Ø³Ù¾ÙˆØ±Ù¹', path: '/Profile/support', icon: MessageSquare },
-        { id: 'suggestions', label: 'ØªØ¬Ø§ÙˆÛŒØ²', path: '/Profile/suggestions', icon: Sparkles },
+        { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
+        // { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
+        { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck },
+        { id: 'support', label: 'سپورٹ', path: '/Profile/support', icon: MessageSquare },
+        { id: 'suggestions', label: 'تجاویز', path: '/Profile/suggestions', icon: Sparkles },
     ];
 
     // const toggleSubMenu = (id) => setOpenSubMenu(openSubMenu === id ? null : id);
@@ -445,14 +450,15 @@ export const SideBar = () => {
     const setting = [
         {
             id: 'setting',
-            label: 'ØªØ±ØªÛŒØ¨Ø§Øª',
+            label: 'ترتیبات',
             icon: Settings,
             subMenu: [
-                { id: 'shift', label: 'Ø´ÙÙ¹ Ú©Ø§ Ø§Ù†ØªØ¸Ø§Ù…', path: '/setting/shift' },
-                { id: 'department', label: 'Ø´Ø¹Ø¨Û Ø¬Ø§Øª Ú©Ø§ Ø§Ù†ØªØ¸Ø§Ù…', path: '/setting/department' },
-                { id: 'degree', label: 'ØªØ¹Ù„ÛŒÙ…ÛŒ Ø§Ø³Ù†Ø§Ø¯ Ú©Û’ Ù†Ø§Ù…', path: '/setting/degree-name' },
-                { id: 'role_management', label: 'Ú©Ø±Ø¯Ø§Ø± Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹', path: '/role-management', permission: 'role_management.view' },
-                { id: 'user_management', label: 'ØµØ§Ø±ÙÛŒÙ† Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹', path: '/role-management/users', permission: 'users.view' },
+                { id: 'shift', label: 'شفٹ کا انتظام', path: '/setting/shift' },
+                { id: 'department', label: 'شعبہ جات کا انتظام', path: '/setting/department' },
+                { id: 'degree', label: 'تعلیمی اسناد کے نام', path: '/setting/degree-name' },
+                { id: 'role_management', label: 'کردار مینجمنٹ', path: '/role-management', permission: 'role_management.view' },
+                { id: 'user_management', label: 'صارفین مینجمنٹ', path: '/role-management/users', permission: 'users.view' },
+                { id: 'tenant_management', label: 'مدارس کا انتظام', path: '/tenant-management', permission: 'tenant_management.view' },
 
             ]
         }
@@ -460,84 +466,85 @@ export const SideBar = () => {
     ];
 
     const urduMenuLabels = {
-        dashboard: 'ÚˆÛŒØ´ Ø¨ÙˆØ±Úˆ',
-        class_mgmt: 'Ú©Ù„Ø§Ø³ Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹',
-        classes: 'Ø¬Ù…Ø§Ø¹Øª',
-        sections: 'Ø¬Ù…Ø§Ø¹Øª Ø³ÛŒÚ©Ø´Ù†Ø²',
-        session: 'Ø³ÛŒØ´Ù†',
-        subjects: 'Ù…Ø¶Ø§Ù…ÛŒÙ†',
-        hifz: 'Ø´Ø¹Ø¨Û Ø­ÙØ¸',
-        hifz_daily: 'ÛŒÙˆÙ…ÛŒÛ Ø¬Ø§Ø¦Ø²Û',
-        daily_entry: 'ÛŒÙˆÙ…ÛŒÛ Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬',
-        daily_list: 'ÛŒÙˆÙ…ÛŒÛ Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª',
-        hifz_weekly: 'ÛÙØªÛ ÙˆØ§Ø± Ø¬Ø§Ø¦Ø²Û',
-        weekly_entry: 'ÛÙØªÛ ÙˆØ§Ø± Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬',
-        weekly_list: 'ÛÙØªÛ ÙˆØ§Ø± Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª',
-        hifz_monthly: 'Ù…Ø§ÛØ§Ù†Û Ø¬Ø§Ø¦Ø²Û',
-        monthly_entry: 'Ù…Ø§ÛØ§Ù†Û Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬',
-        monthly_list: 'Ù…Ø§ÛØ§Ù†Û Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª',
-        hifz_para: 'Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û',
-        para_entry: 'Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û’ Ú©Ø§ Ø§Ù†Ø¯Ø±Ø§Ø¬',
-        para_list: 'Ù¾Ø§Ø±Û Ø¬Ø§Ø¦Ø²Û’ Ú©ÛŒ ÙÛØ±Ø³Øª',
-        students: 'Ø·Ù„Ø¨Ø§Ø¡',
-        std_parents: 'ÙˆØ§Ù„Ø¯ÛŒÙ†',
-        std_admission: 'Ø¯Ø§Ø®Ù„Û ÙØ§Ø±Ù…',
-        std_list: 'Ø·Ù„Ø¨Ø§Ø¡ Ú©ÛŒ ÙÛØ±Ø³Øª',
-        std_id_card: 'Ø¢Ø¦ÛŒ ÚˆÛŒ Ú©Ø§Ø±Úˆ Ø¨Ù†Ø§Ø¦ÛŒÚº',
-        std_attendance: 'Ø·Ù„Ø¨Ø§Ø¡ Ú©ÛŒ Ø­Ø§Ø¶Ø±ÛŒ',
-        std_class_asign: 'Ø·Ù„Ø¨Ø§Ø¡ Ú©Ùˆ Ú©Ù„Ø§Ø³ Ù…ÛŒÚº Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº',
-        'std_schedule ': 'Ù†Ø¸Ø§Ù… Ø§Ù„Ø§ÙˆÙ‚Ø§Øª',
-        'std_fees ': 'ÙÛŒØ³ Ø¬Ù†Ø±ÛŒØ´Ù†',
-        teachers: 'Ø§Ø³Ø§ØªØ°Û',
-        t_add: 'Ù†ÛŒØ§ Ø§Ø³ØªØ§Ø¯ Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº',
-        t_list: 'Ø§Ø³Ø§ØªØ°Û Ú©ÛŒ ÙÛØ±Ø³Øª',
-        t_attendance: 'Ø­Ø§Ø¶Ø±ÛŒ',
-        't_schedule ': 'Ù†Ø¸Ø§Ù… Ø§Ù„Ø§ÙˆÙ‚Ø§Øª',
-        t_salary_increment: 'ØªÙ†Ø®ÙˆØ§Û Ø§Ù†Ú©Ø±ÛŒÙ…Ù†Ù¹',
-        t_salary: 'ØªÙ†Ø®ÙˆØ§Û Ú©ÛŒ Ø§Ø¯Ø§Ø¦ÛŒÚ¯ÛŒ',
-        finance: 'Ù…Ø§Ù„ÛŒØ§Øª',
-        'income-heads-config': 'Ø¢Ù…Ø¯Ù† Ùˆ Ø®Ø±Ú† Ø³ÛŒÙ¹ Ø§Ù¾',
-        income: 'Ø¹Ø·ÛŒØ§Øª',
-        'fee-collection': 'ÙÙ†Úˆ ÙˆØµÙˆÙ„ÛŒ',
-        'fund-list': 'Ø¹Ø·ÛŒØ§Øª Ú©ÛŒ ÙÛØ±Ø³Øª',
-        expenses: 'Ø¯ÛŒÚ¯Ø± Ø¢Ù…Ø¯Ù† Ùˆ Ø®Ø±Ú†',
-        accounts: 'Ø¨ÛŒÙ†Ú© Ø§ÙˆØ± Ú©ÛŒØ´',
-        'cash-management': 'Ú©ÛŒØ´ Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹',
-        'bank-management': 'Ø¨ÛŒÙ†Ú© Ø§Ú©Ø§Ø¤Ù†Ù¹Ø³',
-        HRManagement: 'Ø¹Ù…Ù„Û',
-        staff_add: 'Ù†ÛŒØ§ Ø¹Ù…Ù„Û Ø´Ø§Ù…Ù„ Ú©Ø±ÛŒÚº',
-        staff_list: 'Ø¯ÛŒÚ¯Ø± Ø¹Ù…Ù„Û ÙÛØ±Ø³Øª',
-        staff_salary_increment: 'ØªÙ†Ø®ÙˆØ§Û Ø§Ù†Ú©Ø±ÛŒÙ…Ù†Ù¹',
-        staff_salary: 'ØªÙ†Ø®ÙˆØ§Û Ú©ÛŒ Ø§Ø¯Ø§Ø¦ÛŒÚ¯ÛŒ',
-        exams: 'Ø§Ù…ØªØ­Ø§Ù†',
-        exam_schedule: 'Ø§Ù…ØªØ­Ø§Ù†ÛŒ Ø´ÛŒÚˆÙˆÙ„',
-        exam_schedule_list: 'Ø§Ù…ØªØ­Ø§Ù†ÛŒ Ø´ÛŒÚˆÙˆÙ„ ÙÛØ±Ø³Øª',
-        exam_result: 'Ø§Ù…ØªØ­Ø§Ù†ÛŒ Ø±Ø²Ù„Ù¹',
-        exam_result_list: 'Ø±Ø²Ù„Ù¹ ÙÛØ±Ø³Øª',
-        store: 'Ø§Ø³Ù¹ÙˆØ±',
-        store_dashboard: 'ÚˆÛŒØ´ Ø¨ÙˆØ±Úˆ',
-        store_items: 'Ø§Ø´ÛŒØ§Ø¡',
-        store_units: 'Ø§Ú©Ø§Ø¦ÛŒØ§Úº',
-        store_categories: 'Ú©ÛŒÙ¹ÛŒÚ¯Ø±ÛŒØ²',
-        store_purchases: 'Ø®Ø±ÛŒØ¯Ø§Ø±ÛŒ',
-        store_stock_issues: 'Ø§Ø³Ù¹Ø§Ú© Ø§Ø¬Ø±Ø§Ø¡',
-        store_returns: 'ÙˆØ§Ù¾Ø³ÛŒ',
-        store_damaged_stock: 'Ø®Ø±Ø§Ø¨ / Ú¯Ù… Ø´Ø¯Û Ø§Ø³Ù¹Ø§Ú©',
-        store_approvals: 'Ù…Ù†Ø¸ÙˆØ±ÛŒØ§Úº',
-        store_reports: 'Ø±Ù¾ÙˆØ±Ù¹Ø³',
-        store_suppliers: 'Ø³Ù¾Ù„Ø§Ø¦Ø±Ø²',
-        scholarship: 'ÙˆØ¸ÛŒÙÛ',
-        books: 'Ú©ØªØ§Ø¨',
-        settings: 'Ù¾Ø±ÙˆÙØ§Ø¦Ù„ Ø³ÛŒÙ¹Ù†Ú¯',
-        cities: 'Ø´ÛØ±',
-        support: 'Ø³Ù¾ÙˆØ±Ù¹',
-        suggestions: 'ØªØ¬Ø§ÙˆÛŒØ²',
-        setting: 'ØªØ±ØªÛŒØ¨Ø§Øª',
-        shift: 'Ø´ÙÙ¹ Ú©Ø§ Ø§Ù†ØªØ¸Ø§Ù…',
-        department: 'Ø´Ø¹Ø¨Û Ø¬Ø§Øª Ú©Ø§ Ø§Ù†ØªØ¸Ø§Ù…',
-        degree: 'ØªØ¹Ù„ÛŒÙ…ÛŒ Ø§Ø³Ù†Ø§Ø¯ Ú©Û’ Ù†Ø§Ù…',
-        role_management: 'Ú©Ø±Ø¯Ø§Ø± Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹',
-        user_management: 'ØµØ§Ø±ÙÛŒÙ† Ù…ÛŒÙ†Ø¬Ù…Ù†Ù¹',
+        dashboard: 'ڈیش بورڈ',
+        class_mgmt: 'کلاس مینجمنٹ',
+        classes: 'جماعت',
+        sections: 'جماعت سیکشنز',
+        session: 'سیشن',
+        subjects: 'مضامین',
+        hifz: 'شعبہ حفظ',
+        hifz_daily: 'یومیہ جائزہ',
+        daily_entry: 'یومیہ جائزے کا اندراج',
+        daily_list: 'یومیہ جائزے کی فہرست',
+        hifz_weekly: 'ہفتہ وار جائزہ',
+        weekly_entry: 'ہفتہ وار جائزے کا اندراج',
+        weekly_list: 'ہفتہ وار جائزے کی فہرست',
+        hifz_monthly: 'ماہانہ جائزہ',
+        monthly_entry: 'ماہانہ جائزے کا اندراج',
+        monthly_list: 'ماہانہ جائزے کی فہرست',
+        hifz_para: 'پارہ جائزہ',
+        para_entry: 'پارہ جائزے کا اندراج',
+        para_list: 'پارہ جائزے کی فہرست',
+        students: 'طلباء',
+        std_parents: 'والدین',
+        std_admission: 'داخلہ فارم',
+        std_list: 'طلباء کی فہرست',
+        std_id_card: 'آئی ڈی کارڈ بنائیں',
+        std_attendance: 'طلباء کی حاضری',
+        std_class_asign: 'طلباء کو کلاس میں شامل کریں',
+        'std_schedule ': 'نظام الاوقات',
+        'std_fees ': 'فیس جنریشن',
+        teachers: 'اساتذہ',
+        t_add: 'نیا استاد شامل کریں',
+        t_list: 'اساتذہ کی فہرست',
+        t_attendance: 'حاضری',
+        't_schedule ': 'نظام الاوقات',
+        t_salary_increment: 'تنخواہ انکریمنٹ',
+        t_salary: 'تنخواہ کی ادائیگی',
+        finance: 'مالیات',
+        'income-heads-config': 'آمدن و خرچ سیٹ اپ',
+        income: 'عطیات',
+        'fee-collection': 'فنڈ وصولی',
+        'fund-list': 'عطیات کی فہرست',
+        expenses: 'دیگر آمدن و خرچ',
+        accounts: 'بینک اور کیش',
+        'cash-management': 'کیش مینجمنٹ',
+        'bank-management': 'بینک اکاؤنٹس',
+        HRManagement: 'عملہ',
+        staff_add: 'نیا عملہ شامل کریں',
+        staff_list: 'دیگر عملہ فہرست',
+        staff_salary_increment: 'تنخواہ انکریمنٹ',
+        staff_salary: 'تنخواہ کی ادائیگی',
+        exams: 'امتحان',
+        exam_schedule: 'امتحانی شیڈول',
+        exam_schedule_list: 'امتحانی شیڈول فہرست',
+        exam_result: 'امتحانی رزلٹ',
+        exam_result_list: 'رزلٹ فہرست',
+        store: 'اسٹور',
+        store_dashboard: 'ڈیش بورڈ',
+        store_items: 'اشیاء',
+        store_units: 'اکائیاں',
+        store_categories: 'کیٹیگریز',
+        store_purchases: 'خریداری',
+        store_stock_issues: 'اسٹاک اجراء',
+        store_returns: 'واپسی',
+        store_damaged_stock: 'خراب / گم شدہ اسٹاک',
+        store_approvals: 'منظوریاں',
+        store_reports: 'رپورٹس',
+        store_suppliers: 'سپلائرز',
+        scholarship: 'وظیفہ',
+        books: 'کتاب',
+        settings: 'پروفائل سیٹنگ',
+        cities: 'شہر',
+        support: 'سپورٹ',
+        suggestions: 'تجاویز',
+        setting: 'ترتیبات',
+        shift: 'شفٹ کا انتظام',
+        department: 'شعبہ جات کا انتظام',
+        degree: 'تعلیمی اسناد کے نام',
+        role_management: 'کردار مینجمنٹ',
+        user_management: 'صارفین مینجمنٹ',
+        tenant_management: 'مدارس کا انتظام',
     };
 
     const cp1252ByteMap = {
@@ -796,7 +803,6 @@ export const SideBar = () => {
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                                         <p className="text-themeMuted font-bold">{profileRoleLabel}</p>
                                     </div>
-                                    <p className="mt-2 max-w-full truncate text-[10px] font-bold text-themeMuted" title={profileName}>{profileName}</p>
                                 </div>
                             </div>
                             {isProfileOpen && (

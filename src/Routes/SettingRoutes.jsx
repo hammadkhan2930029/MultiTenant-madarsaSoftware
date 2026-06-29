@@ -2,7 +2,7 @@ import { Route } from 'react-router-dom';
 import { ShiftManagement } from '../Pages/Settings/CreateShift/CreateShift';
 import { DepartmentManagement } from '../Pages/Settings/CreateDepartments/CreateDepartments';
 import { QualificationManagement } from '../Pages/Settings/DegreeName/DegreeName'
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const SettingRoutes = (
     <Route path="setting">

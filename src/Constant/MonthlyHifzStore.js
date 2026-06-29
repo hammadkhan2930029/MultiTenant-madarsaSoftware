@@ -1,3 +1,5 @@
+import { createClientId } from '../Utils/createClientId';
+
 const STORAGE_KEY = 'madarsa_hifz_monthly_entries';
 const STORE_EVENT = 'madarsa-hifz-monthly-updated';
 
@@ -48,7 +50,7 @@ export const saveMonthlyJaizaEntry = (entry) => {
 
   const createdEntry = {
     ...entry,
-    id: entry.id || crypto.randomUUID(),
+    id: entry.id || createClientId(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

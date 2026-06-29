@@ -196,13 +196,13 @@ export const ParentsList = () => {
             <div className="bg-[var(--color-surface)] rounded-[3rem] border border-[var(--color-border)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] p-6 md:p-8 space-y-6">
                 <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h2 className="flex items-center gap-3 text-xl font-black text-[var(--color-text-main)] md:text-3xl">
+                        <h2 className="flex items-center gap-3 text-3xl font-black text-[var(--color-text-main)]">
                             <div className="rounded-2xl bg-[var(--color-primary)]/10 p-3 text-[var(--color-primary)]">
                                 <Users size={26} />
                             </div>
                             والدین کی فہرست
                         </h2>
-                        <p className="mr-14 mt-2 text-xs font-bold text-[var(--color-text-muted)]">کل اندراجات: {filteredParents.length}</p>
+                        <p className="mr-14 mt-2 text-sm font-bold text-[var(--color-text-muted)]">کل اندراجات: {filteredParents.length}</p>
                     </div>
                 </div>
 

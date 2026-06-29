@@ -15,12 +15,14 @@ import { ExamRoutes } from './ExamRoutes';
 import { StoreRoutes } from './StoreRoutes';
 import { AdminLogin, UserLogin } from '../Pages/Auth/AdminLogin';
 import { getDefaultRouteForSession } from '../Pages/Auth/authLandingRoutes';
-import { getAdminSession, isAdminAuthenticated } from '../Constant/AdminAuth';
+import { getAdminSession, isAdminAuthenticated, validateCurrentTenantSession } from '../Constant/AdminAuth';
+import { SESSION_EXPIRED_EVENT } from '../Constant/Api';
 import { StudentAttendanceHistory } from '../Pages/Students/AttendancePage/StudentAttendanceHistory';
 import { RequirePermission } from '../Components/Auth/RequirePermission';
 import { withPermission } from '../Components/Auth/permissionGuards';
 import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
+import { TenantManagement } from '../Pages/TenantManagement/TenantManagement';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -40,8 +42,40 @@ const UserLoginRoute = () => {
 
 const ProtectedAppShell = () => {
   const location = useLocation();
+  const [isCheckingSession, setIsCheckingSession] = React.useState(true);
+  const [sessionExpired, setSessionExpired] = React.useState(false);
 
-  if (!isAdminAuthenticated()) {
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const handleSessionExpired = () => {
+      if (isMounted) setSessionExpired(true);
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+
+    validateCurrentTenantSession()
+      .then(() => {
+        if (isMounted) setIsCheckingSession(false);
+      })
+      .catch(() => {
+        if (isMounted) {
+          setSessionExpired(true);
+          setIsCheckingSession(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
+  }, [location.pathname]);
+
+  if (isCheckingSession) {
+    return null;
+  }
+
+  if (sessionExpired || !isAdminAuthenticated()) {
     return <Navigate to="/admin" replace state={{ from: location }} />;
   }
 
@@ -71,6 +105,10 @@ export const AppRoutes = () => {
         <Route path="role-management/users/create" element={withPermission(<UserManagement />, 'users.create')} />
         <Route path="role-management/users/:userId" element={withPermission(<UserManagement />, 'users.view')} />
         <Route path="role-management/users/:userId/edit" element={withPermission(<UserManagement />, 'users.edit')} />
+        <Route path="tenant-management" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
+        <Route path="tenant-management/create" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
+        <Route path="tenant-management/:tenantId" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
+        <Route path="tenant-management/:tenantId/edit" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="finance/*" element={<FinanceRoutes />} />
         <Route path="hifz/*" element={<HifzRoutes />} />
 

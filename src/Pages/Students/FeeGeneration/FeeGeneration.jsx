@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, Clock, CreditCard, Eye, Filter, Printer, ReceiptText, Search, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
@@ -634,8 +634,8 @@ export const FeesCollection = () => {
                                 <CreditCard size={26} />
                             </div>
                             <div>
-                                <h1 className="text-2xl font-black">فیس جنریشن</h1>
-                                <p className="mt-4 text-xs font-bold text-[var(--color-text-muted)]">ماہانہ فیس واؤچر بنائیں، ادائیگی محفوظ کریں اور رسید پرنٹ کریں</p>
+                                <h1 className="text-3xl font-black">فیس جنریشن</h1>
+                                <p className="mt-4 text-sm font-bold text-[var(--color-text-muted)]">ماہانہ فیس واؤچر بنائیں، ادائیگی محفوظ کریں اور رسید پرنٹ کریں</p>
                             </div>
                         </div>
                         <button
@@ -1389,3 +1389,5 @@ const FeeReceiptPrint = ({ voucher, madrassaProfile }) => {
         </>
     );
 };
+
+

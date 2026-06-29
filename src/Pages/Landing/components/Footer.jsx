@@ -1,3 +1,5 @@
+import lightLogo from '../../../assets/logos/new1.png'
+import darkLogo from '../../../assets/logos/new2.png'
 import { footerLinks } from '../data/landingData'
 
 const getRouteHref = (href) => {
@@ -12,7 +14,9 @@ const getRouteHref = (href) => {
   return href
 }
 
-function Footer({ onNavigate }) {
+function Footer({ theme, onNavigate }) {
+  const brandLogo = theme === 'dark' ? darkLogo : lightLogo
+
   const handleRouteClick = (event, href) => {
     const routeHref = getRouteHref(href)
 
@@ -49,14 +53,13 @@ function Footer({ onNavigate }) {
 
         <div className="grid gap-7 py-7 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
           <div>
-            <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-themePrimary text-theme-kicker font-black text-white shadow-card-theme">
-                م
-              </span>
+            <div className="flex flex-col items-start gap-3 text-right">
+              <img
+                src={brandLogo}
+                alt="مدرسہ سافٹ ویئر"
+                className="h-14 w-auto max-w-[15rem] object-contain sm:h-16 sm:max-w-[18rem]"
+              />
               <div>
-                <p className="footer-brand-name font-urdu text-theme-body font-bold text-themeText">
-                  مدرسہ سافٹ ویئر
-                </p>
                 <p className="text-theme-kicker text-slate-500 dark:text-slate-400">
                   جدید مدرسہ مینجمنٹ کے لیے مکمل سافٹ ویئر حل۔
                 </p>

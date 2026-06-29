@@ -86,7 +86,7 @@ export const StudentProfile = () => {
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
                                 <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.25em]">Student Profile</p>
-                                <h1 className="mt-2 py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)] md:text-4xl">
+                                <h1 className="mt-2 py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {student.fullName}
                                 </h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-4">ولدیت: {student.fatherName}</p>

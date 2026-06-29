@@ -242,7 +242,7 @@ export const ParaJaizaList = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="text-2xl md:text-3xl font-black">سپارہ جائزہ رپورٹ</h1>
+                                <h1 className="text-3xl font-black">سپارہ جائزہ رپورٹ</h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">طالب علم کے سپارہ وار ریکارڈ کی فہرست</p>
                             </div>
                         </div>

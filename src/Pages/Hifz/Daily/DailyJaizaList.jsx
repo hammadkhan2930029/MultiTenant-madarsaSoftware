@@ -401,10 +401,10 @@ export const DailyJaizaList = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="min-h-[2.5rem] text-2xl font-black md:text-3xl">
+                                <h1 className="min-h-[2.5rem] text-3xl font-black">
                                     {isProfileLoading ? '' : madrassaName}
                                 </h1>
-                                <p className="text-sm font-bold text-[var(--color-text-muted)]">{registerMeta.reportTitle}</p>
+                                <p className="text-sm font-bold text-[var(--color-text-muted)] mt-4">{registerMeta.reportTitle}</p>
                             </div>
                         </div>
 

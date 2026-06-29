@@ -8,11 +8,12 @@ import { getStudents } from '../../../Constant/StudentsApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { createClientId } from '../../../Utils/createClientId';
 
 /* eslint-disable no-sparse-arrays */
 
 const createWeeklyRow = () => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     studentId: '',
     studentName: '',
     siparaFrom: '',
@@ -270,13 +271,13 @@ export const WeeklyJaizaForm = () => {
         >
             <div className="max-w-[1700px] mx-auto space-y-6">
                 <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 md:p-7 shadow-sm">
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-start gap-4">
                             <div className="h-14 w-14 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center">
                                 <BookOpen size={28} />
                             </div>
-                            <div className="space-y-1">
-                                <h1 className="text-2xl md:text-3xl font-black">ہفتہ وار جائزہ فارم</h1>
+                            <div className="space-y-1 text-right">
+                                <h1 className="text-3xl font-black">ہفتہ وار جائزہ فارم</h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">
                                     طلبہ حفظ کے ہفتہ وار جائزے کے نمبر، کیفیت اور سپارہ رینج درج کریں
                                 </p>
@@ -286,15 +287,15 @@ export const WeeklyJaizaForm = () => {
                         <button
                             type="button"
                             onClick={() => navigate('/hifz/weekly/list')}
-                            className="px-5 py-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] font-bold flex items-center justify-center gap-2 hover:bg-[var(--color-input)] transition-all"
+                            className="shrink-0 px-5 py-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] font-bold flex items-center justify-center gap-2 hover:bg-[var(--color-input)] transition-all"
                         >
                             <ArrowRight size={18} />
                             واپس فہرست
                         </button>
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-                        <div>
+                    <div className="mt-6 grid grid-cols-1 items-end gap-4 md:grid-cols-2 xl:grid-cols-5">
+                        <div className="min-w-0">
                             <ThemedDatePicker
                                 required
                                 label="کب سے"
@@ -306,7 +307,7 @@ export const WeeklyJaizaForm = () => {
                             />
                         </div>
 
-                        <div>
+                        <div className="min-w-0">
                             <ThemedDatePicker
                                 required
                                 label="کب تک"
@@ -318,8 +319,8 @@ export const WeeklyJaizaForm = () => {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">کلاس<span className="text-red-500"> *</span></label>
+                        <div className="min-w-0 space-y-2">
+                            <label className="mr-2 block text-xs font-black text-[var(--color-text-muted)]">کلاس<span className="text-red-500"> *</span></label>
                             <select
                                 required
                                 value={formData.className}
@@ -333,8 +334,8 @@ export const WeeklyJaizaForm = () => {
                             </select>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن<span className="text-red-500"> *</span></label>
+                        <div className="min-w-0 space-y-2">
+                            <label className="mr-2 block text-xs font-black text-[var(--color-text-muted)]">سیکشن<span className="text-red-500"> *</span></label>
                             <select
                                 required
                                 value={formData.section}
@@ -348,8 +349,8 @@ export const WeeklyJaizaForm = () => {
                             </select>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">استاد</label>
+                        <div className="min-w-0 space-y-2">
+                            <label className="mr-2 block text-xs font-black text-[var(--color-text-muted)]">استاد</label>
                             <select
                                 value={formData.teacher}
                                 onChange={(e) => handleFormChange('teacher', e.target.value)}

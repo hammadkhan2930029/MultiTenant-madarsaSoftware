@@ -1,4 +1,4 @@
-.app-shell {
+﻿.app-shell {
   min-height: 100svh;
 }
 
@@ -1010,6 +1010,22 @@
 }
 
 @media (max-width: 640px) {
+  .site-shell .text-theme-title {
+    font-size: clamp(1.55rem, 1.28rem + 1.25vw, 2.05rem);
+    line-height: 1.7;
+  }
+
+  .site-shell .text-theme-body {
+    font-size: clamp(1.05rem, 0.96rem + 0.62vw, 1.18rem);
+    line-height: 1.9;
+  }
+
+  .site-shell .text-theme-kicker,
+  .site-shell .text-theme-button,
+  .site-shell .text-theme-nav {
+    font-size: 1.12rem;
+  }
+
   .feature-card {
     min-height: auto;
   }
@@ -1020,3 +1036,5 @@
     border-radius: 1rem;
   }
 }
+
+

@@ -142,7 +142,7 @@ export const CreateClasses = () => {
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
-                    <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">جماعت مینجمنٹ</h2>
+                    <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت مینجمنٹ</h2>
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredClasses.length}</p>
                 </div>
 
@@ -174,7 +174,7 @@ export const CreateClasses = () => {
                 <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span>{editMode ? 'جماعت اپڈیٹ کریں' : 'نئی جماعت کا اندراج'}</span>
+                        <span className='text-3xl'>{editMode ? 'جماعت اپڈیٹ کریں' : 'نئی جماعت کا اندراج'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

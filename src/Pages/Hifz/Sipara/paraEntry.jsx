@@ -6,6 +6,7 @@ import { createSiparaHifzEntry, getSiparaHifzEntries } from '../../../Constant/H
 import { getStudents } from '../../../Constant/StudentsApi';
 import { mapStudentsForHifz } from '../HifzUi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { createClientId } from '../../../Utils/createClientId';
 
 const siparaRowsTemplate = [
     { paraNo: 30, paraName: 'عم' },
@@ -41,7 +42,7 @@ const siparaRowsTemplate = [
 ];
 
 const createSiparaRow = (row) => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     apiId: '',
     paraNo: row.paraNo,
     paraName: row.paraName,
@@ -245,7 +246,7 @@ export const ParaJaizaEntry = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="text-2xl md:text-3xl font-black">سپارہ جائزہ اندراج</h1>
+                                <h1 className="text-3xl font-black">سپارہ جائزہ اندراج</h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">
                                     طالب علم منتخب کریں اور سپاروں کی آغاز، اختتام، کل ایام اور کیفیت درج کریں
                                 </p>

@@ -216,7 +216,7 @@ export const MonthlyJaizaList = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="text-2xl md:text-3xl font-black">ماہانہ جائزہ فہرست</h1>
+                                <h1 className="text-3xl font-black">ماہانہ جائزہ فہرست</h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">طلبہ کے ماہانہ جائزے کی مکمل تفصیل</p>
                             </div>
                         </div>

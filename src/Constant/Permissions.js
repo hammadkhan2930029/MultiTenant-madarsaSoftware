@@ -88,6 +88,10 @@ export const PAGE_PERMISSIONS = {
   '/role-management/users/create': 'users.create',
   '/role-management/users/:userId': 'users.view',
   '/role-management/users/:userId/edit': 'users.edit',
+  '/tenant-management': 'tenant_management.view',
+  '/tenant-management/create': 'tenant_management.view',
+  '/tenant-management/:tenantId': 'tenant_management.view',
+  '/tenant-management/:tenantId/edit': 'tenant_management.view',
 };
 
 export const ROLE_PERMISSION_MODULES = [

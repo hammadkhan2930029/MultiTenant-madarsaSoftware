@@ -3,10 +3,64 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq';
+  src: url('/fonts/JameelNooriNastaleeq.ttf') format('truetype');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-urdu: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
+  --font-arabic: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
+  --font-marhey: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
+
+  --text-theme-title: clamp(2rem, 1.1rem + 2.2vw, 3.2rem);
+  --text-theme-title--line-height: 1.9;
+  --text-theme-kicker: 1.5rem;
+  --text-theme-kicker--line-height: 1.7;
+  --text-theme-body: 1.75rem;
+  --text-theme-body--line-height: 2.25rem;
+  --text-theme-nav: 1.5rem;
+  --text-theme-nav--line-height: 1.6;
+  --text-theme-button: 1.5rem;
+  --text-theme-button--line-height: 1.7;
+  --text-theme-detail: 0.875rem;
+  --text-theme-detail--line-height: 1.75rem;
+
+  --color-themeBg: var(--color-bg);
+  --color-themeSurface: var(--color-surface);
+  --color-themeText: var(--color-text-main);
+  --color-themePrimary: var(--color-primary);
+  --color-themePrimaryHover: var(--color-primary-hover);
+  --color-themeBorder: var(--color-border);
+
+  --shadow-theme: var(--shadow-main);
+  --shadow-card-theme: var(--shadow-card);
+}
+
 @layer base {
   .font-urdu {
     line-height: 2.5;
     direction: rtl;
+  }
+}
+
+@layer utilities {
+  .text-app-title {
+    font-size: 1.875rem;
+    line-height: 1.8;
+  }
+
+  .text-app-subtitle {
+    font-size: 0.875rem;
+    line-height: 1.8;
+  }
+
+  .text-app-body {
+    font-size: 1rem;
+    line-height: 1.9;
   }
 }
 

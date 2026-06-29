@@ -215,7 +215,7 @@ export const WeeklyJaizaList = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="text-2xl md:text-3xl font-black">{reportMeta.title}</h1>
+                                <h1 className="text-3xl font-black">{reportMeta.title}</h1>
                                 {/* <p className="text-sm font-bold text-[var(--color-text-muted)]">{reportMeta.campus}</p> */}
                             </div>
                         </div>

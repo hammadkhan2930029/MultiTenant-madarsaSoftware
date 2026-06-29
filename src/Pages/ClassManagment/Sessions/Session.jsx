@@ -145,11 +145,11 @@ export const CreateSessions = () => {
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
-                    <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">تعلیمی سیشن</h2>
+                    <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">تعلیمی سیشن</h2>
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل ریکارڈ: {totalSessions}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                <div className="flex w-full items-center flex-col gap-3 md:w-auto md:flex-row">
                     <ExportExcelButton rows={filteredSessions} columns={exportColumns} fileName="sessions-list" className="w-full md:w-auto" />
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -177,7 +177,7 @@ export const CreateSessions = () => {
                 <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span>{editMode ? 'سیشن اپڈیٹ کریں' : 'نیا سیشن اندراج'}</span>
+                        <span className='text-3xl'>{editMode ? 'سیشن اپڈیٹ کریں' : 'نیا سیشن اندراج'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

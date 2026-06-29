@@ -5,7 +5,7 @@ import { ExamScheduleIndex } from '../Pages/Exams/ExamScheduleIndex';
 import { ExamResult } from '../Pages/Exams/ExamResult';
 import { ExamResultIndex } from '../Pages/Exams/ExamResultIndex';
 import { ResultGradeScale } from '../Pages/Exams/ResultGradeScale';
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const ExamRoutes = (
     <Route path="exams">

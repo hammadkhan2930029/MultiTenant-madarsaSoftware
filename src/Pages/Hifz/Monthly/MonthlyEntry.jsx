@@ -7,6 +7,7 @@ import { getStudents } from '../../../Constant/StudentsApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { filterStudentsForHifz, getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { createClientId } from '../../../Utils/createClientId';
 
 const hijriMonths = [
     'محرم الحرام',
@@ -24,7 +25,7 @@ const hijriMonths = [
 ];
 
 const createMonthRow = (monthName) => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     monthName,
     sabaqStart: '',
     sabaqEnd: '',
@@ -334,7 +335,7 @@ export const MonthlyJaizaEntry = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="text-2xl md:text-3xl font-black">ماہانہ جائزہ اندراج</h1>
+                                <h1 className="text-3xl font-black">ماہانہ جائزہ اندراج</h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">
                                     طالب علم منتخب کریں اور اس کی ماہ بہ ماہ کارکردگی درج کریں
                                 </p>

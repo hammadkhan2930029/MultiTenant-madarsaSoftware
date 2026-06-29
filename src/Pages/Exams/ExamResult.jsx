@@ -8,9 +8,10 @@ import { defaultResultGrades, getResultGradeLabel } from '../../Constant/ResultG
 import { getResultGrades } from '../../Constant/ResultGradesApi';
 import { useNotifier } from '../../Components/Notifications/useNotifier';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { createClientId } from '../../Utils/createClientId';
 
 const emptySubjectRow = () => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     subjectId: '',
     subjectName: '',
     totalMarks: '100',

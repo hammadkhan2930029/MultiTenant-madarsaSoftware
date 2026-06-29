@@ -4,7 +4,7 @@ import { Profile } from '../Pages/ProfileSetting/Profile/Profile'
 import { ChangePassword } from '../Pages/ProfileSetting/ChangePassword/ChangePassword';
 import { Support } from '../Pages/ProfileSetting/Support/Support';
 import { Suggestions } from '../Pages/ProfileSetting/Suggestions/Suggestions';
-import { withPermission } from '../Components/Auth/RequirePermission';
+import { withPermission } from '../Components/Auth/permissionGuards';
 
 
 export const ProfileRoutes = (

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
     BookOpen,
     Camera,
@@ -538,7 +538,7 @@ export const AdmissionForm = () => {
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
                                 <div className="bg-[#002a33] p-8 text-center text-white">
                                     <h2 className="text-3xl font-bold">طالب علم رجسٹریشن فارم</h2>
-                                    <p className="text-emerald-400 mt-2">{madrassaName}</p>
+                                    <p className="text-sm text-emerald-400 mt-2">{madrassaName}</p>
                                 </div>
 
                                 <div className="p-6 md:p-10 space-y-12">
@@ -1038,3 +1038,5 @@ const PrintLine = ({ label, value, flex = '1' }) => (
         </span>
     </div>
 );
+
+

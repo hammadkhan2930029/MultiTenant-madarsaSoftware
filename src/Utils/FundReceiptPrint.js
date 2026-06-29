@@ -1,4 +1,4 @@
-import { AppImages } from '../Constant/AppImages';
+﻿import { AppImages } from '../Constant/AppImages';
 import { getAdminSession, getApiAssetUrl } from '../Constant/AdminAuth';
 
 const parseAmount = (value) => Number(String(value || '').replace(/,/g, '')) || 0;
@@ -35,7 +35,7 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
         <title>رسید</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
+          @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('/fonts/JameelNooriNastaleeq.ttf') format('truetype'); font-weight: 400 700; font-style: normal; font-display: swap; }
           @page { size: A5; margin: 0; }
           body { margin: 0; -webkit-print-color-adjust: exact; }
           .urdu-font { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif; }
@@ -144,3 +144,5 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
   `);
   printWindow.document.close();
 };
+
+

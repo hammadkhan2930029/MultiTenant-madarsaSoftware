@@ -1,3 +1,5 @@
+import { createClientId } from '../Utils/createClientId';
+
 const STORAGE_KEY = 'madarsa_hifz_sipara_entries';
 const STORE_EVENT = 'madarsa-hifz-sipara-updated';
 
@@ -45,7 +47,7 @@ export const saveSiparaJaizaEntry = (entry) => {
 
   const createdEntry = {
     ...entry,
-    id: entry.id || crypto.randomUUID(),
+    id: entry.id || createClientId(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

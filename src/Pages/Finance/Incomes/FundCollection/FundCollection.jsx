@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Save, Copy, Plus, Trash2, User, Wallet, FileText, Printer, CheckCircle } from 'lucide-react';
 /* eslint-disable-next-line no-unused-vars */
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ import { useNotificationBridge } from '../../../../Components/Notifications/useN
 import { createFundCollection, getFundCollections } from '../../../../Constant/FundCollectionsApi';
 import { getAdminSession, getApiAssetUrl } from '../../../../Constant/AdminAuth';
 import { printFundReceipt } from '../../../../Utils/FundReceiptPrint';
+import { createClientId } from '../../../../Utils/createClientId';
 
 const donationTypes = {
     'صدقات واجبہ': ['زکوٰۃ', 'فطرہ', 'فدیہ', 'کفارہ', 'عشر', 'قربانی', 'نذر'],
@@ -16,7 +17,7 @@ const donationTypes = {
 };
 
 const createFundEntry = () => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     paymentMode: 'نقد',
     donationType: 'صدقات واجبہ',
     donationSubType: 'زکوٰۃ',
@@ -97,7 +98,7 @@ export const FundCollection = () => {
     }, [donorInfo.number]);
 
     const handleAddFund = () => setFunds([...funds, createFundEntry()]);
-    const handleCopyFund = (index) => setFunds([...funds, { ...funds[index], id: crypto.randomUUID() }]);
+    const handleCopyFund = (index) => setFunds([...funds, { ...funds[index], id: createClientId() }]);
     const removeFund = (id) => { if (funds.length > 1) setFunds(funds.filter(f => f.id !== id)); };
 
     const updateFund = (index, field, value) => {
@@ -149,7 +150,7 @@ export const FundCollection = () => {
                 <title>رسید</title>
                 <script src="https://cdn.tailwindcss.com"></script>
                 <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu&display=swap');
+                    @font-face { font-family: 'Jameel Noori Nastaleeq'; src: url('/fonts/JameelNooriNastaleeq.ttf') format('truetype'); font-weight: 400 700; font-style: normal; font-display: swap; }
                     
                     @page { 
                         size: A5; 
@@ -484,3 +485,5 @@ export const FundCollection = () => {
         </div>
     );
 };
+
+

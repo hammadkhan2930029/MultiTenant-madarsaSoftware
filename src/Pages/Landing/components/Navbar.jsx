@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import lightLogo from '../../../assets/logos/new1.png'
+import darkLogo from '../../../assets/logos/new2.png'
 import { navItems } from '../data/landingData'
 import ThemeToggle from './ThemeToggle'
 
@@ -16,6 +18,7 @@ const getRouteHref = (href) => {
 
 function Navbar({ theme, onThemeToggle, onNavigate }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const brandLogo = theme === 'dark' ? darkLogo : lightLogo
 
   const handleRouteClick = (event, href) => {
     const routeHref = getRouteHref(href)
@@ -39,17 +42,11 @@ function Navbar({ theme, onThemeToggle, onNavigate }) {
           onClick={(event) => handleRouteClick(event, '/')}
           className="brand-mark flex min-w-0 items-center gap-2 text-right sm:gap-3"
         >
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-themePrimary text-theme-kicker font-bold text-white shadow-card-theme sm:size-10">
-            م
-          </span>
-          <span className="min-w-0">
-            <span className="block max-w-[11rem] truncate font-urdu text-theme-nav font-bold text-themeText min-[380px]:max-w-none">
-              مدرسہ سافٹ ویئر
-            </span>
-            <span className="block max-w-[11rem] truncate text-theme-detail font-medium text-slate-500 min-[380px]:max-w-none dark:text-slate-400">
-              مینجمنٹ سافٹ ویئر
-            </span>
-          </span>
+          <img
+            src={brandLogo}
+            alt="مدرسہ سافٹ ویئر"
+            className="h-14 w-auto max-w-[15rem] object-contain sm:h-16 sm:max-w-[18rem]"
+          />
         </a>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -68,8 +65,8 @@ function Navbar({ theme, onThemeToggle, onNavigate }) {
 
         <div className="hidden items-center gap-3 md:flex">
           <a
-            // href="/admin"
-            // onClick={(event) => handleRouteClick(event, '/admin')}
+            href="/login"
+            onClick={(event) => handleRouteClick(event, '/login')}
             className="rounded-md border border-themeBorder bg-themeSurface px-4 py-2 text-theme-button font-bold text-themeText shadow-card-theme transition hover:border-themePrimary hover:text-themePrimary"
           >
             لاگ اِن
@@ -165,8 +162,8 @@ function Navbar({ theme, onThemeToggle, onNavigate }) {
               ڈیمو بک کریں
             </a>
             <a
-              href="/admin"
-              onClick={(event) => handleRouteClick(event, '/admin')}
+              href="/login"
+              onClick={(event) => handleRouteClick(event, '/login')}
               className="mt-3 block rounded-md border border-themeBorder bg-themeBg px-4 py-3 text-center text-theme-button font-bold text-themeText shadow-card-theme transition hover:border-themePrimary hover:text-themePrimary"
             >
               لاگ اِن

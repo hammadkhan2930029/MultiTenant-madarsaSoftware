@@ -238,7 +238,7 @@ export const StudentScheduleManager = () => {
             <div className="bg-[var(--color-surface)] flex justify-between items-center border border-[var(--color-border)] pr-4 py-4 rounded-[2.5rem] shadow-xl">
                 <div>
                     <h1 className="text-3xl font-black text-[var(--color-text)]">شیڈول مینیجر</h1>
-                    <p className="text-md opacity-60 mt-5">طلباء کا تعلیمی ٹائم ٹیبل ترتیب دیں</p>
+                    <p className="text-sm opacity-60 mt-5">طلباء کا تعلیمی ٹائم ٹیبل ترتیب دیں</p>
                 </div>
                 <div className="hidden md:block bg-[var(--color-surface)] p-3 rounded-2xl border border-[var(--color-border)]/10">
                     <Calendar className="text-[var(--color-primary)]" size={24} />
