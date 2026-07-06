@@ -5,8 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import madarsaLogo from '../../assets/logos/madarsaLogotransparent.png';
 import {
     fetchCurrentTenantBranding,
-    getAdminCredentials,
-    getApiAssetUrl,
     loginAdmin,
     logoutAdmin,
 } from '../../Constant/AdminAuth';
@@ -30,7 +28,6 @@ const MotionButton = motion.button;
 const LoginForm = ({
     usernamePlaceholder,
     submitLabel,
-    showDefaultCredentials = false,
     allowAdminRoles = false,
 }) => {
     const navigate = useNavigate();
@@ -38,7 +35,6 @@ const LoginForm = ({
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [tenantBranding, setTenantBranding] = useState(null);
-    const credentials = getAdminCredentials();
     useNotificationBridge({ error });
 
     React.useEffect(() => {
@@ -67,10 +63,7 @@ const LoginForm = ({
         };
     }, []);
 
-    const loginLogo = React.useMemo(
-        () => (tenantBranding?.logoUrl ? getApiAssetUrl(tenantBranding.logoUrl) : madarsaLogo),
-        [tenantBranding?.logoUrl],
-    );
+    const loginLogo = madarsaLogo;
     const loginLogoAlt = tenantBranding?.name || 'مدرسہ سافٹ ویئر';
 
     const handleChange = (field, value) => {
@@ -203,23 +196,6 @@ const LoginForm = ({
                             {isSubmitting ? 'لاگ اِن ہو رہا ہے...' : submitLabel}
                             <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
                         </MotionButton>
-
-                        {showDefaultCredentials && (
-                            <MotionDiv
-                                initial={{ opacity: 0, y: 18 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.52 }}
-                                className="rounded-[1.75rem] border border-white/10 bg-[rgba(7,17,31,0.82)] px-5 py-4 text-sm font-bold leading-7 text-slate-300"
-                            >
-                                ڈیفالٹ صارف نام:
-                                <span className="text-white"> {credentials.username} </span>
-                                <span className="block">
-                                    ڈیفالٹ پاس ورڈ:
-                                    <span className="text-white"> {credentials.password} </span>
-                                </span>
-                                <span className="block text-slate-400">لاگ اِن بیک اینڈ API اور JWT ٹوکن کے ذریعے ہوگا۔</span>
-                            </MotionDiv>
-                        )}
                     </div>
                 </MotionForm>
             </div>
@@ -232,7 +208,6 @@ export const AdminLogin = () => (
         usernamePlaceholder="ایڈمن صارف نام"
         submitLabel="ایڈمن لاگ اِن"
         allowAdminRoles
-        showDefaultCredentials
     />
 );
 

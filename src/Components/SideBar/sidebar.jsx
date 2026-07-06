@@ -132,7 +132,7 @@ export const SideBar = () => {
                     message.includes('not found')
                 ) {
                     logoutAdmin();
-                    navigate('/login', { replace: true });
+                    navigate('/admin', { replace: true });
                 }
             }
         };
@@ -166,7 +166,7 @@ export const SideBar = () => {
     const handleLogout = () => {
         logoutAdmin();
         setIsProfileOpen(false);
-        navigate('/login');
+        navigate('/admin', { replace: true });
     };
 
     const canAccessItem = (item) => {
