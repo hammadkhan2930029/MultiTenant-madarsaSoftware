@@ -22,6 +22,11 @@ const profileRoleDisplayNames = {
     viewer: 'صرف دیکھنے والا',
 };
 
+const getRoleName = (role) => {
+    if (!role) return '';
+    if (typeof role === 'string') return role;
+    return role.roleName || role.role_name || role.name || '';
+};
 
 export const SideBar = () => {
     //--------------------------------------------------------------------
@@ -150,14 +155,10 @@ export const SideBar = () => {
     const sidebarTitle = madrassaName;
     const profileRoleNameRaw = isSuperAdmin
         ? SUPER_ADMIN_ROLE
-        : adminProfile?.roleDetails?.roleName
-        || adminProfile?.roleDetails?.role_name
-        || adminProfile?.role?.roleName
-        || adminProfile?.role?.role_name
-        || adminProfile?.role
-        || currentSession?.role?.roleName
-        || currentSession?.role?.role_name
-        || currentSession?.user?.role
+        : getRoleName(adminProfile?.roleDetails)
+        || getRoleName(adminProfile?.role)
+        || getRoleName(currentSession?.role)
+        || getRoleName(currentSession?.user?.role)
         || 'admin';
     const profileRoleName = String(profileRoleNameRaw || 'admin').trim().toLowerCase();
     const profileRoleLabel = profileRoleDisplayNames[profileRoleName] || profileRoleName || 'ایڈمن';
@@ -170,6 +171,15 @@ export const SideBar = () => {
     };
 
     const canAccessItem = (item) => {
+        const permissionList = [
+            ...(item.permission ? [item.permission] : []),
+            ...(item.permissions || []),
+        ];
+
+        if (item.id === 'tenant_management' || permissionList.includes('tenant_management.view')) {
+            return isSuperAdmin;
+        }
+
         if (isSuperAdmin) return true;
         if (item.permission) return hasPermission(item.permission);
         if (item.permissions) return hasAnyPermission(item.permissions);
@@ -308,12 +318,14 @@ export const SideBar = () => {
             label: 'مالیات',
             icon: Wallet,
             path: '/finance',
+            permissions: ['fees.view', 'finance.view'],
             subMenu: [
                 {
                     id: 'income-heads-config',
                     label: 'آمدن و خرچ سیٹ اَپ',
                     icon: Settings2,
                     path: '/finance/setup/income-expence',
+                    permissions: ['fees.view', 'finance.view'],
                     heads: ['Yahan admin naye purpose add kare ga']
                 },
                 // --- Income Section ---
@@ -327,12 +339,14 @@ export const SideBar = () => {
                             id: 'fee-collection',
                             label: 'فنڈ وصولی',
                             path: '/finance/income/fund-collection',
+                            permissions: ['fees.create', 'finance.create'],
                             heads: ['Monthly Fee', 'Admission Fee', 'Exam Fee', 'Transport Fee', 'Late Fee Fine']
                         },
                         {
                             id: 'fund-list',
                             label: 'عطیات کی فہرست',
                             path: '/finance/income/fund-list',
+                            permissions: ['fees.view', 'finance.view'],
                             heads: ['Donations', 'Books & Uniform Sale', 'Bank Interest', 'Event Fund']
                         }
                         // {
@@ -348,7 +362,14 @@ export const SideBar = () => {
                     id: 'expenses',
                     label: 'دیگر آمدن و خرچ',
                     icon: TrendingDown,
-                    path: '/finance/other-income-expense'
+                    path: '/finance/other-income-expense',
+                    permissions: ['fees.view', 'finance.view']
+                },
+                {
+                    id: 'finance_reports',
+                    label: 'رپورٹس',
+                    path: '/finance/reports/financial-statements',
+                    permissions: ['reports.view', 'reports.export', 'finance.reports.view']
                 },
                 {
                     id: 'accounts',
@@ -381,7 +402,7 @@ export const SideBar = () => {
                 { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
                 { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
                 { id: 'staff_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
-                { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' }
+                { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll', permissions: ['fees.view', 'finance.view'] }
             ]
         },
         {
@@ -430,9 +451,9 @@ export const SideBar = () => {
     ];
     //--------------------------------------------------------------------
     const profileMenuItems = [
-        { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings },
+        { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings, permissions: ['settings.view', 'settings.update', 'profile.view'] },
         // { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
-        { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck },
+        { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck, permissions: ['settings.view', 'settings.update', 'settings.cities.view'] },
         { id: 'support', label: 'سپورٹ', path: '/Profile/support', icon: MessageSquare },
         { id: 'suggestions', label: 'تجاویز', path: '/Profile/suggestions', icon: Sparkles },
     ];
@@ -453,11 +474,11 @@ export const SideBar = () => {
             label: 'ترتیبات',
             icon: Settings,
             subMenu: [
-                { id: 'shift', label: 'شفٹ کا انتظام', path: '/setting/shift' },
-                { id: 'department', label: 'شعبہ جات کا انتظام', path: '/setting/department' },
-                { id: 'degree', label: 'تعلیمی اسناد کے نام', path: '/setting/degree-name' },
-                { id: 'role_management', label: 'کردار مینجمنٹ', path: '/role-management', permission: 'role_management.view' },
-                { id: 'user_management', label: 'صارفین مینجمنٹ', path: '/role-management/users', permission: 'users.view' },
+                { id: 'shift', label: 'شفٹ کا انتظام', path: '/setting/shift', permissions: ['settings.view', 'settings.update', 'settings.shifts.view'] },
+                { id: 'department', label: 'شعبہ جات کا انتظام', path: '/setting/department', permissions: ['settings.view', 'settings.update', 'settings.departments.view'] },
+                { id: 'degree', label: 'تعلیمی اسناد کے نام', path: '/setting/degree-name', permissions: ['settings.view', 'settings.update', 'settings.degrees.view'] },
+                { id: 'role_management', label: 'کردار مینجمنٹ', path: '/role-management', permissions: ['roles.view', 'roles.manage'] },
+                { id: 'user_management', label: 'صارفین مینجمنٹ', path: '/role-management/users', permissions: ['users.view', 'users.manage'] },
                 { id: 'tenant_management', label: 'مدارس کا انتظام', path: '/tenant-management', permission: 'tenant_management.view' },
 
             ]
@@ -507,6 +528,7 @@ export const SideBar = () => {
         'fee-collection': 'فنڈ وصولی',
         'fund-list': 'عطیات کی فہرست',
         expenses: 'دیگر آمدن و خرچ',
+        finance_reports: 'رپورٹس',
         accounts: 'بینک اور کیش',
         'cash-management': 'کیش مینجمنٹ',
         'bank-management': 'بینک اکاؤنٹس',

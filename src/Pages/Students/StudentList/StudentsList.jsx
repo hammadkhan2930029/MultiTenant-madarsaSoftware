@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { deleteStudent, getStudents } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { Can } from '../../../Components/Auth/Can';
 
 const emptyValue = '---';
 
@@ -269,16 +270,20 @@ export const StudentList = () => {
                         </h2>
                         <p className="text-[var(--color-text-muted)] text-sm font-bold mt-2 mr-14">کل رجسٹرڈ طلباء: {filteredStudents.length}</p>
                     </div>
-                    <button
-                        onClick={() => navigate('/students/admission')}
-                        className="bg-[var(--color-primary)] text-white p-4 rounded-[1.5rem] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[var(--color-primary)]/20 group"
-                    >
-                        <UserPlus size={24} className="group-hover:rotate-12 transition-transform" />
-                    </button>
+                    <Can permission="students.create">
+                        <button
+                            onClick={() => navigate('/students/admission')}
+                            className="bg-[var(--color-primary)] text-white p-4 rounded-[1.5rem] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[var(--color-primary)]/20 group"
+                        >
+                            <UserPlus size={24} className="group-hover:rotate-12 transition-transform" />
+                        </button>
+                    </Can>
                 </div>
 
                 <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="students-complete-list" className="w-full md:w-auto" />
+                    <Can permission="students.export">
+                        <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="students-complete-list" className="w-full md:w-auto" />
+                    </Can>
                     <div className="relative group flex-1">
                         <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" size={20} />
                         <input
@@ -329,12 +334,16 @@ export const StudentList = () => {
                                 <ActionIcon label="حاضری ریکارڈ" tone="blue" onClick={() => navigate(`/students/attendance-history/${student.id}`)}>
                                     <CalendarRange size={18} />
                                 </ActionIcon>
-                                <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
-                                    <Edit2 size={18} />
-                                </ActionIcon>
-                                <ActionIcon label="حذف کریں" tone="danger" onClick={() => setDeleteTarget(student)}>
-                                    <Trash2 size={18} />
-                                </ActionIcon>
+                                <Can anyPermissions={['students.update', 'students.edit']}>
+                                    <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
+                                        <Edit2 size={18} />
+                                    </ActionIcon>
+                                </Can>
+                                <Can permission="students.delete">
+                                    <ActionIcon label="حذف کریں" tone="danger" onClick={() => setDeleteTarget(student)}>
+                                        <Trash2 size={18} />
+                                    </ActionIcon>
+                                </Can>
                             </div>
                         </div>
                     </div>
@@ -380,12 +389,16 @@ export const StudentList = () => {
                                         <ActionIcon label="حاضری ریکارڈ" tone="blue" onClick={() => navigate(`/students/attendance-history/${student.id}`)}>
                                             <CalendarRange size={16} />
                                         </ActionIcon>
-                                        <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
-                                            <Edit2 size={16} />
-                                        </ActionIcon>
-                                        <ActionIcon label="حذف کریں" tone="danger" onClick={() => setDeleteTarget(student)}>
-                                            <Trash2 size={16} />
-                                        </ActionIcon>
+                                        <Can anyPermissions={['students.update', 'students.edit']}>
+                                            <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
+                                                <Edit2 size={16} />
+                                            </ActionIcon>
+                                        </Can>
+                                        <Can permission="students.delete">
+                                            <ActionIcon label="حذف کریں" tone="danger" onClick={() => setDeleteTarget(student)}>
+                                                <Trash2 size={16} />
+                                            </ActionIcon>
+                                        </Can>
                                     </div>
                                 </td>
                             </tr>

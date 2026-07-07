@@ -19,6 +19,7 @@ import { getAdminSession, isAdminAuthenticated, validateCurrentTenantSession } f
 import { SESSION_EXPIRED_EVENT } from '../Constant/Api';
 import { StudentAttendanceHistory } from '../Pages/Students/AttendancePage/StudentAttendanceHistory';
 import { RequirePermission } from '../Components/Auth/RequirePermission';
+import { RoutePermissionGuard } from '../Components/Auth/RoutePermissionGuard';
 import { withPermission } from '../Components/Auth/permissionGuards';
 import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
@@ -79,7 +80,11 @@ const ProtectedAppShell = () => {
     return <Navigate to="/admin" replace state={{ from: location }} />;
   }
 
-  return <SideBar />;
+  return (
+    <RoutePermissionGuard>
+      <SideBar />
+    </RoutePermissionGuard>
+  );
 };
 
 export const AppRoutes = () => {
@@ -98,13 +103,13 @@ export const AppRoutes = () => {
         <Route path="staff/list" element={withPermission(<TeachersList staffType="staff" />, 'staff.view')} />
         <Route path="students/attendance-history/:id" element={withPermission(<StudentAttendanceHistory />, 'attendance.history.view')} />
         <Route path="role-management" element={withPermission(<RoleManagement />, 'role_management.view')} />
-        <Route path="role-management/create" element={withPermission(<RoleManagement />, 'roles.create')} />
+        <Route path="role-management/create" element={withPermission(<RoleManagement />, 'roles.manage')} />
         <Route path="role-management/:roleId" element={withPermission(<RoleManagement />, 'roles.view')} />
-        <Route path="role-management/:roleId/edit" element={withPermission(<RoleManagement />, 'roles.edit')} />
+        <Route path="role-management/:roleId/edit" element={withPermission(<RoleManagement />, 'roles.manage')} />
         <Route path="role-management/users" element={withPermission(<UserManagement />, 'users.view')} />
-        <Route path="role-management/users/create" element={withPermission(<UserManagement />, 'users.create')} />
+        <Route path="role-management/users/create" element={withPermission(<UserManagement />, 'users.manage')} />
         <Route path="role-management/users/:userId" element={withPermission(<UserManagement />, 'users.view')} />
-        <Route path="role-management/users/:userId/edit" element={withPermission(<UserManagement />, 'users.edit')} />
+        <Route path="role-management/users/:userId/edit" element={withPermission(<UserManagement />, 'users.manage')} />
         <Route path="tenant-management" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="tenant-management/create" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="tenant-management/:tenantId" element={withPermission(<TenantManagement />, 'tenant_management.view')} />

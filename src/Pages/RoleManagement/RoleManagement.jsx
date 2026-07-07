@@ -321,6 +321,7 @@ export const RoleManagement = () => {
   const location = useLocation();
   const { roleId } = useParams();
   const { hasPermission } = usePermissions();
+  const canManageRoles = hasPermission('roles.manage');
 
   const [roles, setRoles] = useState([]);
   const [permissionModules, setPermissionModules] = useState(ROLE_PERMISSION_MODULES);
@@ -511,7 +512,7 @@ export const RoleManagement = () => {
           </button>
         ) : null}
 
-        {mode === 'list' && hasPermission('roles.create') ? (
+        {mode === 'list' && canManageRoles ? (
           <button
             type="button"
             onClick={() => navigate('/role-management/create')}
@@ -681,7 +682,7 @@ export const RoleManagement = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {hasPermission('roles.edit') && !isSystemRole(currentRole) ? (
+              {canManageRoles && !isSystemRole(currentRole) ? (
                 <button
                   type="button"
                   onClick={() => navigate(`/role-management/${currentRole.id}/edit`)}
@@ -691,7 +692,7 @@ export const RoleManagement = () => {
                   ترمیم کریں
                 </button>
               ) : null}
-              {hasPermission('roles.delete') && !isSystemRole(currentRole) ? (
+              {canManageRoles && !isSystemRole(currentRole) ? (
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(currentRole)}
@@ -755,12 +756,12 @@ export const RoleManagement = () => {
                             <Eye size={16} />
                           </button>
                         ) : null}
-                        {hasPermission('roles.edit') && !isSystemRole(role) ? (
+                        {canManageRoles && !isSystemRole(role) ? (
                           <button type="button" onClick={() => navigate(`/role-management/${role.id}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50" title="ترمیم کریں">
                             <Edit2 size={16} />
                           </button>
                         ) : null}
-                        {hasPermission('roles.delete') && !isSystemRole(role) ? (
+                        {canManageRoles && !isSystemRole(role) ? (
                           <button type="button" onClick={() => setDeleteTarget(role)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50" title="حذف کریں">
                             <Trash2 size={16} />
                           </button>

@@ -213,6 +213,7 @@ export const UserManagement = () => {
   const location = useLocation();
   const { userId } = useParams();
   const { hasPermission } = usePermissions();
+  const canManageUsers = hasPermission('users.manage');
 
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -369,7 +370,7 @@ export const UserManagement = () => {
           </button>
         ) : null}
 
-        {mode === 'list' && hasPermission('users.create') ? (
+        {mode === 'list' && canManageUsers ? (
           <button type="button" onClick={() => navigate('/role-management/users/create')} style={{ backgroundColor: 'var(--color-primary)' }} className="flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95">
             <Plus size={18} />
             نیا صارف
@@ -443,7 +444,7 @@ export const UserManagement = () => {
               </div>
             </div>
 
-            {hasPermission('users.edit') ? (
+            {canManageUsers ? (
               <button type="button" onClick={() => navigate(`/role-management/users/${currentUser.id}/edit`)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
                 <Edit2 size={16} />
                 ترمیم کریں
@@ -525,7 +526,7 @@ export const UserManagement = () => {
                             <Eye size={16} />
                           </button>
                         ) : null}
-                        {hasPermission('users.edit') ? (
+                        {canManageUsers ? (
                           <button type="button" onClick={() => navigate(`/role-management/users/${user.id}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="ترمیم کریں">
                             <Edit2 size={16} />
                           </button>

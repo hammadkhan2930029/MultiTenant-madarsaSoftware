@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle, Clock, CreditCard, Printer, Wallet } from 'luc
 import { useNavigate, useParams } from 'react-router-dom';
 import { getStudentFeeById, getStudentFeeHistory, saveStudentFeePayment } from '../../../Constant/StudentFeesApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { Can } from '../../../Components/Auth/Can';
 
 const monthNames = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
 const toMoney = (value) => Number(value || 0).toLocaleString('en-PK');
@@ -141,7 +142,9 @@ export const StudentFeeDetail = () => {
                                 <option value="Cheque">Cheque</option>
                                 <option value="Bank Transfer">Bank Transfer</option>
                             </Select>
-                            <button onClick={handleSavePayment} className="h-12 self-end rounded-2xl bg-[var(--color-primary)] px-5 font-black text-white">محفوظ کریں</button>
+                            <Can permission="fees.create">
+                                <button onClick={handleSavePayment} className="h-12 self-end rounded-2xl bg-[var(--color-primary)] px-5 font-black text-white">محفوظ کریں</button>
+                            </Can>
                             <button onClick={() => window.print()} className="flex h-12 items-center justify-center gap-2 self-end rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 font-black">
                                 <Printer size={16} /> پرنٹ
                             </button>

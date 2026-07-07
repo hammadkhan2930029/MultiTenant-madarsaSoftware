@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { deleteTeacher, getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { Can } from '../../../Components/Auth/Can';
 
 const listConfig = {
     teacher: {
@@ -120,6 +121,7 @@ const mapTeacherForExport = (teacher) => ({
 export const TeachersList = ({ staffType = 'teacher' }) => {
     const navigate = useNavigate();
     const config = listConfig[staffType] || listConfig.teacher;
+    const permissionPrefix = staffType === 'staff' ? 'staff' : 'teachers';
     const [searchTerm, setSearchTerm] = useState('');
     const [teachers, setTeachers] = useState([]);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -221,7 +223,9 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
-                        <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="w-full sm:w-auto" />
+                        <Can permission={`${permissionPrefix}.export`}>
+                            <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="w-full sm:w-auto" />
+                        </Can>
                         <div className="relative w-full sm:w-80 group">
                             <Search size={18} className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                             <InputField
@@ -233,13 +237,15 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 className="h-[72px] pr-5 pl-14 text-right leading-[1.8]"
                             />
                         </div>
-                        <button
-                            onClick={() => navigate(config.addPath)}
-                            className="flex items-center justify-center gap-2 bg-[#00d094] text-[#002a33] px-6 py-3 rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 w-full sm:w-auto"
-                        >
-                            <UserPlus size={18} />
-                            <span>نیا اندراج</span>
-                        </button>
+                        <Can permission={`${permissionPrefix}.create`}>
+                            <button
+                                onClick={() => navigate(config.addPath)}
+                                className="flex items-center justify-center gap-2 bg-[#00d094] text-[#002a33] px-6 py-3 rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 w-full sm:w-auto"
+                            >
+                                <UserPlus size={18} />
+                                <span>نیا اندراج</span>
+                            </button>
+                        </Can>
                     </div>
                 </div>
             </div>
@@ -284,12 +290,16 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 <button onClick={() => navigate(`/teachers/details/${teacher.id}`)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all">
                                     <Eye size={16} className="ml-2" /> دیکھیں
                                 </button>
-                                <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-[#00d094]/10 text-[#00d094] hover:bg-[#00d094] hover:text-white transition-all" aria-label="تبدیل کریں">
-                                    <Edit2 size={16} className="ml-2" />
-                                </button>
-                                <button onClick={() => setDeleteTarget(teacher)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all" aria-label="حذف کریں">
-                                    <Trash2 size={16} className="ml-2" />
-                                </button>
+                                <Can anyPermissions={[`${permissionPrefix}.update`, `${permissionPrefix}.edit`]}>
+                                    <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-[#00d094]/10 text-[#00d094] hover:bg-[#00d094] hover:text-white transition-all" aria-label="تبدیل کریں">
+                                        <Edit2 size={16} className="ml-2" />
+                                    </button>
+                                </Can>
+                                <Can permission={`${permissionPrefix}.delete`}>
+                                    <button onClick={() => setDeleteTarget(teacher)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all" aria-label="حذف کریں">
+                                        <Trash2 size={16} className="ml-2" />
+                                    </button>
+                                </Can>
                             </div>
                         </div>
                     ))
@@ -337,8 +347,12 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                     <td className="p-5">
                                         <div className="flex items-center justify-center gap-2">
                                             <button onClick={() => navigate(`/teachers/details/${teacher.id}`)} className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all shadow-sm" aria-label="دیکھیں"><Eye size={16} /></button>
-                                            <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="p-2.5 rounded-xl bg-[#00d094]/10 text-[#00d094] hover:bg-[#00d094] hover:text-white transition-all shadow-sm" aria-label="تبدیل کریں"><Edit2 size={16} /></button>
-                                            <button onClick={() => setDeleteTarget(teacher)} className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm" aria-label="حذف کریں"><Trash2 size={16} /></button>
+                                            <Can anyPermissions={[`${permissionPrefix}.update`, `${permissionPrefix}.edit`]}>
+                                                <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="p-2.5 rounded-xl bg-[#00d094]/10 text-[#00d094] hover:bg-[#00d094] hover:text-white transition-all shadow-sm" aria-label="تبدیل کریں"><Edit2 size={16} /></button>
+                                            </Can>
+                                            <Can permission={`${permissionPrefix}.delete`}>
+                                                <button onClick={() => setDeleteTarget(teacher)} className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm" aria-label="حذف کریں"><Trash2 size={16} /></button>
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>

@@ -14,6 +14,8 @@ export const PAGE_PERMISSIONS = {
   '/class-management/subjects': 'subjects.view',
 
   '/students/list': 'students.view',
+  '/students': 'students.view',
+  '/students/create': 'students.create',
   '/students/admission': 'students.create',
   '/students/create-id-card': 'students.id_card.view',
   '/students/parents': 'parents.view',
@@ -22,6 +24,7 @@ export const PAGE_PERMISSIONS = {
   '/students/class_asign': 'students.assign_class',
   '/students/schedule': 'students.schedule.view',
   '/students/fees': 'fees.view',
+  '/fees': 'fees.view',
   '/students/profile/:id': 'students.profile.view',
   '/students/details/:id': 'fees.details.view',
 
@@ -32,14 +35,14 @@ export const PAGE_PERMISSIONS = {
   '/teachers/attendance-history/:id': 'teachers.attendance.view',
   '/teachers/schedule': 'teachers.schedule.view',
 
-  '/finance': 'finance.view',
-  '/finance/setup/income-expence': 'finance.heads.view',
-  '/finance/setup/expense-heads': 'finance.heads.view',
-  '/finance/income/fund-collection': 'funds.create',
-  '/finance/income/fund-list': 'funds.view',
-  '/finance/expenses/payroll': 'salary.view',
-  '/finance/other-income-expense': 'finance.transactions.view',
-  '/finance/reports/financial-statements': 'finance.reports.view',
+  '/finance': 'fees.view',
+  '/finance/setup/income-expence': 'fees.view',
+  '/finance/setup/expense-heads': 'fees.view',
+  '/finance/income/fund-collection': 'fees.create',
+  '/finance/income/fund-list': 'fees.view',
+  '/finance/expenses/payroll': 'fees.view',
+  '/finance/other-income-expense': 'fees.view',
+  '/finance/reports/financial-statements': 'reports.view',
 
   '/hifz': 'hifz.view',
   '/hifz/daily/entry': 'hifz.daily.create',
@@ -72,6 +75,7 @@ export const PAGE_PERMISSIONS = {
   '/store/units': 'store.units.view',
 
   '/setting/shift': 'settings.shifts.view',
+  '/settings': 'settings.view',
   '/setting/department': 'settings.departments.view',
   '/setting/degree-name': 'settings.degrees.view',
   '/Profile/setting': 'profile.view',
@@ -81,13 +85,15 @@ export const PAGE_PERMISSIONS = {
   '/Profile/suggestions': 'suggestions.view',
 
   '/role-management': 'role_management.view',
-  '/role-management/create': 'roles.create',
+  '/roles': 'roles.view',
+  '/role-management/create': 'roles.manage',
   '/role-management/:roleId': 'roles.view',
-  '/role-management/:roleId/edit': 'roles.edit',
+  '/role-management/:roleId/edit': 'roles.manage',
   '/role-management/users': 'users.view',
-  '/role-management/users/create': 'users.create',
+  '/users': 'users.view',
+  '/role-management/users/create': 'users.manage',
   '/role-management/users/:userId': 'users.view',
-  '/role-management/users/:userId/edit': 'users.edit',
+  '/role-management/users/:userId/edit': 'users.manage',
   '/tenant-management': 'tenant_management.view',
   '/tenant-management/create': 'tenant_management.view',
   '/tenant-management/:tenantId': 'tenant_management.view',
@@ -276,6 +282,19 @@ export const getPagePermission = (path) => {
   if (!path) return null;
 
   const normalizedPath = path.split('?')[0];
+  const exactPermission = PAGE_PERMISSIONS[path] || PAGE_PERMISSIONS[normalizedPath];
 
-  return PAGE_PERMISSIONS[path] || PAGE_PERMISSIONS[normalizedPath] || null;
+  if (exactPermission) return exactPermission;
+
+  const normalizedSegments = normalizedPath.split('/').filter(Boolean);
+  const matchedRoute = Object.entries(PAGE_PERMISSIONS).find(([routePath]) => {
+    const routeSegments = routePath.split('?')[0].split('/').filter(Boolean);
+    if (routeSegments.length !== normalizedSegments.length) return false;
+
+    return routeSegments.every((segment, index) => (
+      segment.startsWith(':') || segment === normalizedSegments[index]
+    ));
+  });
+
+  return matchedRoute?.[1] || null;
 };

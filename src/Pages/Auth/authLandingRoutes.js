@@ -27,16 +27,12 @@ const permissionLandingRoutes = [
 export const isAdminRoleName = (roleName) => adminRoleNames.includes(roleName);
 
 export const getRoleName = (session) => {
-    const role =
-        session?.role?.roleName ||
-        session?.role?.role_name ||
-        session?.admin?.roleDetails?.roleName ||
-        session?.admin?.roleDetails?.role_name ||
-        session?.admin?.role ||
-        session?.user?.role ||
-        '';
+    const role = session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || '';
+    const roleName = typeof role === 'string'
+        ? role
+        : role?.roleName || role?.role_name || role?.name || '';
 
-    return String(role).trim().toLowerCase();
+    return String(roleName).trim().toLowerCase();
 };
 
 export const getDefaultRouteForSession = (session) => {

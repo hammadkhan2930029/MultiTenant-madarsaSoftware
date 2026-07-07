@@ -32,7 +32,7 @@ export const FinanceRoutes = () => {
             <Route path="other-income-expense" element={withPermission(<OtherIncomeExpense />, 'finance.transactions.view')} />
 
             <Route path="reports">
-                <Route path="financial-statements" element={withPermission(<FinancialStatement />, 'finance.reports.view')} />
+                <Route path="financial-statements" element={withPermission(<FinancialStatement />, 'reports.view')} />
             </Route>
         </Routes>
     );

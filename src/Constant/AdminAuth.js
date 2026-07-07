@@ -4,6 +4,7 @@ import { SUPER_ADMIN_ROLE } from './Permissions';
 const AUTH_KEY = 'madarsa_admin_auth';
 export const MADRASSA_PROFILE_UPDATED_EVENT = 'madarsa:madrassa-profile-updated';
 export const TENANT_BRANDING_UPDATED_EVENT = 'madarsa:tenant-branding-updated';
+export const ADMIN_SESSION_UPDATED_EVENT = 'madarsa:admin-session-updated';
 const TENANT_SESSION_EXPIRED_MESSAGE = 'آپ کا سیشن اس مدرسہ ڈومین کے لیے درست نہیں ہے۔ براہ کرم دوبارہ لاگ اِن کریں۔';
 
 export const defaultAdminCredentials = {
@@ -29,6 +30,7 @@ const readSession = () => {
 const writeSession = (session) => {
   if (!canUseStorage) return;
   window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  window.dispatchEvent(new CustomEvent(ADMIN_SESSION_UPDATED_EVENT, { detail: session }));
 };
 
 const getSessionTenantId = (session) => {
@@ -44,19 +46,49 @@ const getCurrentTenantId = (tenantBranding) => {
 const normalizePermissions = (permissions) => {
   if (!Array.isArray(permissions)) return [];
 
-  return permissions
+  return Array.from(new Set(permissions
     .map((permission) => {
       if (typeof permission === 'string') return permission;
       return permission?.permissionKey || permission?.permission_key || '';
     })
-    .filter(Boolean);
+    .filter(Boolean)));
+};
+
+const normalizeRole = (role) => {
+  if (!role) return null;
+
+  if (typeof role === 'string') {
+    return {
+      id: null,
+      name: role,
+      roleName: role,
+    };
+  }
+
+  const roleName = role.roleName || role.role_name || role.name || '';
+
+  return {
+    ...role,
+    id: role.id ?? null,
+    name: role.name || roleName,
+    roleName,
+  };
 };
 
 const buildSessionFromAuthData = (data, currentSession = null) => {
   const admin = data?.admin || data?.user || currentSession?.admin || null;
-  const role = data?.role || admin?.roleDetails || admin?.role || currentSession?.role || null;
+  const user = data?.user || admin;
+  const role = normalizeRole(
+    data?.role ||
+    user?.roleDetails ||
+    user?.role ||
+    admin?.roleDetails ||
+    admin?.role ||
+    currentSession?.role ||
+    null,
+  );
   const permissions = normalizePermissions(
-    data?.permissions || admin?.permissions || currentSession?.permissions || [],
+    data?.permissions || user?.permissions || admin?.permissions || currentSession?.permissions || [],
   );
 
   return {
@@ -64,7 +96,7 @@ const buildSessionFromAuthData = (data, currentSession = null) => {
     isAuthenticated: true,
     token: data?.token || currentSession?.token,
     admin,
-    user: data?.user || admin,
+    user,
     role,
     permissions,
     loginAt: currentSession?.loginAt || new Date().toISOString(),
@@ -99,6 +131,7 @@ const expireSession = (message = TENANT_SESSION_EXPIRED_MESSAGE) => {
   if (!canUseStorage) return;
   window.localStorage.removeItem(AUTH_KEY);
   window.sessionStorage?.setItem(SESSION_EXPIRED_MESSAGE_KEY, message);
+  window.dispatchEvent(new CustomEvent(ADMIN_SESSION_UPDATED_EVENT, { detail: null }));
 };
 
 const attachTenantBrandingToSession = (brandingData) => {
@@ -138,12 +171,12 @@ export const isAdminAuthenticated = () => Boolean(getAdminToken());
 
 export const getAdminRole = () => {
   const session = readSession();
-  return session?.role || session?.admin?.roleDetails || session?.admin?.role || null;
+  return normalizeRole(session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || null);
 };
 
 export const getAdminPermissions = () => {
   const session = readSession();
-  return normalizePermissions(session?.permissions || session?.admin?.permissions || []);
+  return normalizePermissions(session?.permissions || session?.user?.permissions || session?.admin?.permissions || []);
 };
 
 export const isSuperAdmin = () => {
@@ -180,6 +213,12 @@ export const hasAllPermissions = (permissions = []) => {
   const availablePermissions = getAdminPermissions();
   return permissions.every((permission) => availablePermissions.includes(permission));
 };
+
+export const can = (permission) => hasPermission(permission);
+
+export const canAny = (permissions = []) => hasAnyPermission(permissions);
+
+export const canAll = (permissions = []) => hasAllPermissions(permissions);
 
 export const loginAdmin = async ({ username, password }) => {
   const tenantBranding = await fetchCurrentTenantBranding();
@@ -425,4 +464,5 @@ export const changeAdminPassword = async ({ currentPassword, newPassword }) => {
 export const logoutAdmin = () => {
   if (!canUseStorage) return;
   window.localStorage.removeItem(AUTH_KEY);
+  window.dispatchEvent(new CustomEvent(ADMIN_SESSION_UPDATED_EVENT, { detail: null }));
 };

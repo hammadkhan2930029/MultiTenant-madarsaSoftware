@@ -6,6 +6,7 @@ import { generateStudentFees, getStudentFees, saveStudentFeePayment } from '../.
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { AppImages } from '../../../Constant/AppImages';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { Can } from '../../../Components/Auth/Can';
 
 const monthNames = [
     'جنوری',
@@ -638,13 +639,15 @@ export const FeesCollection = () => {
                                 <p className="mt-4 text-sm font-bold text-[var(--color-text-muted)]">ماہانہ فیس واؤچر بنائیں، ادائیگی محفوظ کریں اور رسید پرنٹ کریں</p>
                             </div>
                         </div>
-                        <button
-                            onClick={handleGenerateFees}
-                            disabled={isGenerating}
-                            className="rounded-2xl bg-[var(--color-primary)] px-7 py-3 text-sm font-black text-white shadow-lg shadow-[var(--color-primary)]/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {isGenerating ? 'جنریٹ ہو رہی ہے...' : 'فیس جنریٹ کریں'}
-                        </button>
+                        <Can permission="fees.create">
+                            <button
+                                onClick={handleGenerateFees}
+                                disabled={isGenerating}
+                                className="rounded-2xl bg-[var(--color-primary)] px-7 py-3 text-sm font-black text-white shadow-lg shadow-[var(--color-primary)]/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isGenerating ? 'جنریٹ ہو رہی ہے...' : 'فیس جنریٹ کریں'}
+                            </button>
+                        </Can>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
@@ -745,9 +748,11 @@ export const FeesCollection = () => {
                                                     <button onClick={() => navigate(`/students/details/${voucher.id}`)} className="rounded-xl bg-sky-500/10 p-2.5 text-sky-500 transition-all hover:bg-sky-500 hover:text-white">
                                                         <Eye size={16} />
                                                     </button>
-                                                    <button onClick={() => openPaymentModal(voucher)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white">
-                                                        <Wallet size={16} />
-                                                    </button>
+                                                    <Can permission="fees.create">
+                                                        <button onClick={() => openPaymentModal(voucher)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white">
+                                                            <Wallet size={16} />
+                                                        </button>
+                                                    </Can>
                                                     <button onClick={() => handlePrint(voucher)} className="rounded-xl bg-[var(--color-primary)]/10 p-2.5 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-white">
                                                         <Printer size={16} />
                                                     </button>
@@ -779,7 +784,9 @@ export const FeesCollection = () => {
                             </Select>
                         </div>
                         <div className="mt-6 flex gap-3">
-                            <button onClick={handleSavePayment} className="flex-1 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">محفوظ کریں</button>
+                            <Can permission="fees.create">
+                                <button onClick={handleSavePayment} className="flex-1 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">محفوظ کریں</button>
+                            </Can>
                             <button onClick={() => setPaymentTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black">منسوخ</button>
                         </div>
                     </div>
