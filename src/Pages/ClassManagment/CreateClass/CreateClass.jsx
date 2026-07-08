@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createClass, deleteClass, getDefaultBranch, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -22,7 +22,14 @@ export const CreateClasses = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
     useNotificationBridge({ error, success });
+
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const loadDependencies = async () => {
         setIsLoading(true);
@@ -62,6 +69,7 @@ export const CreateClasses = () => {
         setError('');
         setSuccess('');
         setIsFormOpen(true);
+        scrollToForm();
     };
 
     const handleSubmit = async () => {
@@ -171,7 +179,7 @@ export const CreateClasses = () => {
             </div>
 
             {isFormOpen ? (
-                <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
+                <div ref={formRef} className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
                         <span className='text-3xl'>{editMode ? 'جماعت اپڈیٹ کریں' : 'نئی جماعت کا اندراج'}</span>
@@ -204,7 +212,7 @@ export const CreateClasses = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
                         >
-                            {editMode ? 'اپڈیٹ' : 'بنائیں'}
+                            {editMode ? 'تبدیل کریں' : 'بنائیں'}
                             {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>
@@ -296,7 +304,7 @@ export const CreateClasses = () => {
                                 disabled={isDeleting}
                                 className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                منسوخ کریں
+                                منسوخ
                             </button>
                             <button
                                 type="button"

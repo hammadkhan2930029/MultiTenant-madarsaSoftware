@@ -1,4 +1,9 @@
 const exactTranslations = new Map([
+  ['You do not have permission to perform this action.', 'آپ کو اس عمل کی اجازت نہیں ہے۔'],
+  ['You do not have permission to access this resource.', 'آپ کو اس عمل کی اجازت نہیں ہے۔'],
+  ['Permission denied.', 'آپ کو اس عمل کی اجازت نہیں ہے۔'],
+  ['Forbidden', 'آپ کو اس عمل کی اجازت نہیں ہے۔'],
+  ['Access denied', 'آپ کو اس عمل کی اجازت نہیں ہے۔'],
   ['Request failed', 'درخواست مکمل نہیں ہو سکی۔'],
   ['Request failed.', 'درخواست مکمل نہیں ہو سکی۔'],
   ['Authorization token is required.', 'براہ کرم دوبارہ لاگ اِن کریں۔'],
@@ -23,7 +28,8 @@ const exactTranslations = new Map([
 
 const rules = [
   [/network|failed to fetch|fetch failed|connection/i, 'سرور سے رابطہ نہیں ہو سکا۔ براہ کرم انٹرنیٹ یا سرور کنکشن چیک کریں۔'],
-  [/unauthorized|forbidden|token|session|jwt/i, 'آپ کا سیشن ختم ہو گیا ہے۔ براہ کرم دوبارہ لاگ اِن کریں۔'],
+  [/permission|forbidden|access denied|not allowed/i, 'آپ کو اس عمل کی اجازت نہیں ہے۔'],
+  [/unauthorized|token|session|jwt/i, 'آپ کا سیشن ختم ہو گیا ہے۔ براہ کرم دوبارہ لاگ اِن کریں۔'],
   [/already|duplicate|unique|same name/i, 'یہ ریکارڈ پہلے سے موجود ہے۔'],
   [/not found|does not exist/i, 'مطلوبہ ریکارڈ نہیں ملا۔'],
   [/required|missing|must be|invalid|valid|too long|too short/i, 'براہ کرم مطلوبہ معلومات درست اور مکمل درج کریں۔'],

@@ -9,7 +9,7 @@ const withToken = (options = {}) => ({
 const buildQuery = (filters = {}) => {
   const params = new URLSearchParams();
 
-  ['page', 'limit', 'search'].forEach((key) => {
+  ['page', 'limit', 'search', 'status'].forEach((key) => {
     const value = filters[key];
     if (value !== undefined && value !== null && value !== '') params.set(key, value);
   });
@@ -31,6 +31,16 @@ export const getRoleById = async (id) => {
 export const getRolePermissions = async () => {
   const result = await apiRequest('/roles/permissions', withToken({ method: 'GET' }));
   return result?.data || [];
+};
+
+export const getGroupedPermissions = async () => {
+  const result = await apiRequest('/permissions/grouped', withToken({ method: 'GET' }));
+  return result?.data || [];
+};
+
+export const getRoleAssignedPermissions = async (id) => {
+  const result = await apiRequest(`/roles/${id}/permissions`, withToken({ method: 'GET' }));
+  return result?.data || { role: null, permissions: [] };
 };
 
 export const createRole = async (payload) => {

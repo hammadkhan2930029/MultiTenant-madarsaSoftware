@@ -84,7 +84,7 @@ export const PAGE_PERMISSIONS = {
   '/Profile/support': 'support.view',
   '/Profile/suggestions': 'suggestions.view',
 
-  '/role-management': 'role_management.view',
+  '/role-management': 'roles.view',
   '/roles': 'roles.view',
   '/role-management/create': 'roles.manage',
   '/role-management/:roleId': 'roles.view',
@@ -113,6 +113,7 @@ export const ROLE_PERMISSION_MODULES = [
     label: 'کردار مینجمنٹ',
     permissions: [
       { key: 'role_management.view', name: 'کردار مینجمنٹ دیکھیں' },
+      { key: 'roles.manage', name: 'کردار مینج کریں' },
       { key: 'roles.view', name: 'کردار دیکھیں' },
       { key: 'roles.create', name: 'کردار بنائیں' },
       { key: 'roles.edit', name: 'کردار میں ترمیم کریں' },
@@ -124,6 +125,7 @@ export const ROLE_PERMISSION_MODULES = [
     id: 'users',
     label: 'صارفین',
     permissions: [
+      { key: 'users.manage', name: 'صارفین مینج کریں' },
       { key: 'users.view', name: 'صارفین دیکھیں' },
       { key: 'users.create', name: 'صارف بنائیں' },
       { key: 'users.edit', name: 'صارف میں ترمیم کریں' },
@@ -267,6 +269,8 @@ export const ROLE_PERMISSION_MODULES = [
       { key: 'settings.shifts.create', name: 'شفٹ بنائیں' },
       { key: 'settings.departments.view', name: 'شعبہ جات دیکھیں' },
       { key: 'settings.departments.create', name: 'شعبہ بنائیں' },
+      { key: 'settings.departments.update', name: 'شعبہ تبدیل کریں' },
+      { key: 'settings.departments.delete', name: 'شعبہ حذف کریں' },
       { key: 'settings.degrees.view', name: 'اسناد دیکھیں' },
       { key: 'settings.cities.view', name: 'شہر دیکھیں' },
       { key: 'profile.view', name: 'پروفائل دیکھیں' },

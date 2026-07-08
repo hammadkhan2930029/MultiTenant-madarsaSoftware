@@ -9,7 +9,7 @@ import {
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
-import { fetchCurrentAdminProfile, fetchMadrassaProfile, getAdminSession, resolveApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT } from '../../Constant/AdminAuth'
+import { refreshPermissions, fetchMadrassaProfile, getAdminSession, resolveApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT } from '../../Constant/AdminAuth'
 import { usePermissions } from '../../Hooks/usePermissions';
 import { getPagePermission, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 
@@ -112,7 +112,7 @@ export const SideBar = () => {
         const syncAdminProfile = async () => {
             try {
                 const [profile, madrassa] = await Promise.all([
-                    fetchCurrentAdminProfile(),
+                    refreshPermissions(),
                     fetchMadrassaProfile(),
                 ]);
                 if (isMounted) {
@@ -617,7 +617,7 @@ export const SideBar = () => {
         ...(item.subSubMenu ? { subSubMenu: applyUrduLabels(item.subSubMenu) } : {}),
     }));
 
-    const visibleMenuItems = filterMenuItems(applyUrduLabels(menuItems));
+    const visibleMenuItems = filterMenuItems(applyUrduLabels([...menuItems, ...setting]));
     const visibleProfileMenuItems = filterMenuItems(applyUrduLabels(profileMenuItems));
     const visibleSetting = filterMenuItems(applyUrduLabels(setting));
     const canViewResultGrades = hasPermission('result_grades.view');
@@ -656,7 +656,7 @@ export const SideBar = () => {
                 <div className="flex items-center gap-3 mb-8 px-2 py-4">
                     <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/10 shadow-lg shrink-0 flex items-center justify-center">
                         {hasMadrassaLogo ? (
-                            <img src={avatarSrc} alt={sidebarTitle} className="h-full w-full object-contain p-1" />
+                            <img src={avatarSrc} alt={sidebarTitle} className="h-full w-full object-cover" />
                         ) : (
                             <GraduationCap className="text-[#00d094]" size={26} />
                         )}
@@ -816,7 +816,7 @@ export const SideBar = () => {
                                         src={avatarSrc}
                                         alt={madrassaName}
                                         className="w-12 h-12 border-2 border-emerald-100 shadow-sm"
-                                        sx={{ bgcolor: '#ffffff', '& img': { objectFit: 'contain', padding: '4px' } }}
+                                        sx={{ bgcolor: '#ffffff', '& img': { objectFit: 'cover', padding: 0 } }}
                                     />
                                 </div>
                                 <div className="hidden sm:flex min-w-0 max-w-[15rem] flex-col items-end text-right leading-none">

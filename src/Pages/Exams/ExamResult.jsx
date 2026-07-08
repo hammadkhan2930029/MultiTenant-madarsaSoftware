@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Award, BookOpen, Calculator, Plus, Save, Search, Trash2, UserRound } from 'lucide-react';
 import { getSubjects } from '../../Constant/AcademicSetupApi';
@@ -336,7 +336,7 @@ export const ExamResult = () => {
                                         <Plus size={16} /> مضمون شامل کریں
                                     </button>
                                     <button type="button" onClick={handleSave} disabled={isSaving || isResultLoading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-xs font-black text-[#0b1120] disabled:cursor-not-allowed disabled:opacity-70">
-                                        <Save size={16} /> {isSaving ? 'محفوظ ہو رہا ہے...' : savedResultId ? 'رزلٹ اپڈیٹ کریں' : 'رزلٹ محفوظ کریں'}
+                                        <Save size={16} /> {isSaving ? 'محفوظ ہو رہا ہے...' : savedResultId ? 'رزلٹ تبدیل کریں' : 'رزلٹ محفوظ کریں'}
                                     </button>
                                 </div>
                             </div>

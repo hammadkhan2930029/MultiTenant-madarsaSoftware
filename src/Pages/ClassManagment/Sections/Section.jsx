@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSection, deleteSection, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -23,7 +23,14 @@ export const CreateSections = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
     useNotificationBridge({ error, success });
+
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const activeClasses = useMemo(() => classes.filter((item) => item.status === 'active'), [classes]);
 
@@ -68,9 +75,15 @@ export const CreateSections = () => {
         setError('');
         setSuccess('');
         setIsFormOpen(true);
+        scrollToForm();
     };
 
     const handleSubmit = async () => {
+        if (formData.classId && !formData.name.trim()) {
+            setError('سیکشن نام درج کرنا ضروری ہے۔ جماعت کے ساتھ سیکشن نام بھی لکھیں۔');
+            return;
+        }
+
         if (!formData.classId || !formData.name.trim()) {
             setError('جماعت اور سیکشن کا نام دونوں درج کرنا ضروری ہیں۔');
             return;
@@ -148,7 +161,7 @@ export const CreateSections = () => {
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت سیکشنز</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل ریکارڈ: {filteredSections.length}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSections.length}</p>
                 </div>
 
                 <div className="flex w-full flex-col items-center gap-3 md:w-auto md:flex-row">
@@ -189,7 +202,7 @@ export const CreateSections = () => {
             </div>
 
             {isFormOpen ? (
-                <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
+                <div ref={formRef} className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
                         <span className='text-3xl'>{editMode ? 'سیکشن اپڈیٹ کریں' : 'نیا سیکشن اندراج'}</span>
@@ -236,7 +249,7 @@ export const CreateSections = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
                         >
-                            {editMode ? 'اپڈیٹ' : 'اندراج'}
+                            {editMode ? 'تبدیل کریں' : 'اندراج'}
                             {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>
@@ -332,7 +345,7 @@ export const CreateSections = () => {
                                 disabled={isDeleting}
                                 className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                منسوخ کریں
+                                منسوخ
                             </button>
                             <button
                                 type="button"

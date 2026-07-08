@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import { Award, Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { createResultGrade, deleteResultGrade, getResultGrades, updateResultGrade } from '../../Constant/ResultGradesApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
@@ -195,7 +195,7 @@ export const ResultGradeScale = () => {
                                 className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-black text-[#0b1120] disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {editId ? <Save size={17} /> : <Plus size={17} />}
-                                {isSaving ? 'محفوظ ہو رہا ہے...' : editId ? 'رینج اپڈیٹ کریں' : 'رینج شامل کریں'}
+                                {isSaving ? 'محفوظ ہو رہا ہے...' : editId ? 'رینج تبدیل کریں' : 'رینج شامل کریں'}
                             </button>
                         </div>
                     </div>

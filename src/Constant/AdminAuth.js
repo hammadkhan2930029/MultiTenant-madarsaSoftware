@@ -288,6 +288,17 @@ export const fetchCurrentAdminProfile = async () => {
   return result?.data || null;
 };
 
+export const refreshPermissions = async () => {
+  try {
+    return await fetchCurrentAdminProfile();
+  } catch (error) {
+    if (error?.statusCode === 401 || error?.statusCode === 403) {
+      expireSession(error.message);
+    }
+    throw error;
+  }
+};
+
 export const fetchMadrassaProfile = async () => {
   const token = getAdminToken();
 

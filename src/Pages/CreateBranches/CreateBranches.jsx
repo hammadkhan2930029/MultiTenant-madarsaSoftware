@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, Edit2, Hash, MapPin, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createBranch, deleteBranch, getBranches, updateBranch } from '../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
@@ -204,7 +204,7 @@ export const CreateBranch = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
                         >
-                            {editMode ? 'اپڈیٹ' : 'محفوظ کریں'}
+                            {editMode ? 'تبدیل کریں' : 'محفوظ کریں'}
                             {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>

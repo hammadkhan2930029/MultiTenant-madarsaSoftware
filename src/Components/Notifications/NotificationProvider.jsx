@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, AlertTitle, Slide, Snackbar } from '@mui/material';
+import { PERMISSION_DENIED_EVENT } from '../../Constant/Api';
 import { toUrduNotificationText } from '../../Constant/notificationUtils';
 import { NotificationContext } from './useNotifier';
 
@@ -52,7 +53,16 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
+    const handlePermissionDenied = (event) => {
+      showNotification({
+        severity: 'warning',
+        title: severityTitles.warning,
+        message: event.detail?.message || 'You do not have permission to perform this action.',
+      });
+    };
+
     const originalAlert = window.alert;
+    window.addEventListener(PERMISSION_DENIED_EVENT, handlePermissionDenied);
     window.alert = (message) => {
       showNotification({
         severity: 'info',
@@ -62,6 +72,7 @@ export const NotificationProvider = ({ children }) => {
     };
 
     return () => {
+      window.removeEventListener(PERMISSION_DENIED_EVENT, handlePermissionDenied);
       window.alert = originalAlert;
     };
   }, [showNotification]);

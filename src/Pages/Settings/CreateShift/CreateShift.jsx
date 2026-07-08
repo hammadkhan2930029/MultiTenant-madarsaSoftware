@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Plus, Edit2, Trash2, X, Save, Sun, Moon, Coffee } from 'lucide-react';
 import { InputField, SelectField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -45,10 +45,15 @@ export const ShiftManagement = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
 
     useNotificationBridge({ error, success });
 
-    const totalShifts = useMemo(() => shifts.length, [shifts]);
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const loadShifts = useCallback(async () => {
         try {
@@ -81,9 +86,20 @@ export const ShiftManagement = () => {
         setEditMode(shift.id);
         setError('');
         setSuccess('');
+        scrollToForm();
     };
 
     const handleSubmit = async () => {
+        if (formData.startTime && !formData.endTime) {
+            setError('اختتامی وقت منتخب کرنا ضروری ہے۔ شروع وقت کے ساتھ اختتامی وقت بھی منتخب کریں۔');
+            return;
+        }
+
+        if (!formData.startTime && formData.endTime) {
+            setError('شروع وقت منتخب کرنا ضروری ہے۔ اختتامی وقت کے ساتھ شروع وقت بھی منتخب کریں۔');
+            return;
+        }
+
         if (!formData.name.trim()) {
             setError('شفٹ کا نام ضروری ہے۔');
             return;
@@ -132,6 +148,7 @@ export const ShiftManagement = () => {
             setSuccess('');
             await deleteShift(deleteTarget.id);
             setSuccess('شفٹ کامیابی سے حذف کر دی گئی۔');
+            if (editMode === deleteTarget.id) resetForm();
             setDeleteTarget(null);
             await loadShifts();
         } catch (deleteError) {
@@ -146,7 +163,7 @@ export const ShiftManagement = () => {
             <div className="flex flex-row justify-between items-center gap-6 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
                 <div>
                     <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">شفٹ کا انتظام</h1>
-                    <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-4">کل شفٹس: {totalShifts}</p>
+                    <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-7">نئی شفٹس بنائیں اور اوقات کو منظم کریں</p>
                 </div>
                 <div style={{ backgroundColor: 'var(--color-primary)' }} className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#00d094]/20">
                     <Clock size={24} />
@@ -154,6 +171,7 @@ export const ShiftManagement = () => {
             </div>
 
             <div
+                ref={formRef}
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                 className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
             >
@@ -200,7 +218,7 @@ export const ShiftManagement = () => {
                             onClick={resetForm}
                             className="rounded-2xl border border-[var(--color-border)] px-6 py-4 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]"
                         >
-                            منسوخ کریں
+                            منسوخ
                         </button>
                     ) : null}
                     <button
@@ -210,7 +228,7 @@ export const ShiftManagement = () => {
                         className="px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
                     >
                         {editMode ? <Save size={20} /> : <Plus size={20} />}
-                        <span>{isSaving ? 'محفوظ ہو رہی ہے...' : editMode ? 'اپڈیٹ کریں' : 'نئی شفٹ شامل کریں'}</span>
+                        <span>{isSaving ? 'محفوظ ہو رہی ہے...' : editMode ? 'تبدیل کریں' : 'نئی شفٹ شامل کریں'}</span>
                     </button>
                 </div>
             </div>
@@ -292,7 +310,7 @@ export const ShiftManagement = () => {
                                 disabled={isDeleting}
                                 className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                منسوخ کریں
+                                منسوخ
                             </button>
                             <button
                                 type="button"

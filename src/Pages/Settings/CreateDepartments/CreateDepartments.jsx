@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Plus, Edit2, Trash2, Users, Target, Shield } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -18,8 +18,15 @@ export const DepartmentManagement = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
 
     useNotificationBridge({ error, success });
+
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const loadDepartments = useCallback(async () => {
         try {
@@ -44,7 +51,7 @@ export const DepartmentManagement = () => {
 
     const handleSubmit = async () => {
         if (!formData.name.trim()) {
-            setError('ڈیپارٹمنٹ کا نام ضروری ہے۔');
+            setError('شعبہ کا نام ضروری ہے۔');
             return;
         }
 
@@ -61,16 +68,16 @@ export const DepartmentManagement = () => {
 
             if (editMode) {
                 await updateDepartment(editMode, payload);
-                setSuccess('ڈیپارٹمنٹ کامیابی سے اپڈیٹ ہو گیا۔');
+                setSuccess('شعبہ کامیابی سے تبدیل ہو گیا۔');
             } else {
                 await createDepartment(payload);
-                setSuccess('نیا ڈیپارٹمنٹ کامیابی سے شامل ہو گیا۔');
+                setSuccess('نیا شعبہ کامیابی سے شامل ہو گیا۔');
             }
 
             resetForm();
             await loadDepartments();
         } catch (saveError) {
-            setError(saveError.message || 'ڈیپارٹمنٹ محفوظ نہیں ہو سکا۔');
+            setError(saveError.message || 'شعبہ محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
@@ -85,20 +92,22 @@ export const DepartmentManagement = () => {
         setEditMode(department.id);
         setError('');
         setSuccess('');
+        scrollToForm();
     };
 
     const handleDelete = async (departmentId) => {
-        const isConfirmed = window.confirm('کیا آپ واقعی اس ڈیپارٹمنٹ کو حذف کرنا چاہتے ہیں؟');
+        const isConfirmed = window.confirm('کیا آپ واقعی اس شعبہ کو حذف کرنا چاہتے ہیں؟');
         if (!isConfirmed) return;
 
         try {
             setError('');
             setSuccess('');
             await deleteDepartment(departmentId);
-            setSuccess('ڈیپارٹمنٹ کامیابی سے حذف ہو گیا۔');
+            setSuccess('شعبہ کامیابی سے حذف ہو گیا۔');
+            if (editMode === departmentId) resetForm();
             await loadDepartments();
         } catch (deleteError) {
-            setError(deleteError.message || 'ڈیپارٹمنٹ حذف نہیں ہو سکا۔');
+            setError(deleteError.message || 'شعبہ حذف نہیں ہو سکا۔');
         }
     };
 
@@ -107,7 +116,7 @@ export const DepartmentManagement = () => {
 
             <div className="flex flex-row justify-between items-center gap-6 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
                 <div>
-                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">ڈیپارٹمنٹ مینجمنٹ</h1>
+                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">شعبہ جات کا انتظام</h1>
                     <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-7">نئے شعبے بنائیں اور ٹیم کی ساخت کو منظم کریں</p>
                 </div>
                 <div style={{ backgroundColor: 'var(--color-primary)' }} className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#00d094]/20">
@@ -116,6 +125,7 @@ export const DepartmentManagement = () => {
             </div>
 
             <div
+                ref={formRef}
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                 className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
             >
@@ -123,7 +133,7 @@ export const DepartmentManagement = () => {
                     <div className="space-y-2">
                         <InputField
                             type="text"
-                            label={'ڈیپارٹمنٹ کا نام'}
+                            label={'شعبہ کا نام'}
                             required
                             placeholder="مثلاً: مارکیٹنگ"
                             value={formData.name}
@@ -133,7 +143,7 @@ export const DepartmentManagement = () => {
                     <div className="space-y-2">
                         <InputField
                             type="text"
-                            label={'ڈیپارٹمنٹ کوڈ'}
+                            label={'شعبہ کوڈ'}
                             placeholder="مثلاً: MKT"
                             value={formData.code}
                             onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
@@ -142,13 +152,23 @@ export const DepartmentManagement = () => {
                     <div className="space-y-2">
                         <InputField
                             type="text"
-                            label={'ڈیپارٹمنٹ ہیڈ'}
+                            label={'شعبہ ہیڈ'}
                             placeholder="نام درج کریں"
                             value={formData.head}
                             onChange={(e) => setFormData((prev) => ({ ...prev, head: e.target.value }))}
                         />
                     </div>
                 </div>
+
+                {editMode ? (
+                    <button
+                        type="button"
+                        onClick={resetForm}
+                        className="mt-8 w-full md:w-auto px-10 py-4 rounded-2xl border border-[var(--color-border)] text-[var(--color-text-muted)] font-black flex items-center justify-center gap-3 hover:bg-[var(--color-bg)] transition-all"
+                    >
+                        منسوخ
+                    </button>
+                ) : null}
 
                 <button
                     onClick={handleSubmit}
@@ -157,7 +177,7 @@ export const DepartmentManagement = () => {
                     className="mt-8 w-full md:w-auto px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
                 >
                     <Plus size={20} />
-                    <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'ڈیپارٹمنٹ اپڈیٹ کریں' : 'نیا ڈیپارٹمنٹ شامل کریں'}</span>
+                    <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'شعبہ تبدیل کریں' : 'نیا شعبہ شامل کریں'}</span>
                 </button>
             </div>
 
@@ -216,7 +236,7 @@ export const DepartmentManagement = () => {
                         style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                         className="border rounded-[2rem] p-5 text-center text-sm font-bold text-[var(--color-text-muted)]"
                     >
-                        ابھی تک کوئی ڈیپارٹمنٹ شامل نہیں کیا گیا۔
+                        ابھی تک کوئی شعبہ شامل نہیں کیا گیا۔
                     </div>
                 )}
             </div>

@@ -15,7 +15,7 @@ import { ExamRoutes } from './ExamRoutes';
 import { StoreRoutes } from './StoreRoutes';
 import { AdminLogin, UserLogin } from '../Pages/Auth/AdminLogin';
 import { getDefaultRouteForSession } from '../Pages/Auth/authLandingRoutes';
-import { getAdminSession, isAdminAuthenticated, validateCurrentTenantSession } from '../Constant/AdminAuth';
+import { getAdminSession, isAdminAuthenticated, refreshPermissions, validateCurrentTenantSession } from '../Constant/AdminAuth';
 import { SESSION_EXPIRED_EVENT } from '../Constant/Api';
 import { StudentAttendanceHistory } from '../Pages/Students/AttendancePage/StudentAttendanceHistory';
 import { RequirePermission } from '../Components/Auth/RequirePermission';
@@ -56,6 +56,7 @@ const ProtectedAppShell = () => {
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
 
     validateCurrentTenantSession()
+      .then(() => refreshPermissions())
       .then(() => {
         if (isMounted) setIsCheckingSession(false);
       })
@@ -102,7 +103,7 @@ export const AppRoutes = () => {
         <Route path="HRManagement" element={<RequirePermission anyPermissions={['teachers.create', 'staff.create']}><HRManagement /></RequirePermission>} />
         <Route path="staff/list" element={withPermission(<TeachersList staffType="staff" />, 'staff.view')} />
         <Route path="students/attendance-history/:id" element={withPermission(<StudentAttendanceHistory />, 'attendance.history.view')} />
-        <Route path="role-management" element={withPermission(<RoleManagement />, 'role_management.view')} />
+        <Route path="role-management" element={<RequirePermission anyPermissions={['roles.view', 'roles.manage']}><RoleManagement /></RequirePermission>} />
         <Route path="role-management/create" element={withPermission(<RoleManagement />, 'roles.manage')} />
         <Route path="role-management/:roleId" element={withPermission(<RoleManagement />, 'roles.view')} />
         <Route path="role-management/:roleId/edit" element={withPermission(<RoleManagement />, 'roles.manage')} />

@@ -17,6 +17,7 @@ export const Profile = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [cities, setCities] = useState([]);
     const [logoPreview, setLogoPreview] = useState(AppImages.logo);
+    const [validationErrors, setValidationErrors] = useState({});
     const dropdownRef = useRef(null);
     const fileInputRef = useRef(null);
     const notify = useNotifier();
@@ -161,6 +162,20 @@ export const Profile = () => {
         notify.success(file.name, 'تصویر منتخب ہو گئی');
     };
 
+    const clearFieldError = (field) => {
+        setValidationErrors((current) => {
+            if (!current[field]) return current;
+            const nextErrors = { ...current };
+            delete nextErrors[field];
+            return nextErrors;
+        });
+    };
+
+    const updateTempField = (field, value) => {
+        clearFieldError(field);
+        setTempData((current) => ({ ...current, [field]: value }));
+    };
+
     const resetEditingState = () => {
         if (logoPreview?.startsWith('blob:')) {
             URL.revokeObjectURL(logoPreview);
@@ -174,6 +189,7 @@ export const Profile = () => {
         } else {
             setLogoPreview(AppImages.logo);
         }
+        setValidationErrors({});
         setIsEditing(false);
 
         if (fileInputRef.current) {
@@ -187,8 +203,15 @@ export const Profile = () => {
             return;
         }
 
-        if (!tempData.name?.trim() || !tempData.email?.trim()) {
-            notify.error('ادارے کا نام اور ای میل درج کرنا ضروری ہیں۔', 'نامکمل معلومات');
+        const nextValidationErrors = {};
+        if (!tempData.name?.trim()) nextValidationErrors.name = 'ادارے کا نام درج کرنا ضروری ہے۔';
+        if (!tempData.email?.trim()) nextValidationErrors.email = 'ای میل درج کرنا ضروری ہے۔';
+        if (!tempData.phone1?.trim()) nextValidationErrors.phone1 = 'فون نمبر درج کرنا ضروری ہے۔';
+        if (!tempData.address?.trim()) nextValidationErrors.address = 'مکمل پتہ درج کرنا ضروری ہے۔';
+
+        if (Object.keys(nextValidationErrors).length) {
+            setValidationErrors(nextValidationErrors);
+            notify.error('فون نمبر، مکمل پتہ اور ای میل درج کرنا ضروری ہیں۔', 'نامکمل معلومات');
             return;
         }
 
@@ -196,11 +219,11 @@ export const Profile = () => {
             setIsSaving(true);
 
             const formData = new FormData();
-            formData.append('name', tempData.name || '');
-            formData.append('email', tempData.email || '');
-            formData.append('phone1', tempData.phone1 || '');
-            formData.append('phone2', tempData.phone2 || '');
-            formData.append('address', tempData.address || '');
+            formData.append('name', tempData.name?.trim() || '');
+            formData.append('email', tempData.email?.trim() || '');
+            formData.append('phone1', tempData.phone1?.trim() || '');
+            formData.append('phone2', tempData.phone2?.trim() || '');
+            formData.append('address', tempData.address?.trim() || '');
             formData.append('branch', 'مین کیمپس');
             formData.append('city', tempData.city || '');
             formData.append('familyNoSeq', tempData.familyNoSeq || '');
@@ -228,6 +251,7 @@ export const Profile = () => {
 
             setMadrassaData(nextData);
             setTempData(nextData);
+            setValidationErrors({});
             setIsEditing(false);
 
             if (savedProfile.logoUrl) {
@@ -255,12 +279,12 @@ export const Profile = () => {
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                     <div className="shrink-0 text-center">
                         <div className="relative group mx-auto w-fit">
-                            <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-[2.5rem] border-4 border-white/20 bg-white p-3 shadow-2xl transition-all duration-500 group-hover:scale-105">
+                            <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-[2.5rem] border-4 border-white/20 bg-white p-1 shadow-2xl transition-all duration-500 group-hover:scale-105">
                                 <img
                                     src={logoPreview || AppImages.logo}
                                     alt="Logo"
                                     onError={() => setLogoPreview(AppImages.logo)}
-                                    className="block h-full w-full rounded-[2rem] object-contain"
+                                    className="block h-full w-full rounded-[2.25rem] object-cover"
                                 />
                             </div>
                             <input
@@ -295,11 +319,12 @@ export const Profile = () => {
                                 <textarea
                                     required
                                     value={tempData.name}
-                                    onChange={(e) => setTempData({ ...tempData, name: e.target.value })}
+                                    onChange={(e) => updateTempField('name', e.target.value)}
                                     rows={2}
                                     dir="rtl"
                                     className="bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-xl font-black w-full min-w-0 outline-none focus:bg-white/20 focus:border-[#00d094] text-white transition-all shadow-inner resize-none text-right leading-relaxed overflow-y-hidden"
                                 />
+                                {validationErrors.name ? <p className="mr-2 text-xs font-bold text-rose-200">{validationErrors.name}</p> : null}
                             </div>
                         ) : (
                             <>
@@ -314,12 +339,20 @@ export const Profile = () => {
                     {canEditMadrassaProfile ? (
                     <div className="flex gap-3 mt-4 md:mt-0 shrink-0 self-center md:self-start">
                         {isEditing && (
-                            <button onClick={resetEditingState} className="p-4 bg-rose-500/20 text-rose-200 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/30">
+                            <button onClick={resetEditingState} className="p-4 bg-rose-500/20 text-rose-200 rounded-2xl hover:bg-rose-500 hover:text-white transition-all border border-rose-500/30 flex items-center gap-2">
                                 <X size={20} />
+                                <span className="text-sm font-black">منسوخ</span>
                             </button>
                         )}
                         <button
-                            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                            onClick={() => {
+                                if (isEditing) {
+                                    handleSave();
+                                } else {
+                                    setValidationErrors({});
+                                    setIsEditing(true);
+                                }
+                            }}
                             disabled={isSaving || isLoading}
                             className={`px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-3 transition-all active:scale-95 shadow-xl ${
                                 isEditing ? 'bg-[#00d094] text-white hover:bg-[#00b07d]' : 'bg-[#00d094] text-white hover:bg-[#00b07d] shadow-[#00d094]/30'
@@ -363,10 +396,10 @@ export const Profile = () => {
 
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6">
                     <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">رابطے کی تفصیلات</h3>
-                    <InfoField label="ای میل" required icon={<Mail size={16} />} value={madrassaData.email} isEditing={isEditing} tempValue={tempData.email} onChange={(v) => setTempData({ ...tempData, email: v })} />
+                    <InfoField label="ای میل" required error={validationErrors.email} icon={<Mail size={16} />} value={madrassaData.email} isEditing={isEditing} tempValue={tempData.email} onChange={(v) => updateTempField('email', v)} />
                     <div className="grid grid-cols-2 gap-6">
-                        <InfoField label="فون 1" icon={<Phone size={16} />} value={madrassaData.phone1} isEditing={isEditing} tempValue={tempData.phone1} onChange={(v) => setTempData({ ...tempData, phone1: v })} />
-                        <InfoField label="فون 2" icon={<Phone size={16} />} value={madrassaData.phone2} isEditing={isEditing} tempValue={tempData.phone2} onChange={(v) => setTempData({ ...tempData, phone2: v })} />
+                        <InfoField label="فون 1" required error={validationErrors.phone1} icon={<Phone size={16} />} value={madrassaData.phone1} isEditing={isEditing} tempValue={tempData.phone1} onChange={(v) => updateTempField('phone1', v)} />
+                        <InfoField label="فون 2" icon={<Phone size={16} />} value={madrassaData.phone2} isEditing={isEditing} tempValue={tempData.phone2} onChange={(v) => updateTempField('phone2', v)} />
                     </div>
                 </div>
 
@@ -408,7 +441,7 @@ export const Profile = () => {
                                                         <div
                                                             key={city.id}
                                                             onClick={() => {
-                                                                setTempData({ ...tempData, city: city.name });
+                                                                updateTempField('city', city.name);
                                                                 setIsCityDropdownOpen(false);
                                                                 setCitySearch('');
                                                             }}
@@ -436,21 +469,21 @@ export const Profile = () => {
                             )}
                         </div>
                     </div>
-                    <InfoField label="مکمل پتہ" icon={<MapPin size={16} />} value={madrassaData.address} isEditing={isEditing} tempValue={tempData.address} onChange={(v) => setTempData({ ...tempData, address: v })} />
+                    <InfoField label="مکمل پتہ" required error={validationErrors.address} icon={<MapPin size={16} />} value={madrassaData.address} isEditing={isEditing} tempValue={tempData.address} onChange={(v) => updateTempField('address', v)} />
                 </div>
             </div>
         </div>
     );
 };
 
-const InfoField = ({ label, value, isEditing, tempValue, onChange, icon, required = false }) => (
+const InfoField = ({ label, value, isEditing, tempValue, onChange, icon, required = false, error = '' }) => (
     <div className="space-y-3">
         <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest flex items-center gap-2">
             {icon && <span className="text-[#00d094]">{icon}</span>} {label}{required ? <span className="text-red-500"> *</span> : null}
         </label>
         <div className={`p-4 rounded-2xl border transition-all duration-300 ${
             isEditing
-                ? 'bg-[var(--color-bg)] border-[#00d094]/50 shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)]'
+                ? `bg-[var(--color-bg)] ${error ? 'border-rose-400' : 'border-[#00d094]/50'} shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)]`
                 : 'bg-[var(--color-bg)] border-transparent'
         }`}>
             {isEditing ? (
@@ -464,5 +497,6 @@ const InfoField = ({ label, value, isEditing, tempValue, onChange, icon, require
                 <span className="font-bold text-[var(--color-text)] break-words">{value}</span>
             )}
         </div>
+        {error ? <p className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
     </div>
 );

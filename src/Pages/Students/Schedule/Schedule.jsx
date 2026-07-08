@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
     Calendar,
     Clock,
@@ -395,7 +395,7 @@ export const StudentScheduleManager = () => {
                                 className="flex-1 bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {editingScheduleId ? <Pencil size={20} /> : <Plus size={20} />}
-                                {isSavingSchedule ? 'محفوظ ہو رہا ہے...' : editingScheduleId ? 'شیڈول اپڈیٹ کریں' : 'شیڈول محفوظ کریں'}
+                                {isSavingSchedule ? 'محفوظ ہو رہا ہے...' : editingScheduleId ? 'شیڈول تبدیل کریں' : 'شیڈول محفوظ کریں'}
                             </button>
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Eye, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InputField } from '../../../Components/HR/FormElements';
@@ -218,7 +218,7 @@ export const ParentsList = () => {
                                 </button>
                             ) : null}
                             <button type="submit" className="inline-flex items-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-[#06211a] shadow-lg shadow-[var(--color-primary)]/20">
-                                <Plus size={18} /> {editingParentId ? 'اپڈیٹ کریں' : 'شامل کریں'}
+                                <Plus size={18} /> {editingParentId ? 'تبدیل کریں' : 'شامل کریں'}
                             </button>
                         </div>
                     </div>

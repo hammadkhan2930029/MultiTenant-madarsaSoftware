@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Book, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSubject, deleteSubject, getSubjects, updateSubject } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -21,7 +21,14 @@ export const CreateSubjects = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
     useNotificationBridge({ error, success });
+
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const loadSubjects = async () => {
         setIsLoading(true);
@@ -56,9 +63,15 @@ export const CreateSubjects = () => {
         setError('');
         setSuccess('');
         setIsFormOpen(true);
+        scrollToForm();
     };
 
     const handleSubmit = async () => {
+        if (formData.detail.trim() && !formData.name.trim()) {
+            setError('مضمون کا نام درج کرنا ضروری ہے۔ تفصیل / کوڈ کے ساتھ مضمون کا نام بھی لکھیں۔');
+            return;
+        }
+
         if (!formData.name.trim()) {
             setError('مضمون کا نام درج کرنا ضروری ہے۔');
             return;
@@ -135,7 +148,7 @@ export const CreateSubjects = () => {
             <div className="flex flex-col items-center justify-between gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm backdrop-blur-sm md:flex-row">
                 <div className="text-right">
                     <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">مضامین کی فہرست</h2>
-                    <p className="mt-4 text-right text-sm font-medium text-[var(--color-text-muted)]">کل ریکارڈ: {filteredSubjects.length}</p>
+                    <p className="mt-4 text-right text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSubjects.length}</p>
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row items-center">
@@ -163,7 +176,7 @@ export const CreateSubjects = () => {
             </div>
 
             {isFormOpen ? (
-                <div className="animate-in slide-in-from-top rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl duration-500">
+                <div ref={formRef} className="animate-in slide-in-from-top rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl duration-500">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
                         <span className='text-3xl'>{editMode ? 'مضمون تبدیل کریں' : 'نیا مضمون'}</span>
@@ -197,7 +210,7 @@ export const CreateSubjects = () => {
                     <div className="mt-8 flex justify-end gap-3">
                         {editMode ? (
                             <button onClick={resetForm} className="rounded-xl px-6 py-4 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">
-                                کینسل
+                                منسوخ
                             </button>
                         ) : null}
                         <button

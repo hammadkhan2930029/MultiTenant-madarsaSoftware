@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GraduationCap, Plus, Edit2, Trash2, FileCheck, Award, BookOpen, X } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -20,8 +20,15 @@ export const QualificationManagement = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
 
     useNotificationBridge({ error, success });
+
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const loadQualifications = useCallback(async () => {
         try {
@@ -87,6 +94,7 @@ export const QualificationManagement = () => {
         setEditMode(qualification.id);
         setError('');
         setSuccess('');
+        scrollToForm();
     };
 
     const handleDelete = async () => {
@@ -121,6 +129,7 @@ export const QualificationManagement = () => {
             </div>
 
             <div
+                ref={formRef}
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                 className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
             >
@@ -163,7 +172,7 @@ export const QualificationManagement = () => {
                         className="w-full md:w-auto px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
                     >
                         <Plus size={20} />
-                        <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'سند اپڈیٹ کریں' : 'نئی سند شامل کریں'}</span>
+                        <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'سند تبدیل کریں' : 'نئی سند شامل کریں'}</span>
                     </button>
                     {editMode ? (
                         <button
@@ -171,7 +180,7 @@ export const QualificationManagement = () => {
                             disabled={isSaving}
                             className="w-full md:w-auto px-8 py-4 rounded-2xl font-black bg-[var(--color-input)] text-[var(--color-text-muted)] disabled:opacity-70"
                         >
-                            منسوخ کریں
+                            منسوخ
                         </button>
                     ) : null}
                 </div>
@@ -263,7 +272,7 @@ export const QualificationManagement = () => {
                                 disabled={isDeleting}
                                 className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                منسوخ کریں
+                                منسوخ
                             </button>
                             <button
                                 type="button"

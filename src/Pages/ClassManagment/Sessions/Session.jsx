@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSession, deleteSession, getSessions, updateSession } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -29,7 +29,14 @@ export const CreateSessions = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const formRef = useRef(null);
     useNotificationBridge({ error, success });
+
+    const scrollToForm = () => {
+        window.setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
 
     const totalSessions = useMemo(() => sessions.length, [sessions]);
 
@@ -67,9 +74,25 @@ export const CreateSessions = () => {
         setError('');
         setSuccess('');
         setIsFormOpen(true);
+        scrollToForm();
     };
 
     const handleSubmit = async () => {
+        if (!formData.name.trim()) {
+            setError('سیشن نام درج کرنا ضروری ہے۔');
+            return;
+        }
+
+        if (!formData.startDate) {
+            setError('شروع تاریخ منتخب کرنا ضروری ہے۔');
+            return;
+        }
+
+        if (!formData.endDate) {
+            setError('اختتامی تاریخ منتخب کرنا ضروری ہے۔');
+            return;
+        }
+
         if (!formData.name.trim() || !formData.startDate || !formData.endDate) {
             setError('سیشن کا نام، شروع کی تاریخ اور اختتامی تاریخ درج کرنا ضروری ہیں۔');
             return;
@@ -146,7 +169,7 @@ export const CreateSessions = () => {
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">تعلیمی سیشن</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل ریکارڈ: {totalSessions}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {totalSessions}</p>
                 </div>
 
                 <div className="flex w-full items-center flex-col gap-3 md:w-auto md:flex-row">
@@ -174,7 +197,7 @@ export const CreateSessions = () => {
             </div>
 
             {isFormOpen ? (
-                <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
+                <div ref={formRef} className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
                         <span className='text-3xl'>{editMode ? 'سیشن اپڈیٹ کریں' : 'نیا سیشن اندراج'}</span>
@@ -229,7 +252,7 @@ export const CreateSessions = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
                         >
-                            {editMode ? 'اپڈیٹ' : 'محفوظ کریں'}
+                            {editMode ? 'تبدیل کریں' : 'محفوظ کریں'}
                             {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>
@@ -323,7 +346,7 @@ export const CreateSessions = () => {
                                 disabled={isDeleting}
                                 className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                منسوخ کریں
+                                منسوخ
                             </button>
                             <button
                                 type="button"

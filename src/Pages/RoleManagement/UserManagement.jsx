@@ -1,18 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Edit2, Eye, Plus, Save, Search, ShieldCheck, UserPlus } from 'lucide-react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Edit2, Eye, Plus, Save, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { getRoles } from '../../Constant/RoleManagementApi';
-import { createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
+import { assignUserRole, createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
+import { refreshPermissions } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
 
 const emptyForm = {
   name: '',
   email: '',
+  phone: '',
   username: '',
   password: '',
+  confirmPassword: '',
   roleId: '',
   status: 'active',
 };
@@ -22,6 +25,8 @@ const roleDisplayNames = {
   admin: 'ایڈمن',
   accountant: 'اکاؤنٹنٹ',
   teacher: 'استاد',
+  receptionist: 'ریسپشنسٹ',
+  read_only: 'صرف دیکھنے والا',
   store_manager: 'اسٹور مینیجر',
   viewer: 'صرف دیکھنے والا',
 };
@@ -54,117 +59,34 @@ const moduleDisplayNames = {
   profile: 'پروفائل',
   support: 'سپورٹ',
   suggestions: 'تجاویز',
+  reports: 'رپورٹس',
 };
 
 const permissionDisplayNames = {
   'dashboard.view': 'ڈیش بورڈ دیکھیں',
   'role_management.view': 'کردار مینجمنٹ دیکھیں',
   'roles.view': 'کردار دیکھیں',
+  'roles.manage': 'کردار مینج کریں',
   'roles.create': 'کردار بنائیں',
   'roles.edit': 'کردار میں ترمیم کریں',
   'roles.delete': 'کردار حذف کریں',
   'roles.assign_permissions': 'کردار کو اجازتیں دیں',
   'users.view': 'صارفین دیکھیں',
+  'users.manage': 'صارفین مینج کریں',
   'users.create': 'صارف بنائیں',
   'users.edit': 'صارف میں ترمیم کریں',
   'users.delete': 'صارف حذف کریں',
   'students.view': 'طلباء دیکھیں',
   'students.create': 'طالب علم شامل کریں',
+  'students.update': 'طالب علم میں ترمیم کریں',
   'students.edit': 'طالب علم میں ترمیم کریں',
   'students.delete': 'طالب علم حذف کریں',
-  'students.profile.view': 'طالب علم پروفائل دیکھیں',
-  'students.id_card.view': 'آئی ڈی کارڈ دیکھیں',
-  'students.assign_class': 'کلاس تفویض کریں',
-  'students.schedule.view': 'طلباء شیڈول دیکھیں',
-  'student_fees.view': 'طلباء فیس دیکھیں',
-  'student_fees.create': 'طلباء فیس بنائیں',
-  'student_fees.edit': 'طلباء فیس میں ترمیم کریں',
-  'parents.view': 'والدین دیکھیں',
-  'parents.create': 'والدین شامل کریں',
-  'parents.edit': 'والدین میں ترمیم کریں',
-  'parents.delete': 'والدین حذف کریں',
   'attendance.view': 'حاضری دیکھیں',
-  'attendance.create': 'حاضری درج کریں',
-  'attendance.edit': 'حاضری میں ترمیم کریں',
-  'attendance.history.view': 'حاضری تاریخ دیکھیں',
+  'attendance.mark': 'حاضری درج کریں',
   'teachers.view': 'اساتذہ دیکھیں',
-  'teachers.create': 'استاد شامل کریں',
-  'teachers.edit': 'استاد میں ترمیم کریں',
-  'teachers.delete': 'استاد حذف کریں',
-  'teachers.details.view': 'استاد کی تفصیل دیکھیں',
-  'teachers.attendance.view': 'اساتذہ حاضری دیکھیں',
-  'teachers.schedule.view': 'اساتذہ شیڈول دیکھیں',
-  'teachers.salary_increments.view': 'تنخواہ انکریمنٹ دیکھیں',
-  'staff.view': 'عملہ دیکھیں',
-  'staff.create': 'عملہ شامل کریں',
-  'staff.edit': 'عملہ میں ترمیم کریں',
-  'staff.delete': 'عملہ حذف کریں',
-  'classes.view': 'جماعتیں دیکھیں',
-  'classes.create': 'جماعت بنائیں',
-  'classes.edit': 'جماعت میں ترمیم کریں',
-  'classes.delete': 'جماعت حذف کریں',
-  'sections.view': 'سیکشن دیکھیں',
-  'sections.create': 'سیکشن بنائیں',
-  'sections.edit': 'سیکشن میں ترمیم کریں',
-  'sections.delete': 'سیکشن حذف کریں',
-  'sessions.view': 'سیشن دیکھیں',
-  'subjects.view': 'مضامین دیکھیں',
-  'finance.view': 'مالیات دیکھیں',
-  'finance.heads.view': 'آمدن و اخراجات ہیڈز دیکھیں',
-  'finance.transactions.view': 'آمدن و اخراجات اندراج دیکھیں',
-  'finance.transactions.create': 'آمدن و اخراجات درج کریں',
-  'finance.reports.view': 'مالی رپورٹس دیکھیں',
-  'funds.view': 'عطیات دیکھیں',
-  'funds.create': 'عطیہ درج کریں',
-  'funds.edit': 'عطیہ میں ترمیم کریں',
-  'funds.delete': 'عطیہ حذف کریں',
   'fees.view': 'فیس دیکھیں',
-  'fees.create': 'فیس بنائیں',
-  'fees.edit': 'فیس میں ترمیم کریں',
-  'fees.delete': 'فیس حذف کریں',
-  'fees.details.view': 'فیس تفصیل دیکھیں',
-  'salary.view': 'تنخواہ دیکھیں',
-  'salary.create': 'تنخواہ بنائیں',
-  'salary.edit': 'تنخواہ میں ترمیم کریں',
-  'salary.delete': 'تنخواہ حذف کریں',
-  'hifz.view': 'حفظ دیکھیں',
-  'hifz.daily.view': 'یومیہ جائزہ دیکھیں',
-  'hifz.daily.create': 'یومیہ جائزہ درج کریں',
-  'hifz.weekly.view': 'ہفتہ وار جائزہ دیکھیں',
-  'hifz.weekly.create': 'ہفتہ وار جائزہ درج کریں',
-  'hifz.monthly.view': 'ماہانہ جائزہ دیکھیں',
-  'hifz.monthly.create': 'ماہانہ جائزہ درج کریں',
-  'hifz.para.view': 'پارہ جائزہ دیکھیں',
-  'hifz.para.create': 'پارہ جائزہ درج کریں',
-  'exams.view': 'امتحانات دیکھیں',
-  'exams.create': 'امتحان بنائیں',
-  'exams.edit': 'امتحان میں ترمیم کریں',
-  'exams.delete': 'امتحان حذف کریں',
-  'exam_results.view': 'نتائج دیکھیں',
-  'exam_results.create': 'نتیجہ درج کریں',
-  'result_grades.view': 'نتیجہ گریڈ دیکھیں',
-  'store.view': 'اسٹور دیکھیں',
-  'store.approve': 'اسٹور منظوری دیں',
-  'store.items.view': 'اشیاء دیکھیں',
-  'store.items.create': 'شے شامل کریں',
-  'store.items.edit': 'شے میں ترمیم کریں',
-  'store.items.delete': 'شے حذف کریں',
-  'store.categories.view': 'کیٹیگریز دیکھیں',
-  'store.suppliers.view': 'سپلائرز دیکھیں',
-  'store.purchases.view': 'خریداری دیکھیں',
-  'store.stock_issues.view': 'اسٹاک اجرا دیکھیں',
-  'store.returns.view': 'واپسی دیکھیں',
-  'store.damaged_stock.view': 'خراب اسٹاک دیکھیں',
-  'store.units.view': 'یونٹس دیکھیں',
-  'store.reports': 'اسٹور رپورٹس دیکھیں',
-  'settings.shifts.view': 'شفٹ دیکھیں',
-  'settings.departments.view': 'شعبہ جات دیکھیں',
-  'settings.degrees.view': 'ڈگری نام دیکھیں',
-  'settings.cities.view': 'شہر دیکھیں',
-  'profile.view': 'پروفائل دیکھیں',
-  'profile.change_password': 'پاس ورڈ تبدیل کریں',
-  'support.view': 'سپورٹ دیکھیں',
-  'suggestions.view': 'تجاویز دیکھیں',
+  'reports.view': 'رپورٹس دیکھیں',
+  'settings.view': 'ترتیبات دیکھیں',
 };
 
 const actionDisplayNames = {
@@ -172,22 +94,42 @@ const actionDisplayNames = {
   create: 'بنائیں',
   add: 'شامل کریں',
   edit: 'ترمیم کریں',
-  update: 'اپڈیٹ کریں',
+  update: 'تبدیل کریں',
   delete: 'حذف کریں',
-  generate: 'بنائیں',
+  manage: 'مینج کریں',
+  mark: 'درج کریں',
   approve: 'منظوری دیں',
+  export: 'ایکسپورٹ کریں',
+  assign: 'تفویض کریں',
   assign_class: 'کلاس تفویض کریں',
   assign_permissions: 'اجازتیں دیں',
   change_password: 'پاس ورڈ تبدیل کریں',
 };
 
 const getRoleName = (user) => (
-  user?.roleName || user?.role_name || user?.roleDetails?.roleName || user?.roleDetails?.role_name || user?.role?.roleName || user?.role?.role_name || user?.role || ''
+  user?.roleName ||
+  user?.role_name ||
+  user?.roleDetails?.roleName ||
+  user?.roleDetails?.role_name ||
+  user?.role?.roleName ||
+  user?.role?.role_name ||
+  user?.role ||
+  ''
 );
 
-const getRoleRecordName = (role) => role?.roleName || role?.role_name || '';
+const getRoleRecordName = (role) => role?.roleName || role?.role_name || role?.name || '';
 const getRoleDisplayName = (roleName) => roleDisplayNames[roleName] || roleName || '-';
+const getRoleStatus = (role) => String(role?.status || 'active').toLowerCase();
+const getUserStatus = (user) => String(user?.status || 'active').toLowerCase();
 const isSuperAdminUser = (user) => getRoleName(user) === SUPER_ADMIN_ROLE;
+const getUserPhone = (user) => user?.phone || user?.phoneNumber || user?.phone_number || '---';
+
+const formatDate = (value) => {
+  if (!value) return '---';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '---';
+  return date.toLocaleDateString('ur-PK', { year: 'numeric', month: 'short', day: 'numeric' });
+};
 
 const getPermissionKey = (permission) => (
   typeof permission === 'string' ? permission : permission?.permissionKey || permission?.permission_key || ''
@@ -220,8 +162,12 @@ export const UserManagement = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -238,17 +184,21 @@ export const UserManagement = () => {
     const lockSuperAdminRole = mode === 'edit' && isSuperAdminUser(currentUser);
     const visibleRoles = roles.filter((role) => {
       const roleName = getRoleRecordName(role);
-      return roleName !== SUPER_ADMIN_ROLE || lockSuperAdminRole;
+      const isCurrentRole = currentUser?.roleId && Number(currentUser.roleId) === Number(role.id);
+      const active = getRoleStatus(role) === 'active';
+      return (active || (lockSuperAdminRole && isCurrentRole)) && (roleName !== SUPER_ADMIN_ROLE || lockSuperAdminRole);
     });
 
     return [
       { value: '', label: 'کردار منتخب کریں' },
-      ...visibleRoles.map((role) => {
-        const roleName = getRoleRecordName(role);
-        return { value: String(role.id), label: getRoleDisplayName(roleName) };
-      }),
+      ...visibleRoles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
     ];
   }, [currentUser, mode, roles]);
+
+  const roleFilterOptions = useMemo(() => [
+    { value: '', label: 'تمام کردار' },
+    ...roles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
+  ], [roles]);
 
   const loadRoles = useCallback(async () => {
     const result = await getRoles({ page: 1, limit: 100 });
@@ -259,14 +209,14 @@ export const UserManagement = () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await getUsers({ page: 1, limit: 100, search });
+      const result = await getUsers({ page: 1, limit: 100, search, roleId: roleFilter, status: statusFilter });
       setUsers(result.items || []);
     } catch (loadError) {
       setError(loadError.message || 'صارفین لوڈ نہیں ہو سکے۔');
     } finally {
       setIsLoading(false);
     }
-  }, [search]);
+  }, [roleFilter, search, statusFilter]);
 
   const loadUser = useCallback(async () => {
     if (!userId || mode === 'list' || mode === 'create') return;
@@ -279,8 +229,10 @@ export const UserManagement = () => {
       setFormData({
         name: user?.name || '',
         email: user?.email || '',
+        phone: user?.phone || '',
         username: user?.username || '',
         password: '',
+        confirmPassword: '',
         roleId: user?.roleId ? String(user.roleId) : '',
         status: user?.status || 'active',
       });
@@ -317,6 +269,10 @@ export const UserManagement = () => {
     if (!formData.email.trim()) return setError('ای میل ضروری ہے۔');
     if (!formData.username.trim()) return setError('صارف نام ضروری ہے۔');
     if (mode === 'create' && !formData.password.trim()) return setError('پاس ورڈ ضروری ہے۔');
+    if (!formData.password.trim() && formData.confirmPassword.trim()) return setError('پاس ورڈ بھی درج کریں۔');
+    if (formData.password.trim() && formData.password !== formData.confirmPassword) {
+      return setError('پاس ورڈ اور تصدیقی پاس ورڈ ایک جیسے ہونے چاہئیں۔');
+    }
     if (!formData.roleId && !isSuperAdminUser(currentUser)) return setError('کردار منتخب کریں۔');
 
     setIsSaving(true);
@@ -327,11 +283,12 @@ export const UserManagement = () => {
       const payload = {
         name: formData.name.trim(),
         email: formData.email.trim(),
+        phone: formData.phone.trim(),
         username: formData.username.trim(),
         status: formData.status,
       };
 
-      if (!isSuperAdminUser(currentUser)) {
+      if (mode === 'create' && !isSuperAdminUser(currentUser)) {
         payload.roleId = Number(formData.roleId);
       }
 
@@ -341,25 +298,53 @@ export const UserManagement = () => {
 
       if (mode === 'edit') {
         await updateUser(userId, payload);
+        if (!isSuperAdminUser(currentUser) && Number(formData.roleId) !== Number(currentUser?.roleId || 0)) {
+          await assignUserRole(userId, Number(formData.roleId));
+        }
+        refreshPermissions().catch(() => {});
         setSuccess('صارف کامیابی سے اپڈیٹ ہو گیا۔');
         navigate(`/role-management/users/${userId}`);
       } else {
-        const createdUser = await createUser(payload);
+        await createUser(payload);
+        setFormData(emptyForm);
         setSuccess('نیا صارف کامیابی سے محفوظ ہو گیا۔');
-        navigate(createdUser?.id ? `/role-management/users/${createdUser.id}` : '/role-management/users');
       }
     } catch (saveError) {
       setError(saveError.message || 'صارف محفوظ نہیں ہو سکا۔');
     } finally {
       setIsSaving(false);
     }
+
+    return undefined;
+  };
+
+  const handleDeactivateUser = async () => {
+    if (!deactivateTarget || isSuperAdminUser(deactivateTarget)) return;
+
+    setIsDeactivating(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateUser(deactivateTarget.id, { status: 'inactive' });
+      setDeactivateTarget(null);
+      refreshPermissions().catch(() => {});
+      setSuccess('صارف کامیابی سے غیر فعال ہو گیا۔');
+      await loadUsers();
+    } catch (deactivateError) {
+      setError(deactivateError.message || 'صارف غیر فعال نہیں ہو سکا۔');
+    } finally {
+      setIsDeactivating(false);
+    }
   };
 
   const renderHeader = () => (
     <div className="flex flex-col gap-5 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)] md:flex-row md:items-center md:justify-between">
       <div className="text-right">
-        <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">صارفین مینجمنٹ</h1>
-        <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-4">صارفین بنائیں، کردار منتخب کریں اور اجازتیں دیکھیں۔</p>
+        <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">User Management / Users</h1>
+        <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-4">
+          صارفین بنائیں، کردار منتخب کریں اور اجازتیں دیکھیں۔
+        </p>
       </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -392,8 +377,10 @@ export const UserManagement = () => {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <InputField label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
           <InputField label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))} />
+          <InputField label="فون" placeholder="0300xxxxxxx" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: event.target.value }))} />
           <InputField label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))} />
           <InputField label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type="password" placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
+          <InputField label="تصدیقی پاس ورڈ" required={mode === 'create'} type="password" placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
           <SelectField label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => setFormData((prev) => ({ ...prev, roleId: event.target.value }))} />
           <SelectField label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
         </div>
@@ -440,6 +427,7 @@ export const UserManagement = () => {
               <div className="mt-4 flex flex-wrap gap-3 text-sm font-bold text-[var(--color-text-muted)]">
                 <span>{currentUser.email}</span>
                 <span>{currentUser.username}</span>
+                <span>{getUserPhone(currentUser)}</span>
                 <span className="rounded-xl bg-emerald-500/10 px-3 py-1 font-black text-[#00d094]">{getRoleDisplayName(getRoleName(currentUser))}</span>
               </div>
             </div>
@@ -484,59 +472,90 @@ export const UserManagement = () => {
     <>
       <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="text-sm font-bold text-[var(--color-text-muted)]">کل صارفین: {users.length}</div>
-        <div className="relative w-full md:w-80">
-          <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="صارف تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
+          <SelectField options={roleFilterOptions} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="h-12 py-0 md:w-48" />
+          <SelectField
+            options={[
+              { value: '', label: 'تمام اسٹیٹس' },
+              { value: 'active', label: 'فعال' },
+              { value: 'inactive', label: 'غیر فعال' },
+            ]}
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="h-12 py-0 md:w-44"
+          />
+          <div className="relative w-full md:w-80">
+            <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="صارف تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
+          </div>
         </div>
       </div>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-right">
+          <table className="w-full min-w-[1080px] text-right">
             <thead>
               <tr className="text-[var(--color-text-muted)]">
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">نام</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">صارف نام</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">صارف کا کردار</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ای میل</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">فون</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کردار</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">آخری لاگ اِن</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">صارفین لوڈ ہو رہے ہیں...</td></tr>
+                <tr><td colSpan="7" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">صارفین لوڈ ہو رہے ہیں...</td></tr>
               ) : users.length ? (
-                users.map((user) => (
-                  <tr key={user.id} className="border-t border-[var(--color-border)]/60">
-                    <td className="px-6 py-4">
-                      <div className="font-black text-[var(--color-text-main)]">{user.name}</div>
-                      <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{user.username}</td>
-                    <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{getRoleDisplayName(getRoleName(user))}</td>
-                    <td className="px-6 py-4">
-                      <span className={`rounded-xl px-3 py-1 text-xs font-black ${user.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
-                        {user.status === 'active' ? 'فعال' : 'غیر فعال'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-start gap-2">
-                        {hasPermission('users.view') ? (
-                          <button type="button" onClick={() => navigate(`/role-management/users/${user.id}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="دیکھیں">
-                            <Eye size={16} />
-                          </button>
-                        ) : null}
-                        {canManageUsers ? (
-                          <button type="button" onClick={() => navigate(`/role-management/users/${user.id}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="ترمیم کریں">
-                            <Edit2 size={16} />
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                users.map((user) => {
+                  const active = getUserStatus(user) === 'active';
+
+                  return (
+                    <tr key={user.id} className="border-t border-[var(--color-border)]/60">
+                      <td className="px-6 py-4">
+                        <div className="font-black text-[var(--color-text-main)]">{user.name}</div>
+                        <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{user.username}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{user.email}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]" dir="ltr">{getUserPhone(user)}</td>
+                      <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{getRoleDisplayName(getRoleName(user))}</td>
+                      <td className="px-6 py-4">
+                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${active ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
+                          {active ? 'فعال' : 'غیر فعال'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatDate(user.lastLoginAt || user.last_login_at || user.lastLogin || user.last_login)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-start gap-2">
+                          {hasPermission('users.view') ? (
+                            <button type="button" onClick={() => navigate(`/role-management/users/${user.id}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="دیکھیں">
+                              <Eye size={16} />
+                            </button>
+                          ) : null}
+                          {canManageUsers ? (
+                            <button type="button" onClick={() => navigate(`/role-management/users/${user.id}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="ترمیم کریں">
+                              <Edit2 size={16} />
+                            </button>
+                          ) : null}
+                          {canManageUsers ? (
+                            <button type="button" onClick={() => navigate(`/role-management/users/${user.id}/edit`)} className="rounded-xl bg-[var(--color-primary)]/10 p-2.5 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-white" title="کردار تبدیل کریں">
+                              <ShieldCheck size={16} />
+                            </button>
+                          ) : null}
+                          {canManageUsers && active && !isSuperAdminUser(user) ? (
+                            <button type="button" onClick={() => setDeactivateTarget(user)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white" title="غیر فعال کریں">
+                              <Trash2 size={16} />
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
-                <tr><td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">ابھی تک کوئی صارف موجود نہیں۔</td></tr>
+                <tr><td colSpan="7" className="px-6 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی صارف موجود نہیں۔ سرچ یا فلٹر تبدیل کریں۔</td></tr>
               )}
             </tbody>
           </table>
@@ -551,6 +570,32 @@ export const UserManagement = () => {
       {mode === 'list' ? renderList() : null}
       {mode === 'create' || mode === 'edit' ? renderForm() : null}
       {mode === 'details' ? renderDetails() : null}
+
+      {deactivateTarget ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+            <div className="flex items-start justify-between gap-4">
+              <div className="text-right">
+                <h3 className="text-xl font-black text-[var(--color-text-main)]">صارف غیر فعال کرنے کی تصدیق</h3>
+                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                  کیا آپ واقعی <span className="text-rose-500">{deactivateTarget.name}</span> کو غیر فعال کرنا چاہتے ہیں؟
+                </p>
+              </div>
+              <button type="button" onClick={() => !isDeactivating && setDeactivateTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-8 flex justify-end gap-3">
+              <button type="button" onClick={() => setDeactivateTarget(null)} disabled={isDeactivating} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60">
+                منسوخ کریں
+              </button>
+              <button type="button" onClick={handleDeactivateUser} disabled={isDeactivating} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
+                {isDeactivating ? 'غیر فعال ہو رہا ہے...' : 'غیر فعال کریں'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

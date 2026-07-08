@@ -45,3 +45,12 @@ export const updateUser = async (id, payload) => {
   });
   return result?.data;
 };
+
+export const assignUserRole = async (id, roleId) => {
+  const result = await apiRequest(`/users/${id}/role`, {
+    ...withToken({ method: 'PATCH' }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roleId }),
+  });
+  return result?.data;
+};

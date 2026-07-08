@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Briefcase, Camera, ChevronLeft, ChevronRight, GraduationCap, Save, User, UserPlus, Wallet } from 'lucide-react';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { createTeacher, getTeacherById, updateTeacher } from '../../Constant/TeachersApi';
@@ -303,7 +303,7 @@ export const HRManagement = () => {
               disabled={isSaving}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-7 text-md font-black text-white disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <Save size={18} /> {isSaving ? 'محفوظ ہو رہا ہے...' : teacherId ? 'ریکارڈ اپڈیٹ کریں' : 'ریکارڈ محفوظ کریں'}
+              <Save size={18} /> {isSaving ? 'محفوظ ہو رہا ہے...' : teacherId ? 'ریکارڈ تبدیل کریں' : 'ریکارڈ محفوظ کریں'}
             </button>
           </div>
         </div>
