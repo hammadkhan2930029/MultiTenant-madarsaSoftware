@@ -155,6 +155,37 @@ export const StudentList = () => {
         loadStudents();
     }, []);
 
+    useEffect(() => {
+        let isCurrentSearch = true;
+        const searchQuery = searchTerm.trim();
+
+        const loadSearchResults = async () => {
+            setIsLoading(true);
+            setError('');
+
+            try {
+                const result = await getStudents(`page=1&limit=100&status=active${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
+                if (!isCurrentSearch) return;
+                const items = result.items || [];
+                setStudentRecords(items);
+                setStudents(mapStudentsForList(items));
+            } catch (loadError) {
+                if (!isCurrentSearch) return;
+                setError(loadError.message || 'Ø·Ù„Ø¨Û Ú©ÛŒ ÙÛØ±Ø³Øª Ù„ÙˆÚˆ Ù†ÛÛŒÚº ÛÙˆ Ø³Ú©ÛŒÛ”');
+            } finally {
+                if (!isCurrentSearch) return;
+                setIsLoading(false);
+            }
+        };
+
+        const timeoutId = window.setTimeout(loadSearchResults, searchQuery ? 250 : 0);
+
+        return () => {
+            isCurrentSearch = false;
+            window.clearTimeout(timeoutId);
+        };
+    }, [searchTerm]);
+
     const handleDelete = async () => {
         if (!deleteTarget) return;
 
@@ -178,7 +209,7 @@ export const StudentList = () => {
     const filteredStudents = useMemo(
         () =>
             students.filter((student) =>
-                [student.name, student.idNo, student.familyNo]
+                [student.name, student.idNo, student.fatherName, student.familyNo]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),

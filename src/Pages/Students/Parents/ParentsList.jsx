@@ -2,7 +2,7 @@
 import { Eye, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InputField } from '../../../Components/HR/FormElements';
-import { createParent, deactivateParent, getParents, updateParent } from '../../../Constant/StudentsApi';
+import { createParent, deleteParent, getParents, updateParent } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 
@@ -83,7 +83,18 @@ export const ParentsList = () => {
             const result = await getParents('page=1&limit=100');
             setParents(result.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'والدین کی فہرست لوڈ نہیں ہو سکی۔');
+            const loadMessage = loadError?.message || '';
+            const isEmptyParentsList =
+                loadError?.statusCode === 404 ||
+                loadMessage.includes('مطلوبہ ریکارڈ نہیں ملا') ||
+                /parent.*not found/i.test(loadMessage);
+
+            if (isEmptyParentsList) {
+                setParents([]);
+                return;
+            }
+
+            setError(loadMessage || 'سرپرست کی فہرست لوڈ نہیں ہو سکی۔');
         }
     }, []);
 
@@ -118,19 +129,34 @@ export const ParentsList = () => {
         setError('');
         setSuccess('');
 
+        if (!formValues.fullName.trim()) {
+            setError('سرپرست کا نام درج کرنا ضروری ہے۔');
+            return;
+        }
+
+        if (!formValues.phone.trim()) {
+            setError('فون نمبر درج کرنا ضروری ہے۔');
+            return;
+        }
+
+        if (!formValues.address.trim()) {
+            setError('پتہ درج کرنا ضروری ہے۔');
+            return;
+        }
+
         try {
             if (editingParentId) {
                 await updateParent(editingParentId, formValues);
-                setSuccess('والدین کی معلومات اپڈیٹ ہو گئیں۔');
+                setSuccess('سرپرست کی معلومات تبدیل ہو گئیں۔');
             } else {
                 await createParent(formValues);
-                setSuccess('والدین کی معلومات شامل ہو گئیں۔');
+                setSuccess('سرپرست کی معلومات شامل ہو گئیں۔');
             }
 
             resetForm();
             await loadParents();
         } catch (saveError) {
-            setError(saveError.message || 'والدین کی معلومات محفوظ نہیں ہو سکیں۔');
+            setError(saveError.message || 'سرپرست کی معلومات محفوظ نہیں ہو سکیں۔');
         }
     };
 
@@ -149,14 +175,14 @@ export const ParentsList = () => {
 
     const handleDelete = async (parentId) => {
         try {
-            await deactivateParent(parentId);
+            await deleteParent(parentId);
             if (editingParentId === parentId) {
                 resetForm();
             }
-            setSuccess('والدین کا ریکارڈ غیر فعال کر دیا گیا۔');
+            setSuccess('سرپرست کا ریکارڈ حذف کر دیا گیا۔');
             await loadParents();
         } catch (deleteError) {
-            setError(deleteError.message || 'والدین کا ریکارڈ غیر فعال نہیں ہو سکا۔');
+            setError(deleteError.message || 'سرپرست کا ریکارڈ حذف نہیں ہو سکا۔');
         }
     };
 
@@ -200,16 +226,16 @@ export const ParentsList = () => {
                             <div className="rounded-2xl bg-[var(--color-primary)]/10 p-3 text-[var(--color-primary)]">
                                 <Users size={26} />
                             </div>
-                            والدین کی فہرست
+                            سرپرست
                         </h2>
                         <p className="mr-14 mt-2 text-sm font-bold text-[var(--color-text-muted)]">کل اندراجات: {filteredParents.length}</p>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-5 md:p-6">
+                <form noValidate onSubmit={handleSubmit} className="space-y-5 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-5 md:p-6">
                     <div className="flex items-center justify-between gap-4">
                         <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">
-                            {editingParentId ? 'والدین کی تفصیل تبدیل کریں' : 'والدین شامل کریں'}
+                            {editingParentId ? 'سرپرست کی تفصیل تبدیل کریں' : 'سرپرست شامل کریں'}
                         </h3>
                         <div className="flex items-center gap-3">
                             {editingParentId ? (
@@ -224,8 +250,8 @@ export const ParentsList = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        <InputField label="والدین کا نام" required value={formValues.fullName} onChange={(event) => handleChange('fullName', event.target.value)} placeholder="نام درج کریں" />
-                        <InputField label="فون نمبر" value={formValues.phone} onChange={(event) => handleChange('phone', event.target.value)} placeholder="0300-0000000" />
+                        <InputField label="سرپرست کا نام" required value={formValues.fullName} onChange={(event) => handleChange('fullName', event.target.value)} placeholder="نام درج کریں" />
+                        <InputField label="فون نمبر" required value={formValues.phone} onChange={(event) => handleChange('phone', event.target.value)} placeholder="0300-0000000" />
                         <InputField
                             label="پیشہ"
                             value={formValues.occupation}
@@ -235,20 +261,21 @@ export const ParentsList = () => {
                         />
                         <InputField
                             label="پتہ"
+                            required
                             value={formValues.address}
                             onChange={(event) => handleChange('address', event.target.value)}
                             placeholder="گھر کا پتہ درج کریں"
                             className="min-h-[68px] py-3 leading-[2.5]"
                         />
                         <InputField label="ای میل" value={formValues.email} onChange={(event) => handleChange('email', event.target.value)} placeholder="example@email.com" />
-                        <InputField label="ID" value={formValues.cnic} onChange={(event) => handleChange('cnic', event.target.value)} placeholder="42101-1234567-1" />
+                        <InputField label="آئی ڈی" value={formValues.cnic} onChange={(event) => handleChange('cnic', event.target.value)} placeholder="42101-1234567-1" />
                     </div>
                 </form>
             </div>
 
             <div className="overflow-hidden rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.08)]">
                 <div className="flex flex-col items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-5 md:flex-row md:items-center md:px-8">
-                    <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">والدین کی فہرست</h3>
+                    <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">سرپرست</h3>
                     <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
                         <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="parents-complete-list" className="w-full md:w-auto" />
                         <div className="group relative w-full md:w-96">
@@ -257,7 +284,7 @@ export const ParentsList = () => {
                                 type="text"
                                 value={searchTerm}
                                 onChange={(event) => setSearchTerm(event.target.value)}
-                                placeholder="والدین، فیملی نمبر یا فون نمبر سے تلاش کریں..."
+                                placeholder="سرپرست کا نام، فیملی نمبر یا فون نمبر سے تلاش کریں..."
                                 className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] py-4 pr-14 pl-6 text-sm font-bold text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]/50"
                             />
                         </div>
@@ -268,7 +295,7 @@ export const ParentsList = () => {
                     <table className="w-full min-w-[1200px] text-right">
                         <thead className="border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                             <tr>
-                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">والدین</th>
+                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سرپرست</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فیملی نمبر</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فون نمبر</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پیشہ</th>

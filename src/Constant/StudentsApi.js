@@ -115,3 +115,8 @@ export const deactivateParent = async (id) => {
   const result = await apiRequest(`/parents/${id}/deactivate`, withToken({ method: 'PATCH' }));
   return result?.data;
 };
+
+export const deleteParent = async (id) => {
+  const result = await apiRequest(`/parents/${id}`, withToken({ method: 'DELETE' }));
+  return result?.data;
+};

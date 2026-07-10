@@ -14,6 +14,8 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://appapi.madrasasoftware.com/api';
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://demoapi.madrasasoftware.com/api';
+
 
 const AUTH_KEY = 'madarsa_admin_auth';
 const SESSION_EXPIRED_MESSAGE_KEY = 'madarsa_session_expired_message';

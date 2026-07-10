@@ -39,7 +39,7 @@ export const ParentProfile = () => {
     }
 
     if (!parent) {
-        return <div className="max-w-5xl mx-auto p-6 font-bold text-[var(--color-text-muted)]">Profile load ho raha hai...</div>;
+        return <div className="max-w-5xl mx-auto p-6 font-bold text-[var(--color-text-muted)]">پروفائل لوڈ ہورہی ہے....</div>;
     }
 
     return (
@@ -53,7 +53,7 @@ export const ParentProfile = () => {
                     <div className="w-full min-w-0 flex-1 space-y-4 text-center md:text-right">
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div className="min-w-0">
-                                <p className="text-[11px] font-black uppercase tracking-[0.25em] text-[var(--color-text-muted)]">Parent Profile</p>
+                                <p className="text-[11px] font-black text-[var(--color-text-muted)]">سرپرست کی پروفائل</p>
                                 <h1 className="mt-2 break-words py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {parent.fullName}
                                 </h1>

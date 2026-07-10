@@ -287,7 +287,7 @@ export const SideBar = () => {
             label: 'طلباء',
             icon: GraduationCap,
             subMenu: [
-                { id: 'std_parents', label: 'والدین', path: '/students/parents' },
+                { id: 'std_parents', label: 'سرپرست', path: '/students/parents' },
                 { id: 'std_admission', label: 'داخلہ فارم', path: '/students/admission' },
                 { id: 'std_list', label: 'طلباء کی فہرست', path: '/students/list' },
                 { id: 'std_id_card', label: 'آئی ڈی کارڈ بنائیں', path: '/students/create-id-card' },
@@ -507,7 +507,7 @@ export const SideBar = () => {
         para_entry: 'پارہ جائزے کا اندراج',
         para_list: 'پارہ جائزے کی فہرست',
         students: 'طلباء',
-        std_parents: 'والدین',
+        std_parents: 'سرپرست',
         std_admission: 'داخلہ فارم',
         std_list: 'طلباء کی فہرست',
         std_id_card: 'آئی ڈی کارڈ بنائیں',

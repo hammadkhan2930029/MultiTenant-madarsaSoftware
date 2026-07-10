@@ -68,6 +68,7 @@ const mapStudentForCard = (student, madrassaProfile) => {
         address: student.address || madrassaProfile?.address || '',
         image: getStudentImage(student),
         madrassaName: madrassaProfile?.name || 'جامعہ انوار القرآن',
+        madrassaLogo: madrassaProfile?.logoUrl ? getApiAssetUrl(madrassaProfile.logoUrl) : AppImages.logo,
     };
 };
 
@@ -95,7 +96,7 @@ export const CreateIdCard = () => {
 
             try {
                 const [studentsResult, profileResult] = await Promise.all([
-                    getStudents('page=1&limit=1000'),
+                    getStudents('page=1&limit=100'),
                     fetchMadrassaProfile().catch(() => getAdminSession()?.madrassaProfile || null),
                 ]);
 
@@ -211,7 +212,6 @@ export const CreateIdCard = () => {
                         <div className="relative">
                             <input
                                 type="text"
-                                required
                                 value={searchId}
                                 onChange={(event) => {
                                     setSearchId(event.target.value);
@@ -230,7 +230,7 @@ export const CreateIdCard = () => {
                                     }
                                 }}
                                 className="w-full bg-[var(--color-input)] border-2 border-[var(--color-border)] focus:border-[var(--color-primary)] p-3.5 pl-11 rounded-xl outline-none font-bold text-[var(--color-text-main)] transition-all"
-                                placeholder={loading || isSearching ? 'Students search ho rahe hain...' : '0001 یا طالب علم کا نام'}
+                                placeholder={loading || isSearching ? 'طلبہ تلاش ہو رہے ہیں...' : '0001 یا طالب علم کا نام'}
                             />
                             <Search size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)]" />
                         </div>
@@ -367,7 +367,7 @@ const HorizontalCard = ({ data }) => (
         <div className="bg-[#002a33] p-2 flex items-center justify-between border-b-2 border-[#00d094]">
             <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-white rounded-lg p-1 shadow-inner">
-                    <img src={AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
+                    <img src={data.madrassaLogo || AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
                 </div>
                 <div>
                     <h2 className="id-card-header-title text-white font-black">{data.madrassaName}</h2>
@@ -407,7 +407,7 @@ const VerticalCard = ({ data }) => (
     <div style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }} className="w-[280px] h-[470px] bg-white rounded-xl shadow-2xl border border-gray-300 overflow-hidden flex flex-col text-black font-sans print:shadow-none print:border-gray-400">
         <div className="bg-[#002a33] pt-3 pb-14 px-4 text-center">
             <div className="w-11 h-11 bg-white rounded-lg p-2 mx-auto">
-                <img src={AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
+                <img src={data.madrassaLogo || AppImages.logo} className="w-full h-full object-contain" alt="Logo" />
             </div>
             <h2 className="text-white text-lg font-bold leading-tight mt-2">{data.madrassaName}</h2>
         </div>

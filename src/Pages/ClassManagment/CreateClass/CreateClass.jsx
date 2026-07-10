@@ -182,7 +182,7 @@ export const CreateClasses = () => {
                 <div ref={formRef} className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span className='text-3xl'>{editMode ? 'جماعت اپڈیٹ کریں' : 'نئی جماعت کا اندراج'}</span>
+                        <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نئی جماعت کا اندراج'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

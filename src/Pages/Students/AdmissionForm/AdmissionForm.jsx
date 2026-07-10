@@ -41,8 +41,9 @@ const INITIAL_VALUES = {
     mobile: '',
     whatsapp: '',
     guardianName: '',
-    relation: 'father',
+    relation: '',
     guardianMobile: '',
+    guardianWhatsapp: '',
     guardianEmail: '',
     guardianCnic: '',
     prevMadrassa: '',
@@ -59,6 +60,7 @@ const INITIAL_VALUES = {
 };
 
 const DEFAULT_ADMISSION_NUMBER = '0001';
+const MIN_PARENT_SEARCH_LENGTH = 1;
 
 const parseAdmissionNumber = (value) => {
     const text = String(value || '').trim();
@@ -161,11 +163,12 @@ const mapStudentToFormValues = (student) => {
         permanentAddress: student?.permanentAddress || '',
         district: student?.district || '',
         fatherOccupation: primaryParent.occupation || '',
-        mobile: student?.phone || primaryParent.phone || '',
+        mobile: student?.phone || '',
         whatsapp: student?.whatsapp || '',
         guardianName: guardian.fullName || '',
-        relation: guardianLink.relationship || primaryParentLink.relationship || 'father',
+        relation: guardianLink.relationship || primaryParentLink.relationship || '',
         guardianMobile: guardian.phone || '',
+        guardianWhatsapp: guardian.whatsapp || '',
         guardianEmail: guardian.email || '',
         guardianCnic: guardian.cnic || '',
         prevMadrassa: student?.prevMadrassa || '',
@@ -202,7 +205,9 @@ export const AdmissionForm = () => {
     const [isParentSearching, setIsParentSearching] = useState(false);
     const [parentSearchError, setParentSearchError] = useState('');
     const [selectedParentId, setSelectedParentId] = useState(null);
+    const [selectedParentName, setSelectedParentName] = useState('');
     const [isParentDropdownOpen, setIsParentDropdownOpen] = useState(false);
+    const parentSearchContainerRef = React.useRef(null);
 
     const [classOptions, setClassOptions] = useState([]);
     const [sectionOptions, setSectionOptions] = useState([]);
@@ -214,6 +219,20 @@ export const AdmissionForm = () => {
 
     useEffect(() => {
         window.scrollTo(0, 0);
+    }, []);
+
+    useEffect(() => {
+        const handlePointerDown = (event) => {
+            if (!parentSearchContainerRef.current?.contains(event.target)) {
+                setIsParentDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handlePointerDown);
+
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+        };
     }, []);
 
     useEffect(() => {
@@ -269,6 +288,7 @@ export const AdmissionForm = () => {
 
                 setInitialFormValues(nextValues);
                 setSelectedParentId(primaryParentLink?.parent?.id || null);
+                setSelectedParentName(primaryParentLink?.parent?.fullName || '');
                 setParentSearch(primaryParentLink?.parent?.fullName || '');
                 setImagePreview(student?.imageUrl ? getApiAssetUrl(student.imageUrl) : null);
             } catch (error) {
@@ -336,8 +356,9 @@ export const AdmissionForm = () => {
 
     useEffect(() => {
         const trimmedQuery = parentSearch.trim();
+        const selectedName = selectedParentName.trim();
 
-        if (trimmedQuery.length < 2) {
+        if (selectedParentId && selectedName && trimmedQuery === selectedName) {
             setParentResults([]);
             setIsParentSearching(false);
             setParentSearchError('');
@@ -345,25 +366,41 @@ export const AdmissionForm = () => {
             return undefined;
         }
 
+        if (trimmedQuery.length < MIN_PARENT_SEARCH_LENGTH) {
+            setParentResults([]);
+            setIsParentSearching(false);
+            setParentSearchError('');
+            setIsParentDropdownOpen(false);
+            return undefined;
+        }
+
+        let isCurrentSearch = true;
+
         const timeoutId = setTimeout(async () => {
             setIsParentSearching(true);
             setParentSearchError('');
 
             try {
                 const response = await getParents(`search=${encodeURIComponent(trimmedQuery)}&limit=6&status=active`);
+                if (!isCurrentSearch) return;
                 setParentResults(response?.items || []);
                 setIsParentDropdownOpen(true);
             } catch (error) {
+                if (!isCurrentSearch) return;
                 setParentResults([]);
                 setIsParentDropdownOpen(true);
                 setParentSearchError(error.message || 'والدین کا ریکارڈ حاصل نہیں ہو سکا۔');
             } finally {
+                if (!isCurrentSearch) return;
                 setIsParentSearching(false);
             }
         }, 350);
 
-        return () => clearTimeout(timeoutId);
-    }, [parentSearch]);
+        return () => {
+            isCurrentSearch = false;
+            clearTimeout(timeoutId);
+        };
+    }, [parentSearch, selectedParentId, selectedParentName]);
 
     const filteredJamaatOptions = useMemo(
         () =>
@@ -379,23 +416,22 @@ export const AdmissionForm = () => {
 
     const handleParentSelect = (parent, setFieldValue) => {
         setSelectedParentId(parent.id);
+        setSelectedParentName(parent.fullName || '');
         setParentSearch(parent.fullName || '');
         setParentResults([]);
         setIsParentDropdownOpen(false);
 
         setFieldValue('fatherName', parent.fullName || '');
-        setFieldValue('mobile', parent.phone || '');
         setFieldValue('guardianName', parent.fullName || '');
         setFieldValue('guardianMobile', parent.phone || '');
+        setFieldValue('guardianWhatsapp', parent.whatsapp || '');
         setFieldValue('guardianEmail', parent.email || '');
         setFieldValue('guardianCnic', parent.cnic || '');
-        setFieldValue('cnic', parent.cnic || '');
         setFieldValue('fatherOccupation', parent.occupation || '');
         setFieldValue('currentAddress', parent.address || '');
         setFieldValue('permanentAddress', parent.address || '');
 
-        const primaryStudentLink = parent.students?.find((studentLink) => studentLink?.isPrimary);
-        setFieldValue('relation', primaryStudentLink?.relationship || 'father');
+        setFieldValue('relation', '');
     };
 
     const handleFormSubmit = async (values, { setSubmitting, resetForm }) => {
@@ -422,8 +458,10 @@ export const AdmissionForm = () => {
                     fullName: submittedValues.fatherName,
                     relationship: guardianIsFather ? guardianRelation : 'father',
                     isPrimary: true,
-                    phone: submittedValues.mobile,
-                    cnic: submittedValues.cnic,
+                    phone: selectedParentId ? submittedValues.guardianMobile : submittedValues.mobile,
+                    whatsapp: selectedParentId ? submittedValues.guardianWhatsapp : submittedValues.whatsapp,
+                    email: selectedParentId ? submittedValues.guardianEmail : undefined,
+                    cnic: selectedParentId ? submittedValues.guardianCnic : submittedValues.cnic,
                     occupation: submittedValues.fatherOccupation,
                     address: submittedValues.currentAddress,
                 });
@@ -436,6 +474,7 @@ export const AdmissionForm = () => {
                     relationship: guardianRelation,
                     isPrimary: false,
                     phone: submittedValues.guardianMobile,
+                    whatsapp: submittedValues.guardianWhatsapp,
                     email: submittedValues.guardianEmail,
                     cnic: submittedValues.guardianCnic,
                     address: submittedValues.currentAddress,
@@ -502,6 +541,7 @@ export const AdmissionForm = () => {
                 setParentSearch('');
                 setParentResults([]);
                 setSelectedParentId(null);
+                setSelectedParentName('');
                 setSelectedRequiredClassId(null);
                 setIsParentDropdownOpen(false);
             }
@@ -531,13 +571,14 @@ export const AdmissionForm = () => {
                     const printValues = savedPrintValues || values;
                     const printImagePreview = savedPrintImagePreview || imagePreview;
                     const madrassaName = madrassaProfile?.name?.trim() || 'جامعہ انوار القرآن';
+                    const madrassaLogo = madrassaProfile?.logoUrl ? getApiAssetUrl(madrassaProfile.logoUrl) : AppImages.logo;
 
                     return (
                     <>
                         <Form className="admission-form print:hidden space-y-8 pb-10">
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
                                 <div className="bg-[#002a33] p-8 text-center text-white">
-                                    <h2 className="text-3xl font-bold">طالب علم رجسٹریشن فارم</h2>
+                                    <h2 className="text-3xl font-bold">طالب علم داخلہ فارم</h2>
                                     <p className="text-sm text-emerald-400 mt-2">{madrassaName}</p>
                                 </div>
 
@@ -576,7 +617,7 @@ export const AdmissionForm = () => {
                                     </div>
 
                                     <div className="flex flex-row justify-end items-start">
-                                        <div className="flex h-16 w-full max-w-xl flex-row items-stretch overflow-visible rounded-2xl border-2 border-slate-100 bg-white shadow-sm transition-all hover:border-emerald-400">
+                                        <div ref={parentSearchContainerRef} className="flex h-16 w-full max-w-xl flex-row items-stretch overflow-visible rounded-2xl border-2 border-slate-100 bg-white shadow-sm transition-all hover:border-emerald-400">
                                             <div className="flex w-20 shrink-0 items-center justify-center rounded-r-2xl bg-[#00d094] text-[#002a33] transition-colors hover:bg-[#00b37e]">
                                                 <Search size={22} strokeWidth={2.5} className="group-hover:text-white" />
                                             </div>
@@ -586,19 +627,23 @@ export const AdmissionForm = () => {
                                                     value={parentSearch}
                                                     onChange={(event) => {
                                                         setSelectedParentId(null);
+                                                        setSelectedParentName('');
                                                         setParentSearch(event.target.value);
-                                                        setIsParentDropdownOpen(Boolean(event.target.value.trim()));
+                                                        setIsParentDropdownOpen(event.target.value.trim().length >= MIN_PARENT_SEARCH_LENGTH);
                                                     }}
                                                     onFocus={() => {
-                                                        if (parentSearch.trim().length >= 2) {
+                                                        if (
+                                                            parentSearch.trim().length >= MIN_PARENT_SEARCH_LENGTH &&
+                                                            parentSearch.trim() !== selectedParentName.trim()
+                                                        ) {
                                                             setIsParentDropdownOpen(true);
                                                         }
                                                     }}
-                                                    placeholder="والدین تلاش کریں..."
+                                                    placeholder="سرپرست کو تلاش کریں..."
                                                     className="h-full w-full rounded-l-2xl bg-slate-50 px-5 text-right text-lg font-medium leading-normal text-[#002a33] outline-none placeholder:text-slate-400 focus:bg-white"
                                                     dir="rtl"
                                                 />
-                                                {isParentDropdownOpen && parentSearch.trim().length >= 2 ? (
+                                                {isParentDropdownOpen && parentSearch.trim().length >= MIN_PARENT_SEARCH_LENGTH ? (
                                                     <div className="absolute top-full right-0 left-0 mt-2 rounded-2xl border border-slate-200 bg-white shadow-2xl z-20 overflow-hidden">
                                                         {isParentSearching ? (
                                                             <div className="px-4 py-3 text-sm text-slate-500 text-right">والدین کا ریکارڈ تلاش کیا جا رہا ہے...</div>
@@ -652,7 +697,7 @@ export const AdmissionForm = () => {
                                                 ]}
                                             />
                                             <FormikInputField label="قومیت / ذات" name="caste" />
-                                            <FormikInputField label="شناختی کارڈ نمبر" name="cnic" />
+                                            <FormikInputField label="آئی ڈی نمبر" name="cnic" />
                                             <FormikInputField label="بے فارم نمبر" name="bForm" />
                                             <FormikInputField label="تاریخ پیدائش" name="dob" type="date" />
                                         </div>
@@ -677,7 +722,6 @@ export const AdmissionForm = () => {
                                                 name="district"
                                                 className="admission-urdu-input"
                                             />
-                                            <FormikInputField label="والد کا پیشہ" name="fatherOccupation" />
                                             <FormikInputField label="موبائل نمبر" name="mobile" />
                                             <FormikInputField label="واٹس ایپ" name="whatsapp" />
                                         </div>
@@ -688,7 +732,9 @@ export const AdmissionForm = () => {
                                             <FormikInputField label="نام سرپرست" name="guardianName" />
                                             <FormikInputField label="رشتہ" name="relation" />
                                             <FormikInputField label="سرپرست موبائل" name="guardianMobile" />
-                                            <FormikInputField label="سرپرست CNIC" name="guardianCnic" />
+                                            <FormikInputField label="سرپرست واٹس ایپ" name="guardianWhatsapp" />
+                                            <FormikInputField label="سرپرست آئی ڈی نمبر" name="guardianCnic" />
+                                            <FormikInputField label="سرپرست کا پیشہ" name="fatherOccupation" />
                                             <FormikInputField label="ای میل" name="guardianEmail" />
                                         </div>
                                     </FormSection>
@@ -703,14 +749,14 @@ export const AdmissionForm = () => {
                                             <Field name="requiredClass">
                                                 {({ field, form }) => (
                                                     <SearchableSelectField
-                                                        label="مطلوبہ درجہ"
+                                                        label="جماعت"
                                                         value={field.value || ''}
                                                         options={classOptions.map((item) => ({
                                                             id: item.id,
                                                             label: item.name,
                                                             meta: '',
                                                         }))}
-                                                        placeholder="درجہ تلاش کریں"
+                                                        placeholder="جماعت تلاش کریں"
                                                         onChange={(nextValue) => form.setFieldValue('requiredClass', nextValue)}
                                                         onSelectOption={(option) => {
                                                             setSelectedRequiredClassId(option?.id || null);
@@ -724,10 +770,10 @@ export const AdmissionForm = () => {
                                             <Field name="requiredJamaat">
                                                 {({ field, form }) => (
                                                     <SearchableSelectField
-                                                        label="جماعت"
+                                                        label="سیکشن"
                                                         value={field.value || ''}
                                                         options={filteredJamaatOptions}
-                                                        placeholder="جماعت تلاش کریں"
+                                                        placeholder="سیکشن تلاش کریں"
                                                         onChange={(nextValue) => form.setFieldValue('requiredJamaat', nextValue)}
                                                         onSelectOption={(option) => form.setFieldValue('requiredJamaat', option?.label || '')}
                                                     />
@@ -766,7 +812,7 @@ export const AdmissionForm = () => {
                                         disabled={isSubmitting}
                                         className="w-full bg-[#00d094] hover:bg-[#00b37e] text-[#002a33] py-6 rounded-2xl font-black text-2xl transition-all shadow-xl flex items-center justify-center gap-4"
                                     >
-                                        <Save size={28} /> {isSubmitting ? 'محفوظ ہو رہا ہے...' : 'ڈیٹا محفوظ کریں'}
+                                        <Save size={28} /> {isSubmitting ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
                                     </button>
                                 </div>
                             </div>
@@ -810,7 +856,7 @@ export const AdmissionForm = () => {
                         <div className="admission-print-area hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }}>
                             <div className="absolute inset-0 flex items-center justify-center z-0" style={{ pointerEvents: 'none' }}>
                                 <img
-                                    src={AppImages.logo}
+                                    src={madrassaLogo}
                                     alt="Jamia Logo Watermark"
                                     className="w-[600px] h-[300px] -mt-40 object-contain"
                                     style={{ webkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
@@ -843,7 +889,7 @@ export const AdmissionForm = () => {
                                 <div className="space-y-6">
                                     <div className="flex gap-6">
                                         <PrintLine label="والد کا نام" value={printValues.fatherName} />
-                                        <PrintLine label="شناختی کارڈ نمبر" value={printValues.cnic} />
+                                        <PrintLine label="آئی ڈی نمبر" value={printValues.cnic} />
                                     </div>
                                     <div className="flex gap-6">
                                         <PrintLine label="بے فارم نمبر" value={printValues.bForm} />
@@ -864,7 +910,11 @@ export const AdmissionForm = () => {
                                         </div>
                                         <div className="flex gap-6">
                                             <PrintLine label="سرپرست موبائل" value={printValues.guardianMobile} />
-                                            <PrintLine label="سرپرست CNIC" value={printValues.guardianCnic} />
+                                            <PrintLine label="سرپرست واٹس ایپ" value={printValues.guardianWhatsapp} />
+                                        </div>
+                                        <div className="flex gap-6">
+                                            <PrintLine label="سرپرست آئی ڈی نمبر" value={printValues.guardianCnic} />
+                                            <PrintLine label="ای میل" value={printValues.guardianEmail} />
                                         </div>
                                     </div>
 
@@ -878,8 +928,8 @@ export const AdmissionForm = () => {
                                     </div>
 
                                     <div className="flex gap-6 bg-[#e5faf4]/80 shadow-sm p-3 rounded border border-[#00d094]/20">
-                                        <PrintLine label="مطلوبہ درجہ" value={printValues.requiredClass} />
-                                        <PrintLine label="جماعت" value={printValues.requiredJamaat} />
+                                        <PrintLine label="جماعت" value={printValues.requiredClass} />
+                                        <PrintLine label="سیکشن" value={printValues.requiredJamaat} />
                                         <PrintLine label="ماہانہ فیس" value={printValues.monthlyFee} />
                                     </div>
                                 </div>

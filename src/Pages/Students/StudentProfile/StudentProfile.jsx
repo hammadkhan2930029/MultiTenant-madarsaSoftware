@@ -11,6 +11,13 @@ const GENDER_LABELS = {
     other: 'دیگر',
 };
 
+const formatDate = (value) => {
+    if (!value) return '---';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString();
+};
+
 const InfoGrid = ({ items }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
@@ -85,7 +92,7 @@ export const StudentProfile = () => {
                     <div className="flex-1 text-center md:text-right space-y-3">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.25em]">Student Profile</p>
+                                <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.25em]">طالب علم کی پروفائل</p>
                                 <h1 className="mt-2 py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {student.fullName}
                                 </h1>
@@ -104,6 +111,8 @@ export const StudentProfile = () => {
 
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                             <InfoCard label="Admission No" value={student.admissionNumber} />
+                            <InfoCard label="تاریخ داخلہ" value={formatDate(student.admissionDate)} />
+                            <InfoCard label="داخلہ فیس" value={student.admissionFee} />
                             <InfoCard label="Class" value={activeAssignment?.class?.name || '---'} />
                             <InfoCard label="Section" value={activeAssignment?.section?.name || '---'} />
                         </div>
@@ -117,10 +126,15 @@ export const StudentProfile = () => {
                         { label: 'نام طالب علم', value: student.fullName },
                         { label: 'والد کا نام', value: student.fatherName },
                         { label: 'جنس', value: GENDER_LABELS[student.gender] || student.gender },
-                        { label: 'تاریخ پیدائش', value: student.dob ? new Date(student.dob).toLocaleDateString() : '---' },
-                        { label: 'فون', value: student.phone },
+                        { label: 'قومیت/ذات', value: student.caste },
+                        { label: 'تاریخ پیدائش', value: formatDate(student.dob) },
+                        { label: 'آئی ڈی نمبر', value: student.cnic },
+                        { label: 'طالب علم فون نمبر', value: student.phone },
+                        { label: 'طالب علم واٹس ایپ', value: student.whatsapp },
                         { label: 'ای میل', value: student.email },
-                        { label: 'پتہ', value: student.address },
+                        { label: 'حالیہ پتہ', value: student.currentAddress || student.address },
+                        { label: 'مستقل پتہ', value: student.permanentAddress },
+                        { label: 'رہائشی (ہاں/نہیں)', value: student.reside },
                         { label: 'اسٹیٹس', value: student.status },
                     ]}
                 />
@@ -132,7 +146,14 @@ export const StudentProfile = () => {
                         { label: 'کلاس', value: activeAssignment?.class?.name || '---' },
                         { label: 'سیکشن', value: activeAssignment?.section?.name || '---' },
                         { label: 'سیشن', value: activeAssignment?.session?.name || '---' },
-                        { label: 'Assigned At', value: activeAssignment?.assignedAt ? new Date(activeAssignment.assignedAt).toLocaleDateString() : '---' },
+                        { label: 'تاریخ داخلہ', value: formatDate(student.admissionDate) },
+                        { label: 'داخلہ فیس', value: student.admissionFee },
+                        { label: 'دینی تعلیم', value: student.religiousEdu },
+                        { label: 'عصری تعلیم', value: student.secularEdu },
+                        { label: 'سابقہ مدرسہ', value: student.prevMadrassa },
+                        { label: 'سابقہ اسکول', value: student.prevSchool },
+                        { label: 'بیماری (اگر ہے)', value: student.medicalCondition },
+                        { label: 'Assigned At', value: formatDate(activeAssignment?.assignedAt) },
                     ]}
                 />
             </SectionCard>
@@ -148,7 +169,10 @@ export const StudentProfile = () => {
                                 </span>
                             </div>
                             <p className="mt-4 text-sm font-bold text-[var(--color-text-main)] flex items-center gap-2">
-                                <Phone size={14} className="text-[var(--color-primary)]" /> {parentItem.parent?.phone || '---'}
+                                <Phone size={14} className="text-[var(--color-primary)]" /> سرپرست فون نمبر: {parentItem.parent?.phone || '---'}
+                            </p>
+                            <p className="mt-2 text-sm font-bold text-[var(--color-text-main)] flex items-center gap-2">
+                                <Phone size={14} className="text-[var(--color-primary)]" /> سرپرست واٹس ایپ: {parentItem.parent?.whatsapp || '---'}
                             </p>
                         </div>
                     ))}
