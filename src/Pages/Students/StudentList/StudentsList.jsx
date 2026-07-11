@@ -405,7 +405,7 @@ export const StudentList = () => {
                                 </td>
                                 <td className="p-6">
                                     <div className="font-black text-[var(--color-text)] text-base">{student.name}</div>
-                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">ولدیت: {student.fatherName} | فون: {student.familyNo}</div>
+                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">ولدیت: {student.fatherName} </div>
                                 </td>
                                 <td className="p-6">
                                     <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">

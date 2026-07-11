@@ -64,6 +64,7 @@ export const TeachersScheduleManager = () => {
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -166,14 +167,17 @@ export const TeachersScheduleManager = () => {
         }
     };
 
-    const handleDeleteSchedule = async (id) => {
-        setRemovingScheduleId(id);
+    const handleDeleteSchedule = async () => {
+        if (!deleteTarget) return;
+
+        setRemovingScheduleId(deleteTarget.id);
         setError('');
         setSuccess('');
 
         try {
-            await deleteTeacherSchedule(id);
-            setSchedules((current) => current.filter((schedule) => schedule.id !== id));
+            await deleteTeacherSchedule(deleteTarget.id);
+            setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            setDeleteTarget(null);
             setSuccess('استاد کا شیڈول ختم کر دیا گیا۔');
         } catch (deleteError) {
             setError(deleteError.message || 'استاد کا شیڈول ختم نہیں ہو سکا۔');
@@ -376,7 +380,7 @@ export const TeachersScheduleManager = () => {
 
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     {groupedSchedules[groupName].map((item) => (
-                                        <ScheduleRow key={item.id} item={item} removingScheduleId={removingScheduleId} onDelete={handleDeleteSchedule} />
+                                        <ScheduleRow key={item.id} item={item} removingScheduleId={removingScheduleId} onDelete={setDeleteTarget} />
                                     ))}
                                 </div>
                             </div>
@@ -410,7 +414,7 @@ export const TeachersScheduleManager = () => {
                                                         </span>
                                                     ))}
                                                 </div>
-                                                <button onClick={() => handleDeleteSchedule(period.id)} disabled={removingScheduleId === period.id} className="opacity-0 group-hover:opacity-100 text-red-500 transition-all p-1 disabled:cursor-not-allowed disabled:opacity-50">
+                                                <button onClick={() => setDeleteTarget(period)} disabled={removingScheduleId === period.id} className="opacity-0 group-hover:opacity-100 text-red-500 transition-all p-1 disabled:cursor-not-allowed disabled:opacity-50">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -431,6 +435,15 @@ export const TeachersScheduleManager = () => {
                     <p className="text-sm mt-5">اوپر دیے گئے فارم سے نیا شیڈول بنانا شروع کریں</p>
                 </div>
             )}
+
+            {deleteTarget ? (
+                <DeleteScheduleModal
+                    schedule={deleteTarget}
+                    isDeleting={removingScheduleId === deleteTarget.id}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDeleteSchedule}
+                />
+            ) : null}
         </div>
     );
 };
@@ -473,9 +486,36 @@ const ScheduleRow = ({ item, removingScheduleId, onDelete }) => (
 
         <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto border-t sm:border-t-0 border-[var(--color-border)]/5 pt-3 sm:pt-0 gap-2">
             <TimeBadge startTime={item.startTime} endTime={item.endTime} />
-            <button onClick={() => onDelete(item.id)} disabled={removingScheduleId === item.id} className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={() => onDelete(item)} disabled={removingScheduleId === item.id} className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50">
                 <Trash2 size={20} className="md:w-6 md:h-6" />
             </button>
+        </div>
+    </div>
+);
+
+const DeleteScheduleModal = ({ schedule, isDeleting, onClose, onConfirm }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+        <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-xl font-black text-[var(--color-text)]">شیڈول حذف کرنے کی تصدیق</h3>
+                    <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                        کیا آپ واقعی <span className="text-rose-500">{schedule.teacher || schedule.className || 'یہ شیڈول'}</span> کو حذف کرنا چاہتے ہیں؟
+                    </p>
+                </div>
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                    <Trash2 size={22} />
+                </div>
+            </div>
+
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                <button type="button" onClick={onClose} disabled={isDeleting} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70">
+                    منسوخ
+                </button>
+                <button type="button" onClick={onConfirm} disabled={isDeleting} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
+                    {isDeleting ? 'حذف ہو رہا ہے...' : 'تصدیق کریں'}
+                </button>
+            </div>
         </div>
     </div>
 );

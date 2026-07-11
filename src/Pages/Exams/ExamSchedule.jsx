@@ -97,6 +97,7 @@ export const ExamSchedule = () => {
     const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const [editingId, setEditingId] = useState(null);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
@@ -239,13 +240,16 @@ export const ExamSchedule = () => {
         setError('');
     };
 
-    const handleDelete = async (id) => {
-        setDeletingId(id);
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+
+        setDeletingId(deleteTarget.id);
         setMessage('');
         setError('');
         try {
-            await deleteExamSchedule(id);
-            setSchedules((current) => current.filter((schedule) => schedule.id !== id));
+            await deleteExamSchedule(deleteTarget.id);
+            setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            setDeleteTarget(null);
             setMessage(text.deleted);
         } catch (deleteError) {
             setError(deleteError.message || text.loadError);
@@ -483,7 +487,7 @@ export const ExamSchedule = () => {
                             {filteredSchedules.length ? (
                                 <div className="divide-y divide-[var(--color-border)]">
                                     {filteredSchedules.map((schedule) => (
-                                        <ScheduleRow key={schedule.id} schedule={schedule} deletingId={deletingId} onDelete={handleDelete} onEdit={handleEdit} onPrint={handlePrint} />
+                                        <ScheduleRow key={schedule.id} schedule={schedule} deletingId={deletingId} onDelete={setDeleteTarget} onEdit={handleEdit} onPrint={handlePrint} />
                                     ))}
                                 </div>
                             ) : isLoadingSchedules ? (
@@ -495,6 +499,15 @@ export const ExamSchedule = () => {
                     </div>
                 </div>
             </div>
+
+            {deleteTarget ? (
+                <DeleteScheduleModal
+                    schedule={deleteTarget}
+                    isDeleting={deletingId === deleteTarget.id}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDelete}
+                />
+            ) : null}
         </div>
     );
 };
@@ -503,6 +516,28 @@ const FieldLabel = ({ children, required = false }) => (
     <label className="mb-3 mr-2 flex h-[36px] items-center text-[11px] font-black leading-[2] text-[var(--color-text-muted)]">
         {children}{required ? <span className="text-red-500"> *</span> : null}
     </label>
+);
+
+const DeleteScheduleModal = ({ schedule, isDeleting, onClose, onConfirm }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+        <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-xl font-black text-[var(--color-text-main)]">شیڈول حذف کرنے کی تصدیق</h3>
+                    <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                        کیا آپ واقعی <span className="text-rose-500">{schedule.examName || 'یہ شیڈول'}</span> کو حذف کرنا چاہتے ہیں؟
+                    </p>
+                </div>
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                    <Trash2 size={22} />
+                </div>
+            </div>
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                <button type="button" onClick={onClose} disabled={isDeleting} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70">منسوخ</button>
+                <button type="button" onClick={onConfirm} disabled={isDeleting} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">{isDeleting ? 'حذف ہو رہی ہے...' : 'تصدیق کریں'}</button>
+            </div>
+        </div>
+    </div>
 );
 
 const SelectField = ({ label, value, onChange, children, disabled, required = false }) => (
@@ -609,7 +644,7 @@ const ScheduleRow = ({ schedule, deletingId, onDelete, onEdit, onPrint }) => (
                     </button>
                     <button
                         type="button"
-                        onClick={() => onDelete(schedule.id)}
+                        onClick={() => onDelete(schedule)}
                         disabled={deletingId === schedule.id}
                         className="flex min-h-[62px] items-center justify-center rounded-xl bg-rose-500/10 p-3 text-rose-400 transition-all hover:bg-rose-500 hover:text-white"
                         aria-label={text.deleted}

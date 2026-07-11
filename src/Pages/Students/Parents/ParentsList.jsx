@@ -74,6 +74,8 @@ export const ParentsList = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [formValues, setFormValues] = useState(INITIAL_FORM);
     const [editingParentId, setEditingParentId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
@@ -173,16 +175,22 @@ export const ParentsList = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleDelete = async (parentId) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+
         try {
-            await deleteParent(parentId);
-            if (editingParentId === parentId) {
+            setIsDeleting(true);
+            await deleteParent(deleteTarget.id);
+            if (editingParentId === deleteTarget.id) {
                 resetForm();
             }
+            setDeleteTarget(null);
             setSuccess('سرپرست کا ریکارڈ حذف کر دیا گیا۔');
             await loadParents();
         } catch (deleteError) {
             setError(deleteError.message || 'سرپرست کا ریکارڈ حذف نہیں ہو سکا۔');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -326,7 +334,7 @@ export const ParentsList = () => {
                                             <button type="button" onClick={() => handleEdit(parent)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400 transition-all hover:bg-blue-500 hover:text-white">
                                                 <Pencil size={16} />
                                             </button>
-                                            <button type="button" onClick={() => handleDelete(parent.id)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white">
+                                            <button type="button" onClick={() => setDeleteTarget(parent)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white">
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
@@ -337,6 +345,44 @@ export const ParentsList = () => {
                     </table>
                 </div>
             </div>
+
+            {deleteTarget ? (
+                <DeleteModal
+                    title="سرپرست حذف کرنے کی تصدیق"
+                    message="کیا آپ واقعی"
+                    targetName={deleteTarget.fullName}
+                    isDeleting={isDeleting}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDelete}
+                />
+            ) : null}
         </div>
     );
 };
+
+const DeleteModal = ({ title, message, targetName, isDeleting, onClose, onConfirm }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+        <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-xl font-black text-[var(--color-text-main)]">{title}</h3>
+                    <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                        {message} <span className="text-rose-500">{targetName || 'یہ ریکارڈ'}</span> کو حذف کرنا چاہتے ہیں؟
+                    </p>
+                </div>
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                    <Trash2 size={22} />
+                </div>
+            </div>
+
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                <button type="button" onClick={onClose} disabled={isDeleting} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70">
+                    منسوخ
+                </button>
+                <button type="button" onClick={onConfirm} disabled={isDeleting} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
+                    {isDeleting ? 'حذف ہو رہا ہے...' : 'تصدیق کریں'}
+                </button>
+            </div>
+        </div>
+    </div>
+);

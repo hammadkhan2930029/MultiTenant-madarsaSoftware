@@ -43,6 +43,8 @@ export const SideBar = () => {
     const [avatarSrc, setAvatarSrc] = useState('');
     const profileMenuRef = useRef(null);
     const floatingSettingsRef = useRef(null);
+    const menuItemRefs = useRef({});
+    const subMenuItemRefs = useRef({});
     const { isSuperAdmin, hasPermission, hasAnyPermission } = usePermissions();
     //--------------------------------------------------------------------
 
@@ -458,14 +460,28 @@ export const SideBar = () => {
         { id: 'suggestions', label: 'تجاویز', path: '/Profile/suggestions', icon: Sparkles },
     ];
 
+    const scrollMenuItemIntoView = (itemRef) => {
+        window.setTimeout(() => {
+            itemRef?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+    };
+
     // const toggleSubMenu = (id) => setOpenSubMenu(openSubMenu === id ? null : id);
     const toggleSubMenu = (id) => {
-        setOpenSubMenu(openSubMenu === id ? null : id);
+        const shouldOpen = openSubMenu !== id;
+        setOpenSubMenu(shouldOpen ? id : null);
         setOpenSubSubMenu(null); // Level 1 change ho to Level 2 reset ho jaye
+        if (shouldOpen && id !== 'floating_settings') {
+            scrollMenuItemIntoView(menuItemRefs.current[id]);
+        }
     };
 
     const toggleSubSubMenu = (id) => {
-        setOpenSubSubMenu(openSubSubMenu === id ? null : id);
+        const shouldOpen = openSubSubMenu !== id;
+        setOpenSubSubMenu(shouldOpen ? id : null);
+        if (shouldOpen) {
+            scrollMenuItemIntoView(subMenuItemRefs.current[id]);
+        }
     };
     //--------------------------------------------------------------------
     const setting = [
@@ -670,7 +686,13 @@ export const SideBar = () => {
 
                 <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] vip-scrollbar px-1 " dir="ltr">
                     {visibleMenuItems.map((item) => (
-                        <div key={item.id} dir="rtl">
+                        <div
+                            key={item.id}
+                            ref={(element) => {
+                                menuItemRefs.current[item.id] = element;
+                            }}
+                            dir="rtl"
+                        >
                             {/* --- Level 1: Main Menu --- */}
                             <div
                                 onClick={() => item.subMenu ? toggleSubMenu(item.id) : (navigate(item.path), setIsSidebarOpen(false))}
@@ -690,7 +712,13 @@ export const SideBar = () => {
                             {item.subMenu && openSubMenu === item.id && (
                                 <div className="mt-2 mr-6 space-y-1 border-r border-white/10 pr-2">
                                     {item.subMenu.map((sub) => (
-                                        <div key={sub.id} className="perspective-1000">
+                                        <div
+                                            key={sub.id}
+                                            ref={(element) => {
+                                                subMenuItemRefs.current[sub.id] = element;
+                                            }}
+                                            className="perspective-1000"
+                                        >
                                             <div
                                                 onClick={() => sub.subSubMenu ? toggleSubSubMenu(sub.id) : (navigate(sub.path), setIsSidebarOpen(false))}
                                                 className={`text-[16px] p-2.5 rounded-xl  cursor-pointer flex items-center justify-between transition-all ${isActive(sub.path) || (sub.subSubMenu && sub.subSubMenu.some(ss => isActive(ss.path)))

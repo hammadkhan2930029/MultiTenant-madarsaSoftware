@@ -28,6 +28,7 @@ export const ExpenseHeadsSetup = () => {
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState(createExpenseHead());
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [newRowDeleteTarget, setNewRowDeleteTarget] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,10 +64,13 @@ export const ExpenseHeadsSetup = () => {
         setExpenseHeads([...expenseHeads, createExpenseHead()]);
     };
 
-    const deleteNewRow = (id) => {
+    const deleteNewRow = () => {
+        if (!newRowDeleteTarget) return;
+
         if (expenseHeads.length > 1) {
-            setExpenseHeads(expenseHeads.filter((row) => row.id !== id));
+            setExpenseHeads(expenseHeads.filter((row) => row.id !== newRowDeleteTarget.id));
         }
+        setNewRowDeleteTarget(null);
     };
 
     const handleInputChange = (id, field, value) => {
@@ -206,7 +210,7 @@ export const ExpenseHeadsSetup = () => {
                         </div>
 
                         {expenseHeads.length > 1 && (
-                            <button onClick={() => deleteNewRow(item.id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg" aria-label="سطر حذف کریں">
+                            <button onClick={() => setNewRowDeleteTarget({ id: item.id, title: item.title })} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg" aria-label="سطر حذف کریں">
                                 <Trash2 size={20} />
                             </button>
                         )}
@@ -293,6 +297,28 @@ export const ExpenseHeadsSetup = () => {
                     </p>
                 </div>
             </div>
+
+            {newRowDeleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="text-right">
+                                <h3 className="text-xl font-black text-[var(--color-text-main)]">سطر حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی یہ سطر حذف کرنا چاہتے ہیں؟
+                                </p>
+                            </div>
+                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                                <Trash2 size={22} />
+                            </div>
+                        </div>
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button type="button" onClick={() => setNewRowDeleteTarget(null)} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">منسوخ کریں</button>
+                            <button type="button" onClick={deleteNewRow} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600">تصدیق کریں</button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {deleteTarget ? (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">

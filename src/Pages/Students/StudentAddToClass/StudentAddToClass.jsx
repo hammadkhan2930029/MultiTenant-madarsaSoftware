@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, PlusCircle, Search, Trash2, UserPlus, X } from 'lucide-react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, PlusCircle, Search, Trash2, UserPlus } from 'lucide-react';
 import { SelectField, InputField } from '../../../Components/HR/FormElements';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { assignStudentClass, getStudents, removeStudentClassAssignment } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { DeleteConfirmationModal } from '../../../Components/Common/DeleteConfirmationModal';
 
 export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -286,50 +287,13 @@ export const StudentAddToClass = () => {
             </div>
 
             {assignmentToRemove ? (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-500">
-                                    <AlertTriangle size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-[var(--color-text-main)]">کلاس اسائنمنٹ ختم کریں؟</h3>
-                                    <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">
-                                        {assignmentToRemove.name} کو {assignmentToRemove.className} / {assignmentToRemove.section} سے ہٹایا جائے؟
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setAssignmentToRemove(null)}
-                                disabled={removingAssignmentId === assignmentToRemove.id}
-                                className="rounded-xl p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-primary)]/10 disabled:opacity-50"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                            <button
-                                type="button"
-                                onClick={handleRemoveAssignment}
-                                disabled={removingAssignmentId === assignmentToRemove.id}
-                                className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {removingAssignmentId === assignmentToRemove.id ? 'حذف ہو رہا ہے...' : 'حذف کرنے کی تصدیق کریں'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setAssignmentToRemove(null)}
-                                disabled={removingAssignmentId === assignmentToRemove.id}
-                                className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black text-[var(--color-text-main)] transition-all hover:bg-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                منسوخ کریں
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <DeleteConfirmationModal
+                    title="کلاس اسائنمنٹ ختم کریں؟"
+                    message={`کیا آپ واقعی ${assignmentToRemove.name} کو ${assignmentToRemove.className} / ${assignmentToRemove.section} سے ہٹانا چاہتے ہیں؟`}
+                    isDeleting={removingAssignmentId === assignmentToRemove.id}
+                    onClose={() => setAssignmentToRemove(null)}
+                    onConfirm={handleRemoveAssignment}
+                />
             ) : null}
         </div>
     );

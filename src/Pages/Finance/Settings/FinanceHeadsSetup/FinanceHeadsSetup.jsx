@@ -32,6 +32,7 @@ export const FinanceHeadsSetup = () => {
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [newRowDeleteTarget, setNewRowDeleteTarget] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -81,12 +82,15 @@ export const FinanceHeadsSetup = () => {
         }
     };
 
-    const deleteNewRow = (id) => {
-        if (activeTab === 'income') {
-            if (incomeHeads.length > 1) setIncomeHeads(incomeHeads.filter((row) => row.id !== id));
+    const deleteNewRow = () => {
+        if (!newRowDeleteTarget) return;
+
+        if (newRowDeleteTarget.type === 'income') {
+            if (incomeHeads.length > 1) setIncomeHeads(incomeHeads.filter((row) => row.id !== newRowDeleteTarget.id));
         } else {
-            if (expenseHeads.length > 1) setExpenseHeads(expenseHeads.filter((row) => row.id !== id));
+            if (expenseHeads.length > 1) setExpenseHeads(expenseHeads.filter((row) => row.id !== newRowDeleteTarget.id));
         }
+        setNewRowDeleteTarget(null);
     };
 
     const handleInputChange = (id, field, value) => {
@@ -261,7 +265,7 @@ export const FinanceHeadsSetup = () => {
                             )}
                         </div>
 
-                        <button onClick={() => deleteNewRow(item.id)}
+                        <button onClick={() => setNewRowDeleteTarget({ id: item.id, type: activeTab, title: item.title })}
                             className={`p-2 rounded-lg transition-all ${activeNewRows.length === 1 ? 'opacity-20 cursor-not-allowed' : 'text-red-400 hover:bg-red-500/10'}`}
                             aria-label="سطر حذف کریں">
                             <Trash2 size={20} />
@@ -351,6 +355,28 @@ export const FinanceHeadsSetup = () => {
                     <span className="font-bold text-[var(--color-primary)]">پیشہ ورانہ مشورہ:</span> آمدنی اور اخراجات کو صحیح طرح کیٹیگریز میں تقسیم کرنے سے ماہانہ مالیاتی رپورٹ سمجھنا آسان ہو جاتا ہے۔
                 </p>
             </div>
+
+            {newRowDeleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="text-right">
+                                <h3 className="text-xl font-black text-[var(--color-text-main)]">سطر حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی یہ سطر حذف کرنا چاہتے ہیں؟
+                                </p>
+                            </div>
+                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                                <Trash2 size={22} />
+                            </div>
+                        </div>
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button type="button" onClick={() => setNewRowDeleteTarget(null)} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">منسوخ کریں</button>
+                            <button type="button" onClick={deleteNewRow} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600">تصدیق کریں</button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {deleteTarget ? (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">

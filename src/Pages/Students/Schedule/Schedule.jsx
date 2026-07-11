@@ -50,6 +50,7 @@ export const StudentScheduleManager = () => {
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
     const [editingScheduleId, setEditingScheduleId] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const [setupError, setSetupError] = useState('');
     const [scheduleMessage, setScheduleMessage] = useState('');
     useNotificationBridge({ error: setupError, success: scheduleMessage });
@@ -203,14 +204,17 @@ export const StudentScheduleManager = () => {
         });
     };
 
-    const handleDeleteSchedule = async (id) => {
-        setRemovingScheduleId(id);
+    const handleDeleteSchedule = async () => {
+        if (!deleteTarget) return;
+
+        setRemovingScheduleId(deleteTarget.id);
         setSetupError('');
         setScheduleMessage('');
 
         try {
-            await deleteSchedule(id);
-            setSchedules((current) => current.filter((schedule) => schedule.id !== id));
+            await deleteSchedule(deleteTarget.id);
+            setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            setDeleteTarget(null);
             setScheduleMessage('شیڈول ختم کر دیا گیا۔');
         } catch (error) {
             setSetupError(error.message || 'شیڈول ختم نہیں ہو سکا۔');
@@ -498,7 +502,7 @@ export const StudentScheduleManager = () => {
                                                         <Pencil size={20} className="md:w-6 md:h-6" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteSchedule(item.id)}
+                                                        onClick={() => setDeleteTarget(item)}
                                                         disabled={removingScheduleId === item.id}
                                                         className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50"
                                                         title="حذف کریں"
@@ -582,7 +586,7 @@ export const StudentScheduleManager = () => {
                                                                         <Pencil size={16} />
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handleDeleteSchedule(period.id)}
+                                                                        onClick={() => setDeleteTarget(period)}
                                                                         disabled={removingScheduleId === period.id}
                                                                         className="p-1 text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                                                                         title="حذف کریں"
@@ -619,6 +623,42 @@ export const StudentScheduleManager = () => {
                     <p className="text-sm mt-5">اوپر دیئے گئے فارم سے نیا شیڈول بنانا شروع کریں</p>
                 </div>
             )}
+
+            {deleteTarget ? (
+                <DeleteScheduleModal
+                    schedule={deleteTarget}
+                    isDeleting={removingScheduleId === deleteTarget.id}
+                    onClose={() => setDeleteTarget(null)}
+                    onConfirm={handleDeleteSchedule}
+                />
+            ) : null}
         </div>
     );
 };
+
+const DeleteScheduleModal = ({ schedule, isDeleting, onClose, onConfirm }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+        <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h3 className="text-xl font-black text-[var(--color-text)]">شیڈول حذف کرنے کی تصدیق</h3>
+                    <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                        کیا آپ واقعی <span className="text-rose-500">{schedule.className || 'یہ شیڈول'}</span> کو حذف کرنا چاہتے ہیں؟
+                    </p>
+                </div>
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                    <Trash2 size={22} />
+                </div>
+            </div>
+
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                <button type="button" onClick={onClose} disabled={isDeleting} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70">
+                    منسوخ
+                </button>
+                <button type="button" onClick={onConfirm} disabled={isDeleting} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
+                    {isDeleting ? 'حذف ہو رہا ہے...' : 'تصدیق کریں'}
+                </button>
+            </div>
+        </div>
+    </div>
+);

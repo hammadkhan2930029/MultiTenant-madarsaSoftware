@@ -50,6 +50,7 @@ export const DailyJaizaEntry = () => {
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -148,15 +149,19 @@ export const DailyJaizaEntry = () => {
         }));
     };
 
-    const handleDeleteEntry = (entryId) => {
+    const handleDeleteEntry = () => {
+        if (!deleteTarget) return;
+
         if (formData.entries.length === 1) {
+            setDeleteTarget(null);
             return;
         }
 
         setFormData((prev) => ({
             ...prev,
-            entries: prev.entries.filter((entry) => entry.id !== entryId)
+            entries: prev.entries.filter((entry) => entry.id !== deleteTarget.id)
         }));
+        setDeleteTarget(null);
     };
 
     const toOptionalNumber = (value) => {
@@ -239,6 +244,7 @@ export const DailyJaizaEntry = () => {
     };
 
     return (
+        <>
         <form
             onSubmit={handleSubmit}
             className="max-w-7xl mx-auto p-4 md:p-6 space-y-6 bg-[var(--color-bg)] min-h-screen text-right"
@@ -331,7 +337,7 @@ export const DailyJaizaEntry = () => {
                                 {formData.entries.length > 1 && (
                                     <button
                                         type="button"
-                                        onClick={() => handleDeleteEntry(entry.id)}
+                                        onClick={() => setDeleteTarget({ id: entry.id, label: `انٹری ${index + 1}` })}
                                         className="h-10 w-10 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                                         aria-label={`انٹری ${index + 1} حذف کریں`}
                                     >
@@ -424,6 +430,34 @@ export const DailyJaizaEntry = () => {
                 </button>
             </div>
         </form>
+
+        {deleteTarget ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+                <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-xl font-black text-[var(--color-text-main)]">انٹری حذف کرنے کی تصدیق</h3>
+                            <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                کیا آپ واقعی <span className="text-rose-500">{deleteTarget.label}</span> کو حذف کرنا چاہتے ہیں؟
+                            </p>
+                        </div>
+                        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                            <Trash2 size={22} />
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                        <button type="button" onClick={() => setDeleteTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">
+                            منسوخ
+                        </button>
+                        <button type="button" onClick={handleDeleteEntry} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600">
+                            تصدیق کریں
+                        </button>
+                    </div>
+                </div>
+            </div>
+        ) : null}
+        </>
     );
 };
 

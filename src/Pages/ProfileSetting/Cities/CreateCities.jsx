@@ -40,6 +40,8 @@ export const CreateCities = () => {
     const [cities, setCities] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const dropdownRef = useRef(null);
     const notify = useNotifier();
 
@@ -100,13 +102,19 @@ export const CreateCities = () => {
         }
     };
 
-    const handleDeactivateCity = async (id) => {
+    const handleDeactivateCity = async () => {
+        if (!deleteTarget) return;
+
         try {
-            const updatedCity = await deactivateCity(id);
-            setCities((prev) => prev.map((city) => (city.id === id ? updatedCity : city)));
+            setIsDeleting(true);
+            const updatedCity = await deactivateCity(deleteTarget.id);
+            setCities((prev) => prev.map((city) => (city.id === deleteTarget.id ? updatedCity : city)));
+            setDeleteTarget(null);
             notify.success(`${updatedCity.name} غیر فعال کر دیا گیا۔`, 'شہر غیر فعال ہو گیا');
         } catch (error) {
             notify.error(error?.message || 'شہر حذف نہیں ہو سکا۔', 'حذف کرنے میں مسئلہ پیش آیا');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -253,7 +261,7 @@ export const CreateCities = () => {
                                         </td>
                                         <td className="px-8 py-5 last:rounded-l-[1.5rem] text-center">
                                             <button
-                                                onClick={() => handleDeactivateCity(city.id)}
+                                                onClick={() => setDeleteTarget(city)}
                                                 className="p-3 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-90 hover:rotate-12"
                                                 title="حذف کریں"
                                             >
@@ -286,6 +294,43 @@ export const CreateCities = () => {
                     <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /> واپس جائیں
                 </button>
             </div>
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl font-black text-[var(--color-text)]">شہر حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کو حذف کرنا چاہتے ہیں؟
+                                </p>
+                            </div>
+                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                                <Trash2 size={22} />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                منسوخ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeactivateCity}
+                                disabled={isDeleting}
+                                className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isDeleting ? 'حذف ہو رہا ہے...' : 'تصدیق کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };

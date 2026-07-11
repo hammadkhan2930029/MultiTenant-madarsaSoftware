@@ -16,6 +16,8 @@ export const ResultGradeScale = () => {
     const [editId, setEditId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
@@ -61,16 +63,22 @@ export const ResultGradeScale = () => {
         setSuccess('');
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+
         setError('');
         setSuccess('');
+        setIsDeleting(true);
         try {
-            await deleteResultGrade(id);
-            setGrades((current) => current.filter((grade) => grade.id !== id));
-            if (editId === id) resetForm();
+            await deleteResultGrade(deleteTarget.id);
+            setGrades((current) => current.filter((grade) => grade.id !== deleteTarget.id));
+            if (editId === deleteTarget.id) resetForm();
+            setDeleteTarget(null);
             setSuccess('رینج حذف کر دی گئی۔');
         } catch (deleteError) {
             setError(deleteError.message || 'رینج حذف نہیں ہو سکی۔');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -235,7 +243,7 @@ export const ResultGradeScale = () => {
                                                     <button type="button" onClick={() => handleEdit(grade)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[#0b1120]">
                                                         <Edit2 size={16} />
                                                     </button>
-                                                    <button type="button" onClick={() => handleDelete(grade.id)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 hover:bg-rose-500 hover:text-white">
+                                                    <button type="button" onClick={() => setDeleteTarget(grade)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 hover:bg-rose-500 hover:text-white">
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </div>
@@ -252,6 +260,43 @@ export const ResultGradeScale = () => {
                     </div>
                 </div>
             </div>
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl font-black text-[var(--color-text-main)]">رینج حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی <span className="text-rose-500">{deleteTarget.title}</span> کو حذف کرنا چاہتے ہیں؟
+                                </p>
+                            </div>
+                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                                <Trash2 size={22} />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                منسوخ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isDeleting ? 'حذف ہو رہی ہے...' : 'تصدیق کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };

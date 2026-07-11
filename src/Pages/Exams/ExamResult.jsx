@@ -72,6 +72,7 @@ export const ExamResult = () => {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [savedResultId, setSavedResultId] = useState(null);
     const [rows, setRows] = useState([emptySubjectRow()]);
+    const [deleteRowTarget, setDeleteRowTarget] = useState(null);
     const [examSchedules, setExamSchedules] = useState([]);
     const [gradeScale, setGradeScale] = useState(defaultResultGrades);
     const [isLoading, setIsLoading] = useState(true);
@@ -234,7 +235,11 @@ export const ExamResult = () => {
     };
 
     const addRow = () => setRows((current) => [...current, emptySubjectRow()]);
-    const deleteRow = (rowId) => setRows((current) => (current.length > 1 ? current.filter((row) => row.id !== rowId) : current));
+    const deleteRow = () => {
+        if (!deleteRowTarget) return;
+        setRows((current) => (current.length > 1 ? current.filter((row) => row.id !== deleteRowTarget.id) : current));
+        setDeleteRowTarget(null);
+    };
 
     const handleSave = async () => {
         setError('');
@@ -434,7 +439,7 @@ export const ExamResult = () => {
                                                     </td>
                                                     <td className="p-3 font-sans font-black">{rowPercentage ? `${rowPercentage.toFixed(2)}%` : '---'}</td>
                                                     <td className="p-3 text-center">
-                                                        <button type="button" onClick={() => deleteRow(row.id)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
+                                                        <button type="button" onClick={() => setDeleteRowTarget(row)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
                                                             <Trash2 size={16} />
                                                         </button>
                                                     </td>
@@ -454,6 +459,26 @@ export const ExamResult = () => {
                     </div>
                 </div>
             </div>
+
+            {deleteRowTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl font-black text-[var(--color-text-main)]">مضمون حذف کرنے کی تصدیق</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">کیا آپ واقعی یہ مضمون حذف کرنا چاہتے ہیں؟</p>
+                            </div>
+                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
+                                <Trash2 size={22} />
+                            </div>
+                        </div>
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                            <button type="button" onClick={() => setDeleteRowTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">منسوخ</button>
+                            <button type="button" onClick={deleteRow} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600">تصدیق کریں</button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };
