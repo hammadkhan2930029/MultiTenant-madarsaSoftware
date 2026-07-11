@@ -20,6 +20,10 @@ export const ResultGradeScale = () => {
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
 
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
+
     const sortGrades = (items) => (items || []).slice().sort((a, b) => Number(b.from) - Number(a.from));
 
     const loadGrades = useCallback(async () => {

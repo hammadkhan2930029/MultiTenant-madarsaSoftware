@@ -172,8 +172,8 @@ export const ThemedDatePicker = ({
   const buttonIconSize = size === 'sm' ? 16 : 18;
   const isCompact = size === 'sm';
   const panelClass = isCompact
-    ? 'absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-3'
-    : 'absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4';
+    ? 'themed-date-picker-panel themed-date-picker-panel-sm absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-3'
+    : 'themed-date-picker-panel absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4';
   const navButtonClass = isCompact
     ? 'w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center'
     : 'w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center';
@@ -186,7 +186,78 @@ export const ThemedDatePicker = ({
   const footerButtonClass = isCompact ? 'flex-1 py-2 rounded-lg font-bold text-xs' : 'flex-1 py-2.5 rounded-xl font-bold text-sm';
 
   return (
-    <div ref={wrapperRef} className={`space-y-2 relative ${className}`}>
+    <div ref={wrapperRef} className={`themed-date-picker space-y-2 relative ${className}`}>
+      <style>{`
+        .themed-date-picker-panel,
+        .themed-date-picker-panel * {
+          box-sizing: border-box;
+        }
+
+        .themed-date-picker-panel {
+          color: var(--color-text-main);
+          direction: rtl;
+          font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+          line-height: 1.35 !important;
+        }
+
+        .themed-date-picker-panel-sm {
+          min-width: 336px;
+        }
+
+        .themed-date-picker-panel p,
+        .themed-date-picker-panel span,
+        .themed-date-picker-panel button,
+        .themed-date-picker-panel select {
+          font-size: 13px !important;
+          line-height: 1.35 !important;
+        }
+
+        .themed-date-picker-panel > div:first-child p:first-child {
+          font-size: 18px !important;
+          line-height: 1.45 !important;
+        }
+
+        .themed-date-picker-panel > div:first-child p:last-child {
+          font-size: 13px !important;
+          line-height: 1.35 !important;
+        }
+
+        .themed-date-picker-panel select {
+          min-height: 44px;
+          padding-block: 6px !important;
+        }
+
+        .themed-date-picker-panel .grid.grid-cols-7 span {
+          display: flex;
+          min-height: 28px;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px !important;
+          white-space: nowrap;
+        }
+
+        .themed-date-picker-panel .grid.grid-cols-7 button {
+          min-height: 42px;
+          height: 42px;
+          border-radius: 12px;
+          font-size: 14px !important;
+          line-height: 1 !important;
+        }
+
+        .themed-date-picker-panel-sm .grid.grid-cols-7 button {
+          min-height: 38px;
+          height: 38px;
+        }
+
+        .themed-date-picker-panel .grid.grid-cols-7 div {
+          min-height: 38px;
+        }
+
+        .themed-date-picker-panel > div:last-child button {
+          min-height: 46px;
+          font-size: 15px !important;
+        }
+      `}</style>
       {label ? (
         <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
           {label}{required ? <span className="text-red-500"> *</span> : null}

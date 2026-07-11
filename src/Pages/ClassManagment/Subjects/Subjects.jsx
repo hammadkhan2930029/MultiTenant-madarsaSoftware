@@ -263,16 +263,16 @@ export const CreateSubjects = () => {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-start gap-2">
                                                 <button
-                                                    onClick={() => setDeleteTarget(sub)}
-                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 shadow-sm transition-all hover:bg-rose-500 hover:text-white"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                                <button
                                                     onClick={() => handleEdit(sub)}
                                                     className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] shadow-sm transition-all hover:bg-[#00d094] hover:text-white"
                                                 >
                                                     <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteTarget(sub)}
+                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 shadow-sm transition-all hover:bg-rose-500 hover:text-white"
+                                                >
+                                                    <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         </td>

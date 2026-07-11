@@ -3,6 +3,7 @@ import { Briefcase, ChevronLeft, ChevronUp, ChevronDown, CreditCard, Edit, Plus,
 import { useNavigate, useParams } from 'react-router-dom';
 import { createTeacherIncrement, getTeacherById, getTeacherIncrements } from '../../../Constant/TeachersApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 
 const statusLabel = (status) => (status === 'active' ? 'فعال' : 'غیر فعال');
 const getTeacherShiftLabel = (teacher) =>
@@ -77,6 +78,316 @@ const LabeledValue = ({ label, value, highlight = false }) => (
     </span>
 );
 
+const PrintField = ({ label, value, dir = 'rtl' }) => (
+    <div className="teacher-print-field rounded-lg border border-slate-300 bg-white px-3 py-2">
+        <p className="teacher-print-label font-black text-slate-500">{label}</p>
+        <p className={`teacher-print-value mt-1 break-words font-black text-slate-950 ${dir === 'ltr' ? 'text-left font-sans' : 'text-right'}`} dir={dir}>
+            {value || '---'}
+        </p>
+    </div>
+);
+
+const PrintSection = ({ title, children }) => (
+    <section className="teacher-print-section mt-3 break-inside-avoid">
+        <h2 className="teacher-print-section-title mb-2 border-b-2 border-slate-900 pb-1 font-black text-slate-950">{title}</h2>
+        {children}
+    </section>
+);
+
+const TeacherPrintPreview = ({ teacher, increments, teacherImageUrl, madrassaName, onImageError, onBack }) => (
+    <div className="teacher-print-preview min-h-screen bg-slate-100 p-4 text-slate-950" dir="rtl">
+        <div className="teacher-print-controls mb-4 flex flex-row justify-between gap-3">
+            <button onClick={onBack} className="flex items-center text-[12px] gap-2 bg-slate-800 text-white px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all">
+                واپس جائیں <ChevronLeft size={22} />
+            </button>
+            <button onClick={() => window.print()} className="flex items-center text-[12px] gap-2 bg-[var(--color-primary)] text-white px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all">
+                پرنٹ <Printer size={20} />
+            </button>
+        </div>
+
+        <div className="teacher-print-page teacher-print-page-break mx-auto mb-6 min-h-[1122px] max-w-[794px] bg-white p-6 shadow-xl">
+            <div className="teacher-print-header relative flex items-center justify-between gap-5 border-b-2 border-slate-900 pb-4">
+                <div className="teacher-print-title-block absolute left-1/2 top-0 -translate-x-1/2 text-center">
+                    <p className="teacher-print-madrassa font-black text-slate-950">{madrassaName}</p>
+                    <p className="teacher-print-kicker font-black text-slate-500">استاد / عملہ پروفائل فارم</p>
+                </div>
+                <div className="pt-12">
+                    <h1 className="teacher-print-name mt-1 font-black text-slate-950">{teacher.fullName}</h1>
+                    <p className="teacher-print-meta mt-1 font-bold text-slate-700">نمبر: {teacher.id} | حالت: {statusLabel(teacher.status)}</p>
+                </div>
+                <div className="teacher-print-photo grid h-24 w-24 place-items-center overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100 font-black text-slate-700">
+                    {teacherImageUrl ? (
+                        <img src={teacherImageUrl} alt={teacher.fullName} onError={onImageError} className="h-full w-full object-cover" />
+                    ) : (
+                        teacher.fullName?.charAt(0)
+                    )}
+                </div>
+            </div>
+
+            <PrintSection title="ذاتی معلومات">
+                <div className="grid grid-cols-2 gap-3">
+                    <PrintField label="استاد کا نام" value={teacher.fullName} />
+                    <PrintField label="عملہ کی قسم" value={teacher.staffType === 'staff' ? 'دیگر عملہ' : 'استاد'} />
+                    <PrintField label="موبائل نمبر" value={teacher.phone} dir="ltr" />
+                    <PrintField label="ای میل" value={teacher.email} dir="ltr" />
+                    <PrintField label="شناختی کارڈ نمبر" value={teacher.cnic} dir="ltr" />
+                    <PrintField label="مستقل پتہ" value={teacher.address} />
+                </div>
+            </PrintSection>
+
+            <PrintSection title="تقرری تفصیلات">
+                <div className="grid grid-cols-2 gap-3">
+                    <PrintField label="مضمون / ذمہ داری" value={teacher.subject} />
+                    <PrintField label="تعلیمی قابلیت" value={teacher.qualification} />
+                    <PrintField label="تعلیمی ادارہ" value={teacher.educationInstitute} />
+                    <PrintField label="تعلیمی سال" value={teacher.educationYear} />
+                    <PrintField label="تخصص / مہارت" value={teacher.specialization} />
+                    <PrintField label="عہدہ" value={teacher.jobTitle} />
+                    <PrintField label="شعبہ" value={teacher.department} />
+                    <PrintField label="شفٹ" value={getTeacherShiftLabel(teacher)} />
+                    <PrintField label="شفٹ اوقات" value={getTeacherShiftTime(teacher)} dir="ltr" />
+                    <PrintField label="ملازمت کی نوعیت" value={teacher.employmentType} />
+                    <PrintField label="تاریخ تقرری" value={teacher.appointmentDate} />
+                    <PrintField label="تاریخ شمولیت" value={teacher.joiningDate} />
+                </div>
+                <div className="mt-3">
+                    <PrintField label="سابقہ تجربہ" value={teacher.experienceSummary} />
+                </div>
+            </PrintSection>
+        </div>
+
+        <div className="teacher-print-page mx-auto min-h-[1122px] max-w-[794px] bg-white p-6 shadow-xl">
+            <div className="teacher-print-header border-b-2 border-slate-900 pb-4 text-center">
+                <h1 className="teacher-print-name mt-1 font-black text-slate-950">{teacher.fullName}</h1>
+            </div>
+
+            <PrintSection title="تنخواہ / اکاؤنٹ">
+                <div className="grid grid-cols-2 gap-3">
+                    <PrintField label="بنیادی تنخواہ" value={formatCurrency(teacher.basicSalary)} />
+                    <PrintField label="بینک کا نام" value={teacher.bankName} />
+                    <PrintField label="اکاؤنٹ ٹائٹل" value={teacher.accountTitle} />
+                    <PrintField label="اکاؤنٹ نمبر" value={teacher.accountNumber} dir="ltr" />
+                    <PrintField label="IBAN" value={teacher.iban} dir="ltr" />
+                </div>
+            </PrintSection>
+
+            <PrintSection title="تنخواہ انکریمنٹ">
+                <div className="overflow-hidden rounded-xl border border-slate-300">
+                    <div className="teacher-print-table-head grid grid-cols-5 gap-2 bg-slate-100 px-3 py-2 font-black text-slate-700">
+                        <span>تاریخ</span>
+                        <span>پرانی تنخواہ</span>
+                        <span>اضافہ</span>
+                        <span>نئی تنخواہ</span>
+                        <span>وجہ</span>
+                    </div>
+                    {increments.length ? (
+                        increments.map((increment) => (
+                            <div key={increment.id} className="teacher-print-table-row grid grid-cols-5 gap-2 border-t border-slate-300 px-3 py-2 font-bold text-slate-950">
+                                <span>{increment.effectiveDate || '---'}</span>
+                                <span>{formatCurrency(increment.previousSalary)}</span>
+                                <span>{formatCurrency(increment.incrementAmount)}</span>
+                                <span>{formatCurrency(increment.newSalary)}</span>
+                                <span>{increment.reason || '---'}</span>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="teacher-print-empty border-t border-slate-300 px-3 py-5 text-center font-bold text-slate-500">
+                            ابھی کوئی انکریمنٹ ریکارڈ موجود نہیں۔
+                        </div>
+                    )}
+                </div>
+            </PrintSection>
+
+            <PrintSection title="ریکارڈ">
+                <div className="grid grid-cols-2 gap-3">
+                    <PrintField label="درج کرنے کی تاریخ" value={teacher.createdAt ? new Date(teacher.createdAt).toLocaleString('ur-PK') : '---'} />
+                    <PrintField label="آخری تبدیلی" value={teacher.updatedAt ? new Date(teacher.updatedAt).toLocaleString('ur-PK') : '---'} />
+                </div>
+                <div className="mt-3">
+                    <PrintField label="نوٹس" value={teacher.notes} />
+                </div>
+            </PrintSection>
+        </div>
+
+        <style>{`
+            .teacher-print-preview {
+                font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+                line-height: 1.45 !important;
+            }
+
+            .teacher-print-page {
+                background: #ffffff !important;
+            }
+
+            .teacher-print-photo {
+                font-size: 24px !important;
+            }
+
+            .teacher-print-kicker {
+                font-size: 21px !important;
+                line-height: 1.4 !important;
+            }
+
+            .teacher-print-madrassa {
+                font-size: 38px !important;
+                line-height: 1.45 !important;
+            }
+
+            .teacher-print-name {
+                font-size: 28px !important;
+                line-height: 1.45 !important;
+            }
+
+            .teacher-print-meta {
+                font-size: 14px !important;
+                line-height: 1.4 !important;
+            }
+
+            .teacher-print-section-title {
+                font-size: 18px !important;
+                line-height: 1.45 !important;
+            }
+
+            .teacher-print-label {
+                font-size: 12px !important;
+                line-height: 1.35 !important;
+            }
+
+            .teacher-print-value {
+                font-size: 15px !important;
+                line-height: 1.45 !important;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+            }
+
+            .teacher-print-table-head,
+            .teacher-print-table-row,
+            .teacher-print-empty {
+                font-size: 12px !important;
+                line-height: 1.35 !important;
+            }
+
+            @media print {
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                body {
+                    background: white !important;
+                }
+
+                body * {
+                    visibility: hidden !important;
+                }
+
+                .teacher-print-preview,
+                .teacher-print-preview * {
+                    visibility: visible !important;
+                }
+
+                .teacher-print-controls {
+                    display: none !important;
+                }
+
+                .teacher-print-preview {
+                    background: white !important;
+                    padding: 0 !important;
+                    position: absolute !important;
+                    inset: 0 !important;
+                    width: 100% !important;
+                    font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
+                    line-height: 1.45 !important;
+                }
+
+                .teacher-print-page {
+                    box-sizing: border-box !important;
+                    background: #ffffff !important;
+                    width: 190mm !important;
+                    min-height: 0 !important;
+                    height: auto !important;
+                    max-width: none !important;
+                    margin: 0 auto !important;
+                    padding: 7mm !important;
+                    box-shadow: none !important;
+                    page-break-after: auto !important;
+                    break-after: auto !important;
+                }
+
+                .teacher-print-page-break {
+                    page-break-after: always !important;
+                    break-after: page !important;
+                }
+
+                .teacher-print-header {
+                    padding-bottom: 4mm !important;
+                }
+
+                .teacher-print-photo {
+                    width: 24mm !important;
+                    height: 24mm !important;
+                    font-size: 22px !important;
+                }
+
+                .teacher-print-kicker {
+                    font-size: 18px !important;
+                    line-height: 1.4 !important;
+                }
+
+                .teacher-print-madrassa {
+                    font-size: 30px !important;
+                    line-height: 1.45 !important;
+                }
+
+                .teacher-print-name {
+                    font-size: 22px !important;
+                    line-height: 1.45 !important;
+                }
+
+                .teacher-print-meta {
+                    font-size: 12px !important;
+                    line-height: 1.4 !important;
+                }
+
+                .teacher-print-section {
+                    margin-top: 4mm !important;
+                }
+
+                .teacher-print-section-title {
+                    font-size: 14px !important;
+                    line-height: 1.45 !important;
+                    margin-bottom: 2mm !important;
+                }
+
+                .teacher-print-field {
+                    min-height: 18mm !important;
+                    padding: 2mm 3mm !important;
+                    border-radius: 3mm !important;
+                }
+
+                .teacher-print-label {
+                    font-size: 10px !important;
+                    line-height: 1.35 !important;
+                }
+
+                .teacher-print-value {
+                    font-size: 12px !important;
+                    line-height: 1.45 !important;
+                    min-height: 0 !important;
+                    margin-top: 1mm !important;
+                }
+
+                .teacher-print-table-head,
+                .teacher-print-table-row,
+                .teacher-print-empty {
+                    font-size: 10px !important;
+                    line-height: 1.35 !important;
+                }
+            }
+        `}</style>
+    </div>
+);
+
 export const EmployeeDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -84,6 +395,7 @@ export const EmployeeDetails = () => {
     const [showPrintPreview, setShowPrintPreview] = useState(false);
     const [openSection, setOpenSection] = useState('personal');
     const [teacher, setTeacher] = useState(null);
+    const [imageLoadFailed, setImageLoadFailed] = useState(false);
     const [increments, setIncrements] = useState([]);
     const [incrementForm, setIncrementForm] = useState({
         incrementAmount: '',
@@ -101,6 +413,7 @@ export const EmployeeDetails = () => {
                     getTeacherIncrements(id),
                 ]);
                 setTeacher(result);
+                setImageLoadFailed(false);
                 setIncrements(incrementResult || []);
             } catch (loadError) {
                 setError(loadError.message || 'استاد کی تفصیل لوڈ نہیں ہو سکی۔');
@@ -155,22 +468,41 @@ export const EmployeeDetails = () => {
         return <div className="p-6 text-[var(--color-text-muted)] font-bold">استاد کی تفصیل لوڈ ہو رہی ہے...</div>;
     }
 
+    const teacherImageUrl = teacher.imageUrl && !imageLoadFailed ? getApiAssetUrl(teacher.imageUrl) : '';
+    const adminSession = getAdminSession();
+    const madrassaName =
+        adminSession?.madrassaProfile?.name?.trim() ||
+        adminSession?.tenantBranding?.name?.trim() ||
+        adminSession?.currentTenant?.name?.trim() ||
+        'مدرسہ';
+
     return (
         <div>
             {showPrintPreview && (
-                <div className="flex flex-row justify-between" dir="rtl">
-                    <button onClick={() => setShowPrintPreview(!showPrintPreview)} className="flex items-center text-[12px] gap-2 bg-slate-800 text-white px-8 py-3 rounded-2xl font-bold hover:scale-105 transition-all">
-                        واپس جائیں <ChevronLeft size={22} />
-                    </button>
-                    <p className="print:hidden">پرنٹ کے لیے کنٹرول اور پی دبائیں</p>
-                </div>
+                <TeacherPrintPreview
+                    teacher={teacher}
+                    increments={increments}
+                    teacherImageUrl={teacherImageUrl}
+                    madrassaName={madrassaName}
+                    onImageError={() => setImageLoadFailed(true)}
+                    onBack={() => setShowPrintPreview(false)}
+                />
             )}
 
             {!showPrintPreview && (
                 <div className="min-h-screen space-y-6 pb-10 bg-[var(--color-bg)]" dir="rtl">
                     <div className="bg-[var(--color-surface)] rounded-[2.5rem] p-8 mt-5 md:mt-0 lg:mt-0 shadow-xl border border-[var(--color-border)]/5 flex flex-col lg:flex-row items-center gap-6">
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[#008a63] flex items-center justify-center text-3xl font-black text-white shadow-xl">
-                            {teacher.fullName?.charAt(0)}
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[#008a63] flex items-center justify-center overflow-hidden text-3xl font-black text-white shadow-xl">
+                            {teacherImageUrl ? (
+                                <img
+                                    src={teacherImageUrl}
+                                    alt={teacher.fullName}
+                                    onError={() => setImageLoadFailed(true)}
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : (
+                                teacher.fullName?.charAt(0)
+                            )}
                         </div>
                         <div className="text-center md:text-right space-y-2 flex-1">
                             <h1 className="text-3xl font-black text-[var(--color-text-main)]">{teacher.fullName}</h1>
@@ -192,7 +524,7 @@ export const EmployeeDetails = () => {
                             <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="flex items-center text-[10px] md:text-[12px] lg:text-[14px] gap-2 bg-[var(--color-primary)] text-[var(--color-text-main)] px-8 py-3 rounded-2xl font-bold">
                                 تبدیل کریں <Edit size={20} />
                             </button>
-                            <button onClick={() => setShowPrintPreview(!showPrintPreview)} className="flex items-center text-[10px] gap-2 bg-slate-800 text-white px-8 py-3 rounded-2xl font-bold">
+                            <button onClick={() => setShowPrintPreview(true)} className="flex items-center text-[10px] gap-2 bg-slate-800 text-white px-8 py-3 rounded-2xl font-bold">
                                 پرنٹ <Printer size={20} />
                             </button>
                         </div>

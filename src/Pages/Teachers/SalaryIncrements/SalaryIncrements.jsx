@@ -34,7 +34,7 @@ export const SalaryIncrements = () => {
             if (searchTerm.trim()) params.set('search', searchTerm.trim());
 
             const [teacherResult, incrementResult] = await Promise.all([
-                getTeachers('page=1&limit=200&status=active'),
+                getTeachers('page=1&limit=100&status=active'),
                 getAllTeacherIncrements(params.toString()),
             ]);
 

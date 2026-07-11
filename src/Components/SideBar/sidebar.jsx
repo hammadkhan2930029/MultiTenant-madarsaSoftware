@@ -231,7 +231,7 @@ export const SideBar = () => {
             icon: ClipboardList,
             subMenu: [
                 { id: 'classes', label: ' جماعت', path: '/class-management/Classes' },
-                { id: 'sections', label: 'جماعت سیکشنز', path: '/class-management/sections' },
+                { id: 'sections', label: 'جماعت سیکشن مینجمنٹ', path: '/class-management/sections' },
                 { id: 'session', label: 'سیشن ', path: '/class-management/session' },
                 { id: 'subjects', label: 'مظامین ', path: '/class-management/subjects' },
             ]
@@ -490,7 +490,7 @@ export const SideBar = () => {
         dashboard: 'ڈیش بورڈ',
         class_mgmt: 'کلاس مینجمنٹ',
         classes: 'جماعت',
-        sections: 'جماعت سیکشنز',
+        sections: 'جماعت سیکشن مینجمنٹ',
         session: 'سیشن',
         subjects: 'مضامین',
         hifz: 'شعبہ حفظ',

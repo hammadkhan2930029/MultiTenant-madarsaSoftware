@@ -160,7 +160,7 @@ export const CreateSections = () => {
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
-                    <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت سیکشنز</h2>
+                    <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت سیکشن مینجمنٹ</h2>
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSections.length}</p>
                 </div>
 
@@ -279,7 +279,7 @@ export const CreateSections = () => {
                                     <tr key={section.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4">
                                             <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-xs font-black text-[#00d094]">
-                                                سیکشن {section.name}
+                                                {section.name}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text)]">{section.class?.name || '-'}</td>

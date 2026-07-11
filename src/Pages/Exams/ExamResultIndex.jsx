@@ -80,7 +80,7 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
   <meta charset="utf-8" />
   <title>${escapeHtml(getValue(result.student?.fullName, 'Result Card'))}</title>
   <style>
-    @page { size: A4 portrait; margin: 10mm; }
+    @page { size: A4 portrait; margin: 8mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -91,50 +91,40 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       print-color-adjust: exact;
     }
     .sheet {
-      width: 190mm;
-      height: 277mm;
-      min-height: 277mm;
+      width: 194mm;
+      height: 281mm;
+      min-height: 281mm;
       margin: 0 auto;
       background: #ffffff;
-      border: 1.5mm solid #0f766e;
-      padding: 8mm;
+      border: 0;
+      padding: 0;
       position: relative;
       overflow: hidden;
     }
-    .sheet:before,
-    .sheet:after {
-      content: "";
-      position: absolute;
-      width: 92mm;
-      height: 92mm;
-      border-radius: 50%;
-      background: rgba(15, 118, 110, 0.08);
-      pointer-events: none;
-    }
-    .sheet:before { top: -48mm; right: -35mm; }
-    .sheet:after { bottom: -48mm; left: -35mm; }
     .inner {
       height: 100%;
       min-height: 0;
-      border: 1px solid #bfd8d4;
-      padding: 6mm;
+      border: 0.8mm solid #0f766e;
+      padding: 8mm 7mm 6mm;
       position: relative;
       z-index: 1;
     }
     .header {
-      display: grid;
-      grid-template-columns: 26mm 1fr;
-      gap: 5mm;
-      align-items: center;
-      border-bottom: 2px solid #0f766e;
-      padding-bottom: 5mm;
+      position: relative;
+      min-height: 22mm;
+      border-bottom: 1px solid #0f766e;
+      padding: 1mm 28mm 4mm;
+      text-align: center;
     }
     .logo {
-      width: 24mm;
-      height: 24mm;
-      border: 2px solid #0f766e;
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 20mm;
+      height: 20mm;
+      border: 1px solid #0f766e;
       border-radius: 50%;
-      padding: 2mm;
+      padding: 1.5mm;
       object-fit: contain;
       background: #fff;
     }
@@ -142,72 +132,79 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
     .school h1 {
       margin: 0;
       color: #0f766e;
-      font-size: 28pt;
+      font-size: 26pt;
       line-height: 1.25;
       font-weight: 900;
     }
-    .school p {
-      margin: 2mm 0 0;
-      color: #475569;
-      font-size: 10.5pt;
-      line-height: 1.8;
-      font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
-    }
     .title {
-      margin: 6mm auto 5mm;
+      margin: 5mm auto 4mm;
       width: fit-content;
-      min-width: 68mm;
-      border: 2px solid #0f766e;
+      min-width: 58mm;
+      border: 1px solid #0f766e;
       border-radius: 999px;
       background: #ecfdf5;
       color: #064e3b;
-      padding: 1.8mm 9mm 2.5mm;
+      padding: 1mm 8mm 1.8mm;
       text-align: center;
-      font-size: 20pt;
+      font-size: 17pt;
       font-weight: 900;
-      box-shadow: inset 0 0 0 1px #ffffff;
     }
-    .info-grid {
+    .details {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 3mm;
-      margin-bottom: 5mm;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2.5mm 4mm;
+      margin: 0 0 4mm;
+      border-top: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 3mm 0;
     }
-    .box {
-      border: 1px solid #cbd5e1;
-      background: #f8fafc;
-      border-radius: 3mm;
-      padding: 2.5mm 3mm;
-      min-height: 16mm;
+    .detail {
+      min-width: 0;
+      border-bottom: 1px dotted #94a3b8;
+      padding-bottom: 1.2mm;
     }
-    .box strong {
+    .detail strong {
       display: block;
       color: #64748b;
-      font-size: 8.5pt;
+      font-size: 8pt;
       font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
-      margin-bottom: 1mm;
+      margin-bottom: 0.8mm;
     }
-    .box span {
+    .detail span {
       display: block;
       color: #132033;
-      font-size: 13pt;
+      font-size: 11pt;
       font-weight: 900;
-      line-height: 1.5;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .summary {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 3mm;
-      margin-bottom: 5mm;
+      gap: 0;
+      margin: 4mm 0 6mm;
+      border: 1px solid #99f6e4;
+      background: #ecfdf5;
     }
-    .summary .box {
+    .summary-item {
       text-align: center;
-      border-color: #99f6e4;
-      background: linear-gradient(180deg, #ecfdf5, #ffffff);
+      padding: 2mm 2mm 2.5mm;
+      border-left: 1px solid #99f6e4;
     }
-    .summary .box span {
+    .summary-item:last-child { border-left: 0; }
+    .summary-item strong {
+      display: block;
       color: #0f766e;
-      font-size: 16pt;
+      font-size: 8.5pt;
+      margin-bottom: 0.8mm;
+    }
+    .summary-item span {
+      display: block;
+      color: #0f766e;
+      font-size: 13pt;
+      font-weight: 900;
       font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     table {
@@ -215,20 +212,19 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       border-collapse: collapse;
       overflow: hidden;
       border: 1px solid #0f766e;
-      border-radius: 2mm;
       font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     th {
       background: #0f766e;
       color: #fff;
-      font-size: 10pt;
-      padding: 2.5mm;
+      font-size: 9.5pt;
+      padding: 1.7mm 2mm;
       border: 1px solid #0b5f59;
     }
     td {
-      padding: 2.2mm 2.5mm;
+      padding: 1.7mm 2mm;
       border: 1px solid #cbd5e1;
-      font-size: 10pt;
+      font-size: 9.5pt;
       color: #1e293b;
     }
     tbody tr:nth-child(even) td { background: #f8fafc; }
@@ -244,32 +240,32 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
       padding: 8mm;
     }
     .remarks {
-      margin-top: 5mm;
-      min-height: 18mm;
+      margin-top: 4mm;
+      min-height: 13mm;
       border: 1px dashed #94a3b8;
-      border-radius: 3mm;
-      padding: 3mm 4mm;
+      border-radius: 2mm;
+      padding: 2mm 3mm;
       background: #f8fafc;
-      font-size: 11pt;
-      line-height: 1.9;
+      font-size: 9.5pt;
+      line-height: 1.6;
       font-family: "Jameel Noori Nastaleeq", "Noto Nastaliq Urdu", serif;
     }
     .remarks strong { color: #0f766e; margin-left: 2mm; }
     .signatures {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8mm;
-      margin-top: 17mm;
+      gap: 10mm;
+      margin-top: 15mm;
       text-align: center;
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: 800;
     }
-    .signatures div { border-top: 1px solid #334155; padding-top: 2mm; }
+    .signatures div { border-top: 1px solid #334155; padding-top: 1.8mm; }
     .footer {
       position: absolute;
       left: 6mm;
       right: 6mm;
-      bottom: 4mm;
+      bottom: 3mm;
       display: flex;
       justify-content: space-between;
       color: #64748b;
@@ -281,9 +277,9 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
     @media print {
       body { background: #fff; }
       .sheet {
-        width: 190mm;
-        height: 277mm;
-        min-height: 277mm;
+        width: 194mm;
+        height: 281mm;
+        min-height: 281mm;
         margin: 0 auto;
       }
     }
@@ -296,29 +292,17 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
         <img class="logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(madrassaName)}" />
         <div class="school">
           <h1>${escapeHtml(madrassaName)}</h1>
-          <p>${escapeHtml(getValue(madrassaProfile?.address, ''))}</p>
-          <p>${escapeHtml(getValue(madrassaProfile?.phone1 || madrassaProfile?.phone2, ''))}</p>
         </div>
       </header>
 
       <div class="title">امتحانی رزلٹ کارڈ</div>
 
-      <section class="info-grid">
-        <div class="box"><strong>طالب علم</strong><span>${escapeHtml(getValue(result.student?.fullName))}</span></div>
-        <div class="box"><strong>والد کا نام</strong><span>${escapeHtml(getValue(result.student?.fatherName))}</span></div>
-        <div class="box"><strong>داخلہ نمبر</strong><span>${escapeHtml(getValue(result.student?.admissionNumber))}</span></div>
-        <div class="box"><strong>امتحان</strong><span>${escapeHtml(getExamName(result))}</span></div>
-        <div class="box"><strong>کلاس</strong><span>${escapeHtml(getValue(result.class?.name))}</span></div>
-        <div class="box"><strong>سیکشن</strong><span>${escapeHtml(getValue(result.section?.name))}</span></div>
-        <div class="box"><strong>سیشن</strong><span>${escapeHtml(getValue(result.session?.name))}</span></div>
-        <div class="box"><strong>تاریخ</strong><span>${escapeHtml(printDate)}</span></div>
-      </section>
-
-      <section class="summary">
-        <div class="box"><strong>کل نمبر</strong><span>${escapeHtml(getValue(result.totalMarks))}</span></div>
-        <div class="box"><strong>حاصل کردہ نمبر</strong><span>${escapeHtml(getValue(result.obtainedMarks))}</span></div>
-        <div class="box"><strong>فیصد</strong><span>${escapeHtml(formatPercent(result.percentage))}</span></div>
-        <div class="box"><strong>گریڈ</strong><span>${escapeHtml(getValue(result.grade || result.gradeTitle))}</span></div>
+      <section class="details">
+        <div class="detail"><strong>نام</strong><span>${escapeHtml(getValue(result.student?.fullName))}</span></div>
+        <div class="detail"><strong>والد کا نام</strong><span>${escapeHtml(getValue(result.student?.fatherName))}</span></div>
+        <div class="detail"><strong>کلاس</strong><span>${escapeHtml(getValue(result.class?.name))}</span></div>
+        <div class="detail"><strong>سیکشن</strong><span>${escapeHtml(getValue(result.section?.name))}</span></div>
+        <div class="detail"><strong>تاریخ</strong><span>${escapeHtml(printDate)}</span></div>
       </section>
 
       <table>
@@ -333,6 +317,13 @@ const buildResultPrintHtml = ({ result, madrassaProfile }) => {
         </thead>
         <tbody>${subjectRows}</tbody>
       </table>
+
+      <section class="summary">
+        <div class="summary-item"><strong>کل نمبر</strong><span>${escapeHtml(getValue(result.totalMarks))}</span></div>
+        <div class="summary-item"><strong>حاصل کردہ نمبر</strong><span>${escapeHtml(getValue(result.obtainedMarks))}</span></div>
+        <div class="summary-item"><strong>فیصد</strong><span>${escapeHtml(formatPercent(result.percentage))}</span></div>
+        <div class="summary-item"><strong>گریڈ</strong><span>${escapeHtml(getValue(result.grade || result.gradeTitle))}</span></div>
+      </section>
 
       <div class="remarks"><strong>تبصرہ:</strong>${escapeHtml(getValue(result.remarks, ''))}</div>
 
@@ -377,6 +368,10 @@ export const ExamResultIndex = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);

@@ -4,6 +4,7 @@ import { Award, BookOpen, Calculator, Plus, Save, Search, Trash2, UserRound } fr
 import { getSubjects } from '../../Constant/AcademicSetupApi';
 import { getStudents } from '../../Constant/StudentsApi';
 import { getStudentExamResult, saveExamResult, updateExamResult } from '../../Constant/ExamResultsApi';
+import { getExamSchedules } from '../../Constant/ExamSchedulesApi';
 import { defaultResultGrades, getResultGradeLabel } from '../../Constant/ResultGrades';
 import { getResultGrades } from '../../Constant/ResultGradesApi';
 import { useNotifier } from '../../Components/Notifications/useNotifier';
@@ -14,7 +15,7 @@ const emptySubjectRow = () => ({
     id: createClientId(),
     subjectId: '',
     subjectName: '',
-    totalMarks: '100',
+    totalMarks: '',
     obtainedMarks: '',
 });
 
@@ -51,6 +52,16 @@ const rowsFromResult = (result) => (result?.subjects || []).map((subjectRow) => 
     obtainedMarks: String(subjectRow.obtainedMarks ?? ''),
 }));
 
+const getScheduledTotalMarks = (schedules, subjectId) => {
+    const schedule = (schedules || []).find((item) => String(item.subject?.id || '') === String(subjectId));
+    return schedule?.totalMarks ? String(schedule.totalMarks) : '';
+};
+
+const applyScheduleMarksToRows = (rows, schedules) => rows.map((row) => ({
+    ...row,
+    totalMarks: row.subjectId ? getScheduledTotalMarks(schedules, row.subjectId) || row.totalMarks : '',
+}));
+
 export const ExamResult = () => {
     const notify = useNotifier();
     const location = useLocation();
@@ -61,6 +72,7 @@ export const ExamResult = () => {
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [savedResultId, setSavedResultId] = useState(null);
     const [rows, setRows] = useState([emptySubjectRow()]);
+    const [examSchedules, setExamSchedules] = useState([]);
     const [gradeScale, setGradeScale] = useState(defaultResultGrades);
     const [isLoading, setIsLoading] = useState(true);
     const [isResultLoading, setIsResultLoading] = useState(false);
@@ -68,6 +80,10 @@ export const ExamResult = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error });
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
 
     useEffect(() => {
         const loadData = async () => {
@@ -111,8 +127,22 @@ export const ExamResult = () => {
         });
         setSearch(`${editResult.student?.fullName || ''} ${editResult.student?.admissionNumber ? `(${editResult.student.admissionNumber})` : ''}`.trim());
         setSavedResultId(editResult.id);
-        setRows(rowsFromResult(editResult).length ? rowsFromResult(editResult) : [emptySubjectRow()]);
         setSuccess('رزلٹ ترمیم کے لیے لوڈ ہو گیا۔');
+
+        const loadEditSchedules = async () => {
+            try {
+                const schedulesResult = await getExamSchedules(`page=1&limit=100&status=active&sessionId=${editResult.session?.id || ''}&classId=${editResult.class?.id || ''}`);
+                const schedules = schedulesResult.items || [];
+                setExamSchedules(schedules);
+                const resultRows = rowsFromResult(editResult);
+                setRows(resultRows.length ? applyScheduleMarksToRows(resultRows, schedules) : [emptySubjectRow()]);
+            } catch {
+                setExamSchedules([]);
+                setRows(rowsFromResult(editResult).length ? rowsFromResult(editResult) : [emptySubjectRow()]);
+            }
+        };
+
+        loadEditSchedules();
     }, [editResult]);
 
     const filteredStudents = useMemo(() => {
@@ -139,11 +169,24 @@ export const ExamResult = () => {
         };
     }, [gradeScale, rows]);
 
+    const loadSchedulesForAssignment = async (studentAssignment) => {
+        if (!studentAssignment?.session?.id || !studentAssignment?.class?.id) {
+            setExamSchedules([]);
+            return [];
+        }
+
+        const schedulesResult = await getExamSchedules(`page=1&limit=100&status=active&sessionId=${studentAssignment.session.id}&classId=${studentAssignment.class.id}`);
+        const schedules = schedulesResult.items || [];
+        setExamSchedules(schedules);
+        return schedules;
+    };
+
     const selectStudent = async (student) => {
         setSelectedStudent(student);
         setSearch(`${student.fullName || ''} ${student.admissionNumber ? `(${student.admissionNumber})` : ''}`.trim());
         setSavedResultId(null);
         setRows([emptySubjectRow()]);
+        setExamSchedules([]);
         setError('');
         setSuccess('');
 
@@ -155,10 +198,14 @@ export const ExamResult = () => {
 
         setIsResultLoading(true);
         try {
-            const result = await getStudentExamResult(student.id, buildResultQuery(studentAssignment));
+            const [result, schedules] = await Promise.all([
+                getStudentExamResult(student.id, buildResultQuery(studentAssignment)),
+                loadSchedulesForAssignment(studentAssignment),
+            ]);
             if (result) {
                 setSavedResultId(result.id);
-                setRows(rowsFromResult(result).length ? rowsFromResult(result) : [emptySubjectRow()]);
+                const resultRows = rowsFromResult(result);
+                setRows(resultRows.length ? applyScheduleMarksToRows(resultRows, schedules) : [emptySubjectRow()]);
                 setSuccess('محفوظ شدہ رزلٹ لوڈ ہو گیا۔');
             }
         } catch (loadError) {
@@ -174,7 +221,12 @@ export const ExamResult = () => {
 
             if (field === 'subjectId') {
                 const subject = subjects.find((item) => String(item.id) === String(value));
-                return { ...row, subjectId: value, subjectName: subject?.name || '' };
+                return {
+                    ...row,
+                    subjectId: value,
+                    subjectName: subject?.name || '',
+                    totalMarks: getScheduledTotalMarks(examSchedules, value),
+                };
             }
 
             return { ...row, [field]: value };
@@ -206,6 +258,11 @@ export const ExamResult = () => {
 
         if (rows.some((row) => !row.subjectId || !row.totalMarks || row.obtainedMarks === '')) {
             setError('ہر قطار میں مضمون، کل نمبر اور حاصل کردہ نمبر درج کریں۔');
+            return;
+        }
+
+        if (rows.some((row) => row.subjectId && !getScheduledTotalMarks(examSchedules, row.subjectId))) {
+            setError('منتخب مضمون کے لیے امتحانی شیڈول میں کل نمبر موجود نہیں۔ پہلے شیڈول میں کل نمبر شامل کریں۔');
             return;
         }
 
@@ -370,7 +427,7 @@ export const ExamResult = () => {
                                                         </select>
                                                     </td>
                                                     <td className="p-3">
-                                                        <input type="number" min="1" value={row.totalMarks} onChange={(event) => updateRow(row.id, 'totalMarks', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
+                                                        <input type="number" min="1" value={row.totalMarks} readOnly required className="h-11 w-full cursor-not-allowed rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
                                                     </td>
                                                     <td className="p-3">
                                                         <input type="number" min="0" max={row.totalMarks || undefined} value={row.obtainedMarks} onChange={(event) => updateRow(row.id, 'obtainedMarks', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />

@@ -102,6 +102,10 @@ export const ExamScheduleIndex = () => {
     const [error, setError] = useState('');
     useNotificationBridge({ error, success: message });
 
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, []);
+
     const filteredSchedules = useMemo(() => {
         const query = filters.search.trim().toLowerCase();
         return schedules.filter((schedule) => {
