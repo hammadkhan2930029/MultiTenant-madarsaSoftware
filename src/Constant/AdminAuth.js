@@ -337,9 +337,22 @@ export const fetchCurrentTenantBranding = async () => {
   return brandingData;
 };
 
-export const getApiAssetUrl = (assetPath) => {
+const appendAssetCacheKey = (url, cacheKey = '') => {
+  if (!cacheKey) return url;
+
+  try {
+    const nextUrl = new URL(url, typeof window !== 'undefined' ? window.location.origin : undefined);
+    nextUrl.searchParams.set('v', String(cacheKey));
+    return nextUrl.toString();
+  } catch {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${encodeURIComponent(String(cacheKey))}`;
+  }
+};
+
+export const getApiAssetUrl = (assetPath, cacheKey = '') => {
   if (!assetPath) return '';
-  if (/^https?:\/\//i.test(assetPath)) return assetPath;
+  if (/^https?:\/\//i.test(assetPath)) return appendAssetCacheKey(assetPath, cacheKey);
 
   const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
 
@@ -351,49 +364,49 @@ export const getApiAssetUrl = (assetPath) => {
       const isLocalApiHost = ['localhost', '127.0.0.1'].includes(apiUrl.hostname);
 
       if (isLocalApiHost && currentHostName && !['localhost', '127.0.0.1'].includes(currentHostName)) {
-        return `${window.location.protocol}//${currentHostName}:${apiUrl.port}${normalizedAssetPath}`;
+        return appendAssetCacheKey(`${window.location.protocol}//${currentHostName}:${apiUrl.port}${normalizedAssetPath}`, cacheKey);
       }
     }
 
-    return new URL(normalizedAssetPath, `${apiUrl.origin}/`).toString();
+    return appendAssetCacheKey(new URL(normalizedAssetPath, `${apiUrl.origin}/`).toString(), cacheKey);
   } catch {
     const apiOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
-    return `${apiOrigin}${normalizedAssetPath}`;
+    return appendAssetCacheKey(`${apiOrigin}${normalizedAssetPath}`, cacheKey);
   }
 };
 
-const buildAssetCandidates = (assetPath) => {
+const buildAssetCandidates = (assetPath, cacheKey = '') => {
   if (!assetPath) return [];
-  if (/^https?:\/\//i.test(assetPath)) return [assetPath];
+  if (/^https?:\/\//i.test(assetPath)) return [appendAssetCacheKey(assetPath, cacheKey)];
 
   const normalizedAssetPath = assetPath.startsWith('/') ? assetPath : `/${assetPath}`;
   const candidates = new Set();
 
   try {
     const apiUrl = new URL(API_BASE_URL);
-    candidates.add(new URL(normalizedAssetPath, `${apiUrl.origin}/`).toString());
+    candidates.add(appendAssetCacheKey(new URL(normalizedAssetPath, `${apiUrl.origin}/`).toString(), cacheKey));
 
     if (['localhost', '127.0.0.1'].includes(apiUrl.hostname)) {
-      candidates.add(`http://localhost:${apiUrl.port}${normalizedAssetPath}`);
-      candidates.add(`http://127.0.0.1:${apiUrl.port}${normalizedAssetPath}`);
+      candidates.add(appendAssetCacheKey(`http://localhost:${apiUrl.port}${normalizedAssetPath}`, cacheKey));
+      candidates.add(appendAssetCacheKey(`http://127.0.0.1:${apiUrl.port}${normalizedAssetPath}`, cacheKey));
     }
   } catch {
-    candidates.add(getApiAssetUrl(normalizedAssetPath));
+    candidates.add(getApiAssetUrl(normalizedAssetPath, cacheKey));
   }
 
   if (typeof window !== 'undefined') {
-    candidates.add(`${window.location.origin}${normalizedAssetPath}`);
+    candidates.add(appendAssetCacheKey(`${window.location.origin}${normalizedAssetPath}`, cacheKey));
   }
 
   return Array.from(candidates).filter(Boolean);
 };
 
-export const resolveApiAssetUrl = async (assetPath) => {
-  const candidates = buildAssetCandidates(assetPath);
+export const resolveApiAssetUrl = async (assetPath, cacheKey = '') => {
+  const candidates = buildAssetCandidates(assetPath, cacheKey);
 
   for (const candidate of candidates) {
     try {
-      const response = await fetch(candidate, { method: 'GET' });
+      const response = await fetch(candidate, { method: 'GET', cache: 'no-store' });
       if (response.ok) {
         const blob = await response.blob();
         return URL.createObjectURL(blob);
@@ -403,7 +416,7 @@ export const resolveApiAssetUrl = async (assetPath) => {
     }
   }
 
-  return getApiAssetUrl(assetPath);
+  return getApiAssetUrl(assetPath, cacheKey);
 };
 
 export const updateMadrassaProfile = async (profileData) => {

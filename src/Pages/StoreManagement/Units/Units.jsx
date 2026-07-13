@@ -200,7 +200,7 @@ export const StoreUnits = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
                         <thead>
-                            <tr className="text-[var(--color-text-muted)]">
+                            <tr className="text-[var(--color-text-muted)] border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اکائی</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">مختصر نام</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">تفصیل</th>

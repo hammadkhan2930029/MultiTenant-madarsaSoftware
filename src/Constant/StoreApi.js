@@ -87,7 +87,7 @@ export const rejectStoreApproval = async (moduleType, id, remarks = '') => {
 };
 
 export const getStoreItems = async (filters = {}) => {
-  const query = buildQuery(filters, ['search', 'category', 'lowStock', 'outOfStock', 'lowStockThreshold']);
+  const query = buildQuery(filters, ['search', 'category', 'lowStock', 'outOfStock', 'lowStockThreshold', 'includeInactive', 'status']);
   const result = await apiRequest(`/store/items${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
   return result?.data || { items: [], meta: null };
 };

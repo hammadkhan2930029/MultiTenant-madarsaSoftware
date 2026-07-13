@@ -8,6 +8,7 @@ import {
     getStoreSupplierPayments,
     getStoreSupplierPurchases,
 } from '../../../Constant/StoreApi';
+import { formatAmountInput, parseAmountInput } from '../storeAmountFormat';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const formatNumber = (value) => new Intl.NumberFormat('ur-PK', { maximumFractionDigits: 2 }).format(Number(value || 0));
@@ -66,7 +67,7 @@ export const StoreSupplierDetail = () => {
     }, [supplierId]);
 
     const handlePaymentSubmit = async () => {
-        if (Number(paymentForm.amount || 0) <= 0) {
+        if (parseAmountInput(paymentForm.amount) <= 0) {
             setError('ادائیگی کی رقم درست درج کریں۔');
             return;
         }
@@ -77,7 +78,7 @@ export const StoreSupplierDetail = () => {
 
         try {
             await createStoreSupplierPayment(supplierId, {
-                amount: Number(paymentForm.amount),
+                amount: parseAmountInput(paymentForm.amount),
                 paymentDate: paymentForm.paymentDate,
                 paymentMethod: paymentForm.paymentMethod,
                 note: paymentForm.note.trim(),
@@ -194,7 +195,7 @@ export const StoreSupplierDetail = () => {
                     <div className="space-y-4">
                         <div>
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">رقم</label>
-                            <input type="number" min="0" value={paymentForm.amount} onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: event.target.value }))} placeholder="0" className="mt-2 h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
+                            <input type="text" inputMode="decimal" value={paymentForm.amount} onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: formatAmountInput(event.target.value) }))} placeholder="0" className="mt-2 h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
                         </div>
                         <div>
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تاریخ</label>

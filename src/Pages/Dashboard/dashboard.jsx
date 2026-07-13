@@ -214,6 +214,12 @@ export const Dashboard = () => {
         charts: 'loading',
         activities: 'loading',
     });
+    const [financeCards, setFinanceCards] = useState({
+        payableAmount: 0,
+        receivableAmount: 0,
+        totalKharch: 0,
+        total: 0,
+    });
 
     useEffect(() => {
         window.scrollTo(0, 0)
@@ -272,6 +278,12 @@ export const Dashboard = () => {
                     const income = Number(summary.totalAmdan || 0);
                     const expense = Number(summary.totalKharch || 0);
                     const total = income + expense;
+                    setFinanceCards({
+                        payableAmount: Number(summary.payableAmount || 0),
+                        receivableAmount: Number(summary.receivableAmount || 0),
+                        totalKharch: expense,
+                        total: Number(summary.remainingBalance || 0),
+                    });
 
                     if (total > 0) {
                         hasChartData = true;
@@ -682,10 +694,10 @@ export const Dashboard = () => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" dir="rtl">
-                <StatCard title="قابل ادائیگی" value="PKR 250,000" subValue="آج: 8 مکمل" icon={BookOpen} colorClass="bg-blue-500" borderClass="bg-blue-500" />
-                <StatCard title="قابل وصولی" value="PKR 38,000" subValue="87% حاضری" icon={Users} colorClass="bg-emerald-500" borderClass="bg-emerald-500" />
-                <StatCard title="کل خرچ" value="PKR 33,000" subValue="78% اوسط حاضری" icon={TrendingUp} colorClass="bg-indigo-500" borderClass="bg-indigo-500" />
-                <StatCard title="کل آمدنی" value="PKR 803,000" subValue="اس مہینے 12% اضافہ" icon={Wallet} colorClass="bg-orange-500" borderClass="bg-orange-500" isIncome={true} />
+                <StatCard title="قابل ادائیگی" value={formatCurrency(financeCards.payableAmount, 'PKR 0')} subValue="خریداری کی باقی ادائیگیاں" icon={BookOpen} colorClass="bg-blue-500" borderClass="bg-blue-500" />
+                <StatCard title="قابل وصولی" value={formatCurrency(financeCards.receivableAmount, 'PKR 0')} subValue="طلباء فیس کی باقی وصولی" icon={Users} colorClass="bg-emerald-500" borderClass="bg-emerald-500" />
+                <StatCard title="کل خرچ" value={formatCurrency(financeCards.totalKharch, 'PKR 0')} subValue="مالیاتی ریکارڈ کے مطابق" icon={TrendingUp} colorClass="bg-indigo-500" borderClass="bg-indigo-500" />
+                <StatCard title="کل" value={formatCurrency(financeCards.total, 'PKR 0')} subValue="کل آمدن منفی کل خرچ" icon={Wallet} colorClass="bg-orange-500" borderClass="bg-orange-500" isIncome={true} />
             </motion.div>
 
             {isQuickActionSettingsOpen ? (

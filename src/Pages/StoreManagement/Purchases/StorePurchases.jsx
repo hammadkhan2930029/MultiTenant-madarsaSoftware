@@ -11,10 +11,12 @@ import {
     openStorePrintPage,
     updateStorePurchase,
 } from '../../../Constant/StoreApi';
+import { getStoreUnits } from '../../../Constant/StoreUnitsApi';
+import { formatAmountInput, parseAmountInput } from '../storeAmountFormat';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const emptyItem = { itemId: '', quantity: '', rate: '', total: 0 };
+const emptyItem = { itemId: '', quantity: '1', unitId: '', rate: '', total: 0 };
 
 const emptyForm = {
     purchaseDate: today(),
@@ -40,6 +42,7 @@ export const StorePurchases = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [purchases, setPurchases] = useState([]);
     const [items, setItems] = useState([]);
+    const [units, setUnits] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [search, setSearch] = useState(() => searchParams.get('search') || '');
     const [supplierFilter, setSupplierFilter] = useState(() => searchParams.get('supplierId') || '');
@@ -59,10 +62,14 @@ export const StorePurchases = () => {
 
     const loadDependencies = async () => {
         setError('');
-        const [itemsResult, suppliersResult] = await Promise.allSettled([getStoreItems(), getStoreSuppliers()]);
+        const [itemsResult, suppliersResult, unitsResult] = await Promise.allSettled([
+            getStoreItems(),
+            getStoreSuppliers(),
+            getStoreUnits({ activeOnly: 'true' }),
+        ]);
 
         if (itemsResult.status === 'fulfilled') {
-            setItems(itemsResult.value.items || []);
+            setItems((itemsResult.value.items || []).filter((item) => item.status !== 'inactive'));
         } else {
             setItems([]);
             setError(itemsResult.reason?.message || 'اشیاء لوڈ نہیں ہو سکیں۔');
@@ -73,6 +80,13 @@ export const StorePurchases = () => {
         } else {
             setSuppliers([]);
             setError(suppliersResult.reason?.message || 'سپلائرز لوڈ نہیں ہو سکے۔');
+        }
+
+        if (unitsResult.status === 'fulfilled') {
+            setUnits((unitsResult.value.items || []).filter((unit) => unit.status === 'active'));
+        } else {
+            setUnits([]);
+            setError(unitsResult.reason?.message || 'اکائیاں لوڈ نہیں ہو سکیں۔');
         }
     };
 
@@ -119,7 +133,7 @@ export const StorePurchases = () => {
     };
 
     const totalAmount = useMemo(() => formData.items.reduce((sum, item) => sum + Number(item.total || 0), 0), [formData.items]);
-    const paidAmount = Number(formData.paidAmount || 0);
+    const paidAmount = parseAmountInput(formData.paidAmount);
     const remainingAmount = Math.max(totalAmount - paidAmount, 0);
 
     const resetForm = () => {
@@ -128,13 +142,28 @@ export const StorePurchases = () => {
         setIsFormOpen(false);
     };
 
+    const getItemDefaultUnitId = (itemId) => {
+        const selectedItem = items.find((item) => Number(item.id) === Number(itemId));
+        if (!selectedItem?.unit) return '';
+        const unitName = String(selectedItem.unit).trim().toLowerCase();
+        const matchedUnit = units.find((unit) => (
+            String(unit.id) === String(selectedItem.unit)
+            || String(unit.name || '').trim().toLowerCase() === unitName
+            || String(unit.shortName || '').trim().toLowerCase() === unitName
+        ));
+        return matchedUnit ? String(matchedUnit.id) : '';
+    };
+
     const updatePurchaseItem = (index, field, value) => {
         setFormData((prev) => {
             const nextItems = prev.items.map((item, itemIndex) => {
                 if (itemIndex !== index) return item;
                 const nextItem = { ...item, [field]: value };
+                if (field === 'itemId' && !nextItem.unitId) {
+                    nextItem.unitId = getItemDefaultUnitId(value);
+                }
                 const quantity = Number(nextItem.quantity || 0);
-                const rate = Number(nextItem.rate || 0);
+                const rate = parseAmountInput(nextItem.rate);
                 return { ...nextItem, total: quantity * rate };
             });
             return { ...prev, items: nextItems };
@@ -159,12 +188,13 @@ export const StorePurchases = () => {
             items: purchase.items?.length
                 ? purchase.items.map((item) => ({
                       itemId: String(item.itemId),
-                      quantity: String(item.quantity),
-                      rate: String(item.rate),
+                      quantity: String(item.quantity ?? 1),
+                      unitId: item.unitId ? String(item.unitId) : getItemDefaultUnitId(item.itemId),
+                      rate: formatAmountInput(item.unitPrice ?? item.rate ?? ''),
                       total: Number(item.total || 0),
                   }))
                 : [emptyItem],
-            paidAmount: String(purchase.paidAmount ?? ''),
+            paidAmount: formatAmountInput(purchase.paidAmount ?? ''),
             paymentMethod: purchase.paymentMethod || 'cash',
             invoiceImage: null,
         });
@@ -177,9 +207,9 @@ export const StorePurchases = () => {
         if (!formData.purchaseDate) return 'خریداری کی تاریخ درج کرنا ضروری ہے۔';
         if (!formData.supplierId && !formData.supplierName.trim()) return 'سپلائر منتخب یا درج کرنا ضروری ہے۔';
         if (!formData.items.length) return 'کم از کم ایک شے شامل کریں۔';
-        if (formData.items.some((item) => !item.itemId || Number(item.quantity) <= 0 || Number(item.rate) < 0)) return 'اشیاء، مقدار اور ریٹ درست درج کریں۔';
-        if (Number(formData.paidAmount || 0) < 0) return 'ادا شدہ رقم درست درج کریں۔';
-        if (Number(formData.paidAmount || 0) > totalAmount) return 'ادا شدہ رقم کل رقم سے زیادہ نہیں ہو سکتی۔';
+        if (formData.items.some((item) => !item.itemId || Number(item.quantity) <= 0 || !item.unitId || parseAmountInput(item.rate) < 0 || item.rate === '')) return 'شے، مقدار، اکائی اور فی اکائی رقم درست درج کریں۔';
+        if (parseAmountInput(formData.paidAmount) < 0) return 'ادا شدہ رقم درست درج کریں۔';
+        if (parseAmountInput(formData.paidAmount) > totalAmount) return 'ادا شدہ رقم کل رقم سے زیادہ نہیں ہو سکتی۔';
         return '';
     };
 
@@ -203,9 +233,12 @@ export const StorePurchases = () => {
                 items: formData.items.map((item) => ({
                     itemId: Number(item.itemId),
                     quantity: Number(item.quantity),
-                    rate: Number(item.rate),
+                    unitId: Number(item.unitId),
+                    unitPrice: parseAmountInput(item.rate),
+                    rate: parseAmountInput(item.rate),
+                    total: Number(item.total || 0),
                 })),
-                paidAmount: Number(formData.paidAmount || 0),
+                paidAmount: parseAmountInput(formData.paidAmount),
                 paymentMethod: formData.paymentMethod,
                 invoiceImage: formData.invoiceImage,
             };
@@ -248,11 +281,13 @@ export const StorePurchases = () => {
     };
 
     const getItemName = (itemId) => items.find((item) => Number(item.id) === Number(itemId))?.itemName || 'شے';
+    const getUnitName = (unitId) => units.find((unit) => Number(unit.id) === Number(unitId))?.name || '';
+    const getUnitPriceLabel = (unitId) => (unitId ? `فی ${getUnitName(unitId) || 'اکائی'} رقم` : 'فی اکائی رقم');
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
-            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
-                <div className="text-right">
+            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm xl:flex-row xl:items-center xl:justify-between">
+                <div className="shrink-0 text-right">
                     <div className="mb-3 inline-flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-2 text-sm font-black text-[#00d094]">
                         <ReceiptText size={18} />
                         اسٹور مینجمنٹ
@@ -261,8 +296,8 @@ export const StorePurchases = () => {
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل خریداری ریکارڈ: {purchases.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:justify-end">
-                    <div className="relative md:w-72">
+                <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:justify-end xl:w-auto xl:flex-nowrap xl:items-center">
+                    <div className="relative md:w-64 xl:w-60">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
@@ -272,24 +307,24 @@ export const StorePurchases = () => {
                         />
                     </div>
 
-                    <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-56">
+                    <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-48 xl:w-44">
                         <option value="">تمام سپلائرز</option>
                         {suppliers.map((supplier) => (
                             <option key={supplier.id} value={supplier.id}>{supplier.supplierName}</option>
                         ))}
                     </select>
 
-                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
-                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
+                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
 
-                    <button type="button" onClick={resetFilters} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-sm font-black text-[var(--color-text)]">
+                    <button type="button" onClick={resetFilters} className="h-12 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
                         فلٹر صاف کریں
                     </button>
 
                     <button
                         type="button"
                         onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))}
-                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all active:scale-95 ${
+                        className={`flex shrink-0 items-center justify-center gap-3 rounded-2xl px-5 py-3 text-sm font-black transition-all active:scale-95 ${
                             isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white shadow-lg shadow-emerald-500/20'
                         }`}
                     >
@@ -358,13 +393,17 @@ export const StorePurchases = () => {
                         </div>
 
                         {formData.items.map((purchaseItem, index) => (
-                            <div key={index} className="grid grid-cols-1 gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+                            <div key={index} className="grid grid-cols-1 gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 md:grid-cols-[2fr_1fr_1.2fr_1fr_1fr_auto]">
                                 <select value={purchaseItem.itemId} onChange={(event) => updatePurchaseItem(index, 'itemId', event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">
                                     <option value="">{items.length ? 'شے منتخب کریں' : 'کوئی شے موجود نہیں'}</option>
                                     {items.map((item) => <option key={item.id} value={item.id}>{item.itemName}</option>)}
                                 </select>
                                 <input type="number" min="0" value={purchaseItem.quantity} onChange={(event) => updatePurchaseItem(index, 'quantity', event.target.value)} placeholder="مقدار" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
-                                <input type="number" min="0" value={purchaseItem.rate} onChange={(event) => updatePurchaseItem(index, 'rate', event.target.value)} placeholder="ریٹ" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
+                                <select value={purchaseItem.unitId || ''} onChange={(event) => updatePurchaseItem(index, 'unitId', event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">
+                                    <option value="">{units.length ? 'اکائی منتخب کریں' : 'کوئی اکائی موجود نہیں'}</option>
+                                    {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
+                                </select>
+                                <input type="text" inputMode="decimal" value={purchaseItem.rate} onChange={(event) => updatePurchaseItem(index, 'rate', formatAmountInput(event.target.value))} placeholder={getUnitPriceLabel(purchaseItem.unitId)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
                                 <div className="flex h-12 items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-sm font-black text-[var(--color-text)]">روپے {formatNumber(purchaseItem.total)}</div>
                                 <button type="button" onClick={() => removeItemRow(index)} className="h-12 rounded-xl bg-rose-500/10 px-4 text-rose-500 transition-all hover:bg-rose-500 hover:text-white">
                                     <Trash2 size={16} />
@@ -380,7 +419,7 @@ export const StorePurchases = () => {
                         </div>
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                             <p className="text-xs font-black text-[var(--color-text-muted)]">ادا شدہ رقم</p>
-                            <input type="number" min="0" value={formData.paidAmount} onChange={(event) => setFormData((prev) => ({ ...prev, paidAmount: event.target.value }))} placeholder="0" className="mt-2 h-10 w-full bg-transparent text-right text-xl font-black text-[var(--color-text)] outline-none" />
+                            <input type="text" inputMode="decimal" value={formData.paidAmount} onChange={(event) => setFormData((prev) => ({ ...prev, paidAmount: formatAmountInput(event.target.value) }))} placeholder="0" className="mt-2 h-10 w-full bg-transparent text-right text-xl font-black text-[var(--color-text)] outline-none" />
                         </div>
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                             <p className="text-xs font-black text-[var(--color-text-muted)]">باقی رقم</p>
@@ -402,7 +441,7 @@ export const StorePurchases = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
                         <thead>
-                            <tr className="text-[var(--color-text-muted)]">
+                            <tr  className="text-[var(--color-text-muted)] border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">تاریخ</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سپلائر</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">انوائس</th>

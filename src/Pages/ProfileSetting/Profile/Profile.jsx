@@ -59,13 +59,14 @@ export const Profile = () => {
                     familyNoSeq: profile.familyNoSeq || '',
                     regNo: profile.regNo || '',
                     logoUrl: profile.logoUrl || '',
+                    updatedAt: profile.updatedAt || '',
                 };
 
                 setMadrassaData(nextData);
                 setTempData(nextData);
 
                 if (profile.logoUrl) {
-                    const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl);
+                    const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl, profile.updatedAt || Date.now());
                     if (isMounted) {
                         setLogoPreview(resolvedLogoUrl || AppImages.logo);
                     }
@@ -183,7 +184,7 @@ export const Profile = () => {
 
         setTempData({ ...madrassaData });
         if (madrassaData.logoUrl) {
-            resolveApiAssetUrl(madrassaData.logoUrl).then((resolvedLogoUrl) => {
+            resolveApiAssetUrl(madrassaData.logoUrl, madrassaData.updatedAt || Date.now()).then((resolvedLogoUrl) => {
                 setLogoPreview(resolvedLogoUrl || AppImages.logo);
             });
         } else {
@@ -247,6 +248,7 @@ export const Profile = () => {
                 familyNoSeq: savedProfile.familyNoSeq || '',
                 regNo: savedProfile.regNo || '',
                 logoUrl: savedProfile.logoUrl || '',
+                updatedAt: savedProfile.updatedAt || '',
             };
 
             setMadrassaData(nextData);
@@ -255,7 +257,7 @@ export const Profile = () => {
             setIsEditing(false);
 
             if (savedProfile.logoUrl) {
-                const resolvedLogoUrl = await resolveApiAssetUrl(savedProfile.logoUrl);
+                const resolvedLogoUrl = await resolveApiAssetUrl(savedProfile.logoUrl, savedProfile.updatedAt || Date.now());
                 setLogoPreview(resolvedLogoUrl || AppImages.logo);
             } else {
                 setLogoPreview(AppImages.logo);

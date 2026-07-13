@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, Printer, Search } from 'lucide-react';
+import { Download, FileText, PackageCheck, Printer, Search, Wallet } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { downloadStoreExport, getStoreItems, getStoreReport, getStoreSuppliers, openStorePrintPage } from '../../../Constant/StoreApi';
 import { getStoreCategories } from '../../../Constant/StoreCategoriesApi';
@@ -19,7 +19,7 @@ const reportOptions = [
 
 const columnsByReport = {
     dailyStock: [
-        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'قیمت'], ['stockValue', 'مالیت'],
+        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['stockValue', 'مالیت'],
     ],
     monthlyStock: [
         ['monthLabel', 'مہینہ'], ['purchaseQuantity', 'خریداری'], ['issueQuantity', 'اجراء'], ['returnQuantity', 'واپسی'], ['damagedQuantity', 'خراب'],
@@ -37,13 +37,13 @@ const columnsByReport = {
         ['department', 'شعبہ'], ['totalIssues', 'کل اجراء'], ['totalQuantity', 'کل مقدار'],
     ],
     lowStock: [
-        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'قیمت'], ['stockValue', 'مالیت'],
+        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['stockValue', 'مالیت'],
     ],
     damagedStock: [
         ['date', 'تاریخ'], ['itemName', 'شے'], ['quantity', 'مقدار'], ['reason', 'وجہ'], ['responsiblePerson', 'ذمہ دار'], ['amountLoss', 'نقصان رقم'], ['approvalStatus', 'حالت'],
     ],
     storeValue: [
-        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'قیمت'], ['totalValue', 'کل مالیت'],
+        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['totalValue', 'کل مالیت'],
     ],
     itemLedger: [
         ['ledgerDate', 'تاریخ'], ['sourceType', 'قسم'], ['referenceNo', 'حوالہ'], ['inQuantity', 'آمد'], ['outQuantity', 'رفت'], ['balanceQuantity', 'بیلنس'], ['note', 'نوٹ'],
@@ -58,11 +58,34 @@ const formatValue = (value) => {
     return String(value);
 };
 
+const moneyText = (value) => `روپے ${formatValue(Number(value || 0))}`;
+const formatReportCell = (row, key) => {
+    if (key === 'purchasePrice') {
+        return `${moneyText(row.purchasePrice)}${row.unit ? ` فی ${row.unit}` : ''}`;
+    }
+    if (['stockValue', 'totalValue', 'totalAmount', 'paidAmount', 'remainingAmount', 'amountLoss', 'totalPurchase', 'totalPaid', 'balance'].includes(key)) {
+        return moneyText(row[key]);
+    }
+    return formatValue(row[key]);
+};
+
+const getSummaryCards = (summary) => {
+    if (!summary) return [];
+    const cards = [];
+    if (summary.totalItems !== undefined) cards.push({ key: 'totalItems', label: 'کل اشیاء', value: formatValue(summary.totalItems), icon: PackageCheck });
+    if (summary.totalValue !== undefined) cards.push({ key: 'totalValue', label: 'کل مالیت', value: moneyText(summary.totalValue), icon: Wallet });
+    if (summary.totalAmount !== undefined) cards.push({ key: 'totalAmount', label: 'کل رقم', value: moneyText(summary.totalAmount), icon: Wallet });
+    if (summary.paidAmount !== undefined) cards.push({ key: 'paidAmount', label: 'ادا شدہ', value: moneyText(summary.paidAmount), icon: Wallet });
+    if (summary.remainingAmount !== undefined) cards.push({ key: 'remainingAmount', label: 'باقی', value: moneyText(summary.remainingAmount), icon: Wallet });
+    if (summary.amountLoss !== undefined) cards.push({ key: 'amountLoss', label: 'کل نقصان', value: moneyText(summary.amountLoss), icon: Wallet });
+    return cards;
+};
+
 const downloadCsv = ({ rows, columns, fileName }) => {
     const escapeValue = (value) => `"${formatValue(value).replace(/"/g, '""')}"`;
     const csv = [
         columns.map(([, label]) => escapeValue(label)).join(','),
-        ...rows.map((row) => columns.map(([key]) => escapeValue(row[key])).join(',')),
+        ...rows.map((row) => columns.map(([key]) => escapeValue(formatReportCell(row, key))).join(',')),
     ].join('\r\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -88,6 +111,7 @@ export const StoreReports = () => {
 
     const columns = useMemo(() => columnsByReport[reportType] || columnsByReport.dailyStock, [reportType]);
     const reportTitle = reportOptions.find((item) => item.value === reportType)?.label || 'رپورٹ';
+    const summaryCards = useMemo(() => getSummaryCards(summary), [summary]);
 
     useEffect(() => {
         Promise.all([getStoreItems(), getStoreSuppliers(), getStoreCategories({ activeOnly: 'true' })])
@@ -162,7 +186,7 @@ export const StoreReports = () => {
         doc.text(reportTitle, 14, 16);
         let y = 26;
         rows.slice(0, 30).forEach((row) => {
-            const line = columns.map(([key, label]) => `${label}: ${formatValue(row[key])}`).join(' | ');
+            const line = columns.map(([key, label]) => `${label}: ${formatReportCell(row, key)}`).join(' | ');
             doc.text(line.slice(0, 180), 14, y);
             y += 8;
             if (y > 190) {
@@ -238,9 +262,22 @@ export const StoreReports = () => {
 
             {error ? <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-black text-rose-500">{error}</div> : null}
 
-            {summary ? (
-                <div className="flex flex-wrap gap-3 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm font-black text-[var(--color-text-muted)]">
-                    {Object.entries(summary).map(([key, value]) => <span key={key}>{key}: {formatValue(value)}</span>)}
+            {summaryCards.length ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2 ">
+                    {summaryCards.map((card) => {
+                        const Icon = card.icon;
+                        return (
+                            <div key={card.key} className="flex items-center justify-between gap-4 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                                <div className="text-right">
+                                    <p className="text-xs font-black text-[var(--color-text-muted)]">{card.label}</p>
+                                    <p className="mt-2 text-2xl font-black text-[var(--color-text)]">{card.value}</p>
+                                </div>
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-[#00d094]">
+                                    <Icon size={22} />
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             ) : null}
 
@@ -248,7 +285,7 @@ export const StoreReports = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
                         <thead>
-                            <tr className="text-[var(--color-text-muted)]">
+                            <tr className="text-[var(--color-text-muted)] border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                                 {columns.map(([key, label]) => <th key={key} className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">{label}</th>)}
                             </tr>
                         </thead>
@@ -258,7 +295,7 @@ export const StoreReports = () => {
                             ) : rows.length ? (
                                 rows.map((row, index) => (
                                     <tr key={row.id || index} className="border-t border-[var(--color-border)]/60">
-                                        {columns.map(([key]) => <td key={key} className="px-6 py-4 text-sm font-bold text-[var(--color-text)]">{formatValue(row[key])}</td>)}
+                                        {columns.map(([key]) => <td key={key} className="px-6 py-4 text-sm font-bold text-[var(--color-text)]">{formatReportCell(row, key)}</td>)}
                                     </tr>
                                 ))
                             ) : (

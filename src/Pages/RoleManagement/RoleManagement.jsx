@@ -622,7 +622,7 @@ export const RoleManagement = () => {
   };
 
   const pageTitle = {
-    list: 'Role Management / Roles',
+    list: 'کردار مینجمنٹ / کردار',
     create: 'نیا کردار بنائیں',
     edit: 'کردار میں ترمیم',
     details: 'کردار کی تفصیل',

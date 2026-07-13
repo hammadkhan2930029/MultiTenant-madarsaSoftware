@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // Hifz Components (Inhe aapne jo pages banaye hain unse link karein)
 import { DailyJaizaEntry } from '../Pages/Hifz/Daily/DailyJaizaEntry';
@@ -13,6 +13,16 @@ import { ParaJaizaList } from '../Pages/Hifz/Sipara/paraList';
 import { withPermission } from '../Components/Auth/permissionGuards';
 
 export const HifzRoutes = () => {
+    const location = useLocation();
+
+    useEffect(() => {
+        window.requestAnimationFrame(() => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        });
+    }, [location.pathname]);
+
     return (
         <Routes>
             {/* Jab koi direct /hifz par aaye */}

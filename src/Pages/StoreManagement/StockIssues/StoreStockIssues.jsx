@@ -223,8 +223,8 @@ export const StoreStockIssues = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
-            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
-                <div className="text-right">
+            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm xl:flex-row xl:items-center xl:justify-between">
+                <div className="shrink-0 text-right">
                     <div className="mb-3 inline-flex items-center gap-2 rounded-2xl bg-emerald-500/10 px-4 py-2 text-sm font-black text-[#00d094]">
                         <PackageMinus size={18} />
                         اسٹور مینجمنٹ
@@ -233,18 +233,18 @@ export const StoreStockIssues = () => {
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل ریکارڈ: {issues.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:justify-end">
-                    <div className="relative md:w-72">
+                <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:justify-end xl:w-auto xl:flex-nowrap xl:items-center">
+                    <div className="relative md:w-64 xl:w-60">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="شے، شعبہ یا وصول کنندہ تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none" />
                     </div>
-                    <input value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)} placeholder="شعبہ فلٹر کریں" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-52" />
-                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
-                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
-                    <button type="button" onClick={resetFilters} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-sm font-black text-[var(--color-text)]">
+                    <input value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)} placeholder="شعبہ فلٹر کریں" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-44 xl:w-40" />
+                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+                    <button type="button" onClick={resetFilters} className="h-12 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
                         فلٹر صاف کریں
                     </button>
-                    <button type="button" onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))} className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all active:scale-95 ${isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white shadow-lg shadow-emerald-500/20'}`}>
+                    <button type="button" onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))} className={`flex shrink-0 items-center justify-center gap-3 rounded-2xl px-5 py-3 text-sm font-black transition-all active:scale-95 ${isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white shadow-lg shadow-emerald-500/20'}`}>
                         {isFormOpen ? 'بند کریں' : 'نیا اجراء'}
                         {isFormOpen ? <X size={18} /> : <Plus size={18} />}
                     </button>

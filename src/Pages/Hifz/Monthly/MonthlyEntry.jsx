@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, CalendarDays, Save, School, UserRound } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, BookOpen, CalendarDays, ChevronDown, Save, School, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { createMonthlyHifzEntry, getMonthlyHifzEntries } from '../../../Constant/HifzApi';
@@ -114,7 +114,10 @@ export const MonthlyJaizaEntry = () => {
     const [teachers, setTeachers] = useState([]);
     const [formData, setFormData] = useState(createInitialFormData);
     const [isSaving, setIsSaving] = useState(false);
+    const [savingRowId, setSavingRowId] = useState('');
     const [isLoadingSavedMonths, setIsLoadingSavedMonths] = useState(false);
+    const topScrollRef = useRef(null);
+    const tableScrollRef = useRef(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -188,6 +191,17 @@ export const MonthlyJaizaEntry = () => {
         () => [...new Set([formData.teacher, ...teacherOptions].filter(Boolean))],
         [formData.teacher, teacherOptions],
     );
+
+    const syncTableScroll = (source) => {
+        const sourceRef = source === 'top' ? topScrollRef.current : tableScrollRef.current;
+        const targetRef = source === 'top' ? tableScrollRef.current : topScrollRef.current;
+
+        if (!sourceRef || !targetRef || targetRef.scrollLeft === sourceRef.scrollLeft) {
+            return;
+        }
+
+        targetRef.scrollLeft = sourceRef.scrollLeft;
+    };
 
     const loadSavedMonthlyRows = useCallback(async (studentId, year) => {
         if (!studentId) {
@@ -294,15 +308,11 @@ export const MonthlyJaizaEntry = () => {
         status: 'active',
     });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
+    const saveRows = async (rowsToSave, successMessage) => {
         if (!formData.className || !formData.section || !formData.studentId) {
             notify.error('براہ کرم پہلے کلاس، سیکشن اور طالب علم منتخب کریں۔');
             return;
         }
-
-        const rowsToSave = formData.monthlyRows.filter(rowHasContent);
 
         if (!rowsToSave.length) {
             notify.error('براہ کرم کم از کم ایک ماہ کی کارکردگی درج کریں۔');
@@ -312,12 +322,31 @@ export const MonthlyJaizaEntry = () => {
         try {
             setIsSaving(true);
             await Promise.all(rowsToSave.map((row) => createMonthlyHifzEntry(buildPayload(row))));
-            notify.success('ماہانہ جائزہ ڈیٹابیس میں محفوظ ہو گیا۔');
+            notify.success(successMessage);
             await loadSavedMonthlyRows(formData.studentId, getYearValue(formData.academicYear));
         } catch (error) {
             notify.error(error?.message || 'ماہانہ جائزہ محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        await saveRows(formData.monthlyRows.filter(rowHasContent), 'تمام ماہانہ جائزے محفوظ ہو گئے۔');
+    };
+
+    const handleRowSave = async (row) => {
+        if (!rowHasContent(row)) {
+            notify.error('اس ماہ کی کارکردگی درج کریں۔');
+            return;
+        }
+
+        try {
+            setSavingRowId(row.id);
+            await saveRows([row], 'ایک ماہ کا جائزہ محفوظ ہو گیا۔');
+        } finally {
+            setSavingRowId('');
         }
     };
 
@@ -400,12 +429,12 @@ export const MonthlyJaizaEntry = () => {
                             <label className="text-xs font-black text-[var(--color-text-muted)]">استاد</label>
                             <div className="relative">
                                 <UserRound className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
-                                <select value={formData.teacher} onChange={(e) => handleFieldChange('teacher', e.target.value)} className={iconSelectFieldClassName}>
-                                    <option value="">استاد کا نام</option>
-                                    {teacherSelectOptions.map((teacherName) => (
-                                        <option key={teacherName} value={teacherName}>{teacherName}</option>
-                                    ))}
-                                </select>
+                                <TeacherSearchDropdown
+                                    value={formData.teacher}
+                                    options={teacherSelectOptions}
+                                    placeholder="استاد کا نام"
+                                    onChange={(value) => handleFieldChange('teacher', value)}
+                                />
                             </div>
                         </div>
 
@@ -446,8 +475,11 @@ export const MonthlyJaizaEntry = () => {
                             محفوظ شدہ ماہانہ ریکارڈ لوڈ ہو رہا ہے...
                         </div>
                     )}
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[1700px] border-collapse text-center text-sm">
+                    <div ref={topScrollRef} onScroll={() => syncTableScroll('top')} className="mb-2 overflow-x-auto">
+                        <div className="h-1 min-w-[1820px]" />
+                    </div>
+                    <div ref={tableScrollRef} onScroll={() => syncTableScroll('table')} className="overflow-x-auto">
+                        <table className="w-full min-w-[1820px] border-collapse text-center text-sm">
                             <thead>
                                 <tr className="bg-[var(--color-bg)]">
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[170px]">مہینہ</th>
@@ -461,6 +493,7 @@ export const MonthlyJaizaEntry = () => {
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[120px]">رخصت / بیماری</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[130px]">امتحانی نمبرات</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[220px]">وجوہات</th>
+                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[120px]">عمل</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -485,6 +518,17 @@ export const MonthlyJaizaEntry = () => {
                                             <td className="border border-[var(--color-border)] p-2"><input type="number" min="0" value={row.leaveDays} onChange={(e) => handleRowChange(row.id, 'leaveDays', e.target.value)} placeholder="0" className={tableInputClassName} /></td>
                                             <td className="border border-[var(--color-border)] p-2"><input type="text" value={row.transferStatus} onChange={(e) => handleRowChange(row.id, 'transferStatus', e.target.value)} placeholder="مثلاً جید" className={tableInputClassName} /></td>
                                             <td className="border border-[var(--color-border)] p-2"><input type="text" value={row.reason} onChange={(e) => handleRowChange(row.id, 'reason', e.target.value)} placeholder="مختصر وجہ" className={tableInputClassName} /></td>
+                                            <td className="border border-[var(--color-border)] p-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRowSave(row)}
+                                                    disabled={isSaving || savingRowId === row.id}
+                                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-xs font-black text-[#0b1120] shadow-sm transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    <Save size={15} />
+                                                    {savingRowId === row.id ? '...' : 'محفوظ'}
+                                                </button>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -501,10 +545,78 @@ export const MonthlyJaizaEntry = () => {
                 <div className="flex justify-end pt-2">
                     <button type="submit" disabled={isSaving} className="w-full md:w-auto px-10 py-4 bg-[var(--color-primary)] text-[#0b1120] font-black rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-[var(--color-primary)]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-60">
                         <Save size={20} />
-                        {isSaving ? 'محفوظ ہو رہا ہے...' : 'ماہانہ جائزہ محفوظ کریں'}
+                        {isSaving ? 'محفوظ ہو رہا ہے...' : 'تمام اندراجات محفوظ کریں'}
                     </button>
                 </div>
             </div>
         </form>
+    );
+};
+
+const TeacherSearchDropdown = ({ value, options, placeholder, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef(null);
+
+    const filteredOptions = useMemo(() => {
+        const query = String(value || '').trim().toLowerCase();
+        const safeOptions = options.filter(Boolean);
+
+        if (!query) {
+            return safeOptions.slice(0, 8);
+        }
+
+        return safeOptions.filter((option) => String(option).toLowerCase().includes(query)).slice(0, 8);
+    }, [options, value]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={wrapperRef} className="relative">
+            <input
+                type="text"
+                value={value}
+                onChange={(event) => {
+                    onChange(event.target.value);
+                    setIsOpen(true);
+                }}
+                onFocus={() => setIsOpen(true)}
+                placeholder={placeholder}
+                className={iconSelectFieldClassName}
+            />
+            <button
+                type="button"
+                onClick={() => setIsOpen((prev) => !prev)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+                aria-label="استاد منتخب کریں"
+            >
+                <ChevronDown size={18} />
+            </button>
+            {isOpen && filteredOptions.length > 0 && (
+                <div className="absolute right-0 top-[calc(100%+8px)] z-30 max-h-64 w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-2xl">
+                    {filteredOptions.map((option) => (
+                        <button
+                            key={option}
+                            type="button"
+                            onClick={() => {
+                                onChange(option);
+                                setIsOpen(false);
+                            }}
+                            className="w-full rounded-xl px-4 py-3 text-right text-sm font-bold text-[var(--color-text-main)] transition-all hover:bg-[var(--color-bg)]"
+                        >
+                            {option}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 };

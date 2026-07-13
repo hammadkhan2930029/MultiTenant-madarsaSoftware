@@ -3,6 +3,7 @@ import { Edit2, Eye, Plus, Save, Search, Store, Trash2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createStoreSupplier, deleteStoreSupplier, getStoreSuppliers, updateStoreSupplier } from '../../../Constant/StoreApi';
+import { formatAmountInput, parseAmountInput } from '../storeAmountFormat';
 
 const emptyForm = {
     supplierName: '',
@@ -69,7 +70,7 @@ export const StoreSuppliers = () => {
             mobileNumber: supplier.mobileNumber || '',
             address: supplier.address || '',
             shopName: supplier.shopName || '',
-            balance: String(supplier.balance ?? 0),
+            balance: formatAmountInput(supplier.balance ?? 0),
         });
         setIsFormOpen(true);
         setError('');
@@ -82,7 +83,7 @@ export const StoreSuppliers = () => {
             return;
         }
 
-        if (Number(formData.balance || 0) < 0) {
+        if (parseAmountInput(formData.balance) < 0) {
             setError('بیلنس درست درج کریں۔');
             return;
         }
@@ -97,7 +98,7 @@ export const StoreSuppliers = () => {
                 mobileNumber: formData.mobileNumber.trim(),
                 address: formData.address.trim(),
                 shopName: formData.shopName.trim(),
-                balance: Number(formData.balance || 0),
+                balance: parseAmountInput(formData.balance),
             };
 
             if (editMode) {
@@ -183,7 +184,7 @@ export const StoreSuppliers = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">بیلنس</label>
-                            <input type="number" min="0" value={formData.balance} onChange={(event) => setFormData((prev) => ({ ...prev, balance: event.target.value }))} placeholder="0" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
+                            <input type="text" inputMode="decimal" value={formData.balance} onChange={(event) => setFormData((prev) => ({ ...prev, balance: formatAmountInput(event.target.value) }))} placeholder="0" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پتہ</label>

@@ -87,7 +87,7 @@ export const SideBar = () => {
 
             setMadrassaProfile(profile);
             if (profile.logoUrl) {
-                const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl);
+                const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl, profile.updatedAt || Date.now());
                 if (isMounted) {
                     setAvatarSrc(resolvedLogoUrl || '');
                 }
@@ -121,7 +121,7 @@ export const SideBar = () => {
                     setAdminProfile(profile);
                     setMadrassaProfile(madrassa);
                     if (madrassa?.logoUrl) {
-                        const resolvedLogoUrl = await resolveApiAssetUrl(madrassa.logoUrl);
+                        const resolvedLogoUrl = await resolveApiAssetUrl(madrassa.logoUrl, madrassa.updatedAt || Date.now());
                         if (isMounted) {
                             setAvatarSrc(resolvedLogoUrl || '');
                         }
@@ -426,9 +426,9 @@ export const SideBar = () => {
             path: '/store',
             subMenu: [
                 { id: 'store_dashboard', label: 'ڈیش بورڈ', path: '/store/dashboard' },
+                { id: 'store_categories', label: 'کیٹیگریز', path: '/store/categories' },
                 { id: 'store_items', label: 'اشیاء', path: '/store/items' },
                 { id: 'store_units', label: 'اکائیاں', path: '/store/units' },
-                { id: 'store_categories', label: 'کیٹیگریز', path: '/store/categories' },
                 { id: 'store_purchases', label: 'خریداری', path: '/store/purchases' },
                 { id: 'store_stock_issues', label: 'اسٹاک اجراء', path: '/store/stock-issues' },
                 { id: 'store_returns', label: 'واپسی', path: '/store/returns' },

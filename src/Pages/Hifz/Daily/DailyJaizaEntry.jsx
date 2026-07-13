@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, User, School, BookOpen, Save, ArrowRight, ClipboardCheck, Plus, Trash2, Grid2x2Plus } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Calendar, User, School, BookOpen, Save, ArrowRight, ClipboardCheck, Plus, Trash2, Grid2x2Plus, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicker';
 import { getStudents } from '../../../Constant/StudentsApi';
 import { createDailyHifzEntry } from '../../../Constant/HifzApi';
 import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
+import { getTeachers } from '../../../Constant/TeachersApi';
 import { filterStudentsForHifz, getUniqueOptions, mapStudentsForHifz } from '../HifzUi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 import { createClientId } from '../../../Utils/createClientId';
@@ -49,6 +50,7 @@ export const DailyJaizaEntry = () => {
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
+    const [teachers, setTeachers] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -57,15 +59,17 @@ export const DailyJaizaEntry = () => {
 
         const loadStudents = async () => {
             try {
-                const [studentResult, classResult, sectionResult] = await Promise.all([
+                const [studentResult, classResult, sectionResult, teacherResult] = await Promise.all([
                     getStudents('page=1&limit=100&status=active'),
                     getClasses('page=1&limit=100&status=active'),
                     getSections('page=1&limit=100&status=active'),
+                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
                 if (isMounted) {
                     setStudents(mapStudentsForHifz(studentResult.items || []));
                     setClasses(classResult.items || []);
                     setSections(sectionResult.items || []);
+                    setTeachers(teacherResult.items || []);
                 }
             } catch (error) {
                 notify.error(error?.message || 'طلبہ لوڈ نہیں ہو سکے۔');
@@ -99,6 +103,12 @@ export const DailyJaizaEntry = () => {
     const studentOptions = useMemo(
         () => filterStudentsForHifz(students, formData.class, formData.section),
         [formData.class, formData.section, students],
+    );
+    const teacherOptions = useMemo(
+        () => [...new Set(teachers
+            .map((teacher) => teacher.fullName || teacher.name)
+            .filter(Boolean))],
+        [teachers],
     );
 
     const handleChange = (field, value) => {
@@ -361,28 +371,28 @@ export const DailyJaizaEntry = () => {
                             <h3 className="text-lg font-black text-[var(--color-primary)] flex items-center gap-2 mb-4">
                                 <BookOpen size={20} /> سبق (Sabaq)
                             </h3>
-                            <ReviewDetailFields section="sabaq" values={entry.sabaq} onChange={(field, value) => handleEntryChange(entry.id, 'sabaq', field, value)} showTeacher />
+                            <ReviewDetailFields section="sabaq" entryId={entry.id} values={entry.sabaq} onChange={(field, value) => handleEntryChange(entry.id, 'sabaq', field, value)} teacherOptions={teacherOptions} showTeacher />
                         </div>
 
                         <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] p-6 space-y-4">
                             <h3 className="text-lg font-black text-blue-400 flex items-center gap-2 mb-4">
                                 <ClipboardCheck size={20} /> سبقی (Sabqi)
                             </h3>
-                            <ReviewDetailFields section="sabqi" values={entry.sabqi} onChange={(field, value) => handleEntryChange(entry.id, 'sabqi', field, value)} />
+                            <ReviewDetailFields section="sabqi" entryId={entry.id} values={entry.sabqi} onChange={(field, value) => handleEntryChange(entry.id, 'sabqi', field, value)} />
                         </div>
 
                         <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] p-6 space-y-4">
                             <h3 className="text-lg font-black text-emerald-400 flex items-center gap-2 mb-4">
                                 منزل (قبل الظہر)
                             </h3>
-                            <ReviewDetailFields section="manzil_1" values={entry.manzil_1} onChange={(field, value) => handleEntryChange(entry.id, 'manzil_1', field, value)} />
+                            <ReviewDetailFields section="manzil_1" entryId={entry.id} values={entry.manzil_1} onChange={(field, value) => handleEntryChange(entry.id, 'manzil_1', field, value)} />
                         </div>
 
                         <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] p-6 space-y-4">
                             <h3 className="text-lg font-black text-orange-400 flex items-center gap-2 mb-4">
                                 منزل (بعد الظہر)
                             </h3>
-                            <ReviewDetailFields section="manzil_2" values={entry.manzil_2} onChange={(field, value) => handleEntryChange(entry.id, 'manzil_2', field, value)} />
+                            <ReviewDetailFields section="manzil_2" entryId={entry.id} values={entry.manzil_2} onChange={(field, value) => handleEntryChange(entry.id, 'manzil_2', field, value)} />
                         </div>
                     </div>
 
@@ -461,7 +471,7 @@ export const DailyJaizaEntry = () => {
     );
 };
 
-const ReviewDetailFields = ({ section, values, onChange, showTeacher = false }) => {
+const ReviewDetailFields = ({ section, entryId, values, onChange, teacherOptions = [], showTeacher = false }) => {
     const fields = [
         { key: 'para', label: 'پارہ', placeholder: 'مثلاً پارہ 1' },
         { key: 'ruku', label: 'رکوع', placeholder: 'مثلاً رکوع 3' },
@@ -477,16 +487,93 @@ const ReviewDetailFields = ({ section, values, onChange, showTeacher = false }) 
             {fields.map((field) => (
                 <div key={`${section}-${field.key}`} className="space-y-2">
                     <label className="mr-1 text-[11px] font-black text-[var(--color-text-muted)]">{field.label}</label>
-                    <input
-                        type={field.type || 'text'}
-                        min={field.type === 'number' ? '0' : undefined}
-                        placeholder={field.placeholder}
-                        value={values[field.key]}
-                        onChange={(event) => onChange(field.key, event.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
-                    />
+                    {field.key === 'teacher' ? (
+                        <TeacherSearchDropdown
+                            value={values[field.key]}
+                            options={teacherOptions}
+                            placeholder={field.placeholder}
+                            onChange={(value) => onChange(field.key, value)}
+                        />
+                    ) : (
+                        <input
+                            type={field.type || 'text'}
+                            min={field.type === 'number' ? '0' : undefined}
+                            placeholder={field.placeholder}
+                            value={values[field.key]}
+                            onChange={(event) => onChange(field.key, event.target.value)}
+                            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                        />
+                    )}
                 </div>
             ))}
+        </div>
+    );
+};
+
+const TeacherSearchDropdown = ({ value, options, placeholder, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef(null);
+    const normalizedValue = String(value || '').trim().toLowerCase();
+    const filteredOptions = useMemo(
+        () => options.filter((option) => String(option).toLowerCase().includes(normalizedValue)).slice(0, 8),
+        [normalizedValue, options],
+    );
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div ref={wrapperRef} className="relative">
+            <input
+                type="text"
+                placeholder={placeholder}
+                value={value}
+                onFocus={() => setIsOpen(true)}
+                onChange={(event) => {
+                    onChange(event.target.value);
+                    setIsOpen(true);
+                }}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] py-2.5 pl-10 pr-4 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+            />
+            <button
+                type="button"
+                onClick={() => setIsOpen((current) => !current)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+                aria-label="استاد منتخب کریں"
+            >
+                <ChevronDown size={18} />
+            </button>
+            {isOpen ? (
+                <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-2xl shadow-black/20">
+                    {filteredOptions.length ? (
+                        filteredOptions.map((teacherName) => (
+                            <button
+                                key={teacherName}
+                                type="button"
+                                onClick={() => {
+                                    onChange(teacherName);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full rounded-xl px-3 py-2.5 text-right text-sm font-bold text-[var(--color-text-main)] transition-colors hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primary)]"
+                            >
+                                {teacherName}
+                            </button>
+                        ))
+                    ) : (
+                        <div className="px-3 py-2.5 text-right text-xs font-bold text-[var(--color-text-muted)]">
+                            کوئی استاد موجود نہیں
+                        </div>
+                    )}
+                </div>
+            ) : null}
         </div>
     );
 };
