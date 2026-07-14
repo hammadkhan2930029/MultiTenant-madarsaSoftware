@@ -4,7 +4,7 @@ import {
     Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
-import { fetchMadrassaProfile, getAdminRole, isSuperAdmin as isSuperAdminSession, resolveApiAssetUrl, updateMadrassaProfile } from '../../../Constant/AdminAuth';
+import { fetchMadrassaProfile, getAdminRole, getApiAssetUrl, isSuperAdmin as isSuperAdminSession, updateMadrassaProfile } from '../../../Constant/AdminAuth';
 import { getCities } from '../../../Constant/CityApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
@@ -24,6 +24,7 @@ export const Profile = () => {
     const sessionRole = getAdminRole();
     const sessionRoleName = typeof sessionRole === 'string' ? sessionRole : sessionRole?.roleName || sessionRole?.role_name;
     const canEditMadrassaProfile = isSuperAdminSession() || sessionRoleName === 'admin';
+    const buildLogoPreviewUrl = (profile) => (profile?.logoUrl ? getApiAssetUrl(profile.logoUrl, profile.updatedAt || Date.now()) : AppImages.logo);
 
     const [madrassaData, setMadrassaData] = useState({
         name: 'جامعہ انوار القرآن',
@@ -65,13 +66,8 @@ export const Profile = () => {
                 setMadrassaData(nextData);
                 setTempData(nextData);
 
-                if (profile.logoUrl) {
-                    const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl, profile.updatedAt || Date.now());
-                    if (isMounted) {
-                        setLogoPreview(resolvedLogoUrl || AppImages.logo);
-                    }
-                } else if (isMounted) {
-                    setLogoPreview(AppImages.logo);
+                if (isMounted) {
+                    setLogoPreview(buildLogoPreviewUrl(profile));
                 }
             } catch (loadError) {
                 if (isMounted) {
@@ -183,13 +179,7 @@ export const Profile = () => {
         }
 
         setTempData({ ...madrassaData });
-        if (madrassaData.logoUrl) {
-            resolveApiAssetUrl(madrassaData.logoUrl, madrassaData.updatedAt || Date.now()).then((resolvedLogoUrl) => {
-                setLogoPreview(resolvedLogoUrl || AppImages.logo);
-            });
-        } else {
-            setLogoPreview(AppImages.logo);
-        }
+        setLogoPreview(buildLogoPreviewUrl(madrassaData));
         setValidationErrors({});
         setIsEditing(false);
 
@@ -256,12 +246,7 @@ export const Profile = () => {
             setValidationErrors({});
             setIsEditing(false);
 
-            if (savedProfile.logoUrl) {
-                const resolvedLogoUrl = await resolveApiAssetUrl(savedProfile.logoUrl, savedProfile.updatedAt || Date.now());
-                setLogoPreview(resolvedLogoUrl || AppImages.logo);
-            } else {
-                setLogoPreview(AppImages.logo);
-            }
+            setLogoPreview(buildLogoPreviewUrl(savedProfile));
             notify.success('تمام تبدیلیاں محفوظ ہو گئی ہیں۔', 'پروفائل اپڈیٹ ہو گئی');
         } catch (saveError) {
             const message = saveError?.message || 'پروفائل محفوظ نہیں ہو سکی۔';
@@ -285,7 +270,9 @@ export const Profile = () => {
                                 <img
                                     src={logoPreview || AppImages.logo}
                                     alt="Logo"
-                                    onError={() => setLogoPreview(AppImages.logo)}
+                                    onError={(event) => {
+                                        event.currentTarget.src = AppImages.logo;
+                                    }}
                                     className="block h-full w-full rounded-[2.25rem] object-cover"
                                 />
                             </div>

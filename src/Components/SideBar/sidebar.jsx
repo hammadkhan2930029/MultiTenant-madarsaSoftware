@@ -9,7 +9,7 @@ import {
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
-import { refreshPermissions, fetchMadrassaProfile, getAdminSession, resolveApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT } from '../../Constant/AdminAuth'
+import { refreshPermissions, fetchMadrassaProfile, getAdminSession, getApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT } from '../../Constant/AdminAuth'
 import { usePermissions } from '../../Hooks/usePermissions';
 import { getPagePermission, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 
@@ -46,6 +46,7 @@ export const SideBar = () => {
     const menuItemRefs = useRef({});
     const subMenuItemRefs = useRef({});
     const { isSuperAdmin, hasPermission, hasAnyPermission } = usePermissions();
+    const buildLogoUrl = (profile) => (profile?.logoUrl ? getApiAssetUrl(profile.logoUrl, profile.updatedAt || Date.now()) : '');
     //--------------------------------------------------------------------
 
     useEffect(() => {
@@ -86,14 +87,7 @@ export const SideBar = () => {
             if (!isMounted || !profile) return;
 
             setMadrassaProfile(profile);
-            if (profile.logoUrl) {
-                const resolvedLogoUrl = await resolveApiAssetUrl(profile.logoUrl, profile.updatedAt || Date.now());
-                if (isMounted) {
-                    setAvatarSrc(resolvedLogoUrl || '');
-                }
-            } else {
-                setAvatarSrc('');
-            }
+            setAvatarSrc(buildLogoUrl(profile));
         };
 
         const handleMadrassaProfileUpdated = (event) => {
@@ -120,14 +114,7 @@ export const SideBar = () => {
                 if (isMounted) {
                     setAdminProfile(profile);
                     setMadrassaProfile(madrassa);
-                    if (madrassa?.logoUrl) {
-                        const resolvedLogoUrl = await resolveApiAssetUrl(madrassa.logoUrl, madrassa.updatedAt || Date.now());
-                        if (isMounted) {
-                            setAvatarSrc(resolvedLogoUrl || '');
-                        }
-                    } else {
-                        setAvatarSrc('');
-                    }
+                    setAvatarSrc(buildLogoUrl(madrassa));
                 }
             } catch (error) {
                 const message = error?.message?.toLowerCase() || '';
