@@ -7,6 +7,7 @@ import { SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { getRoles } from '../../Constant/RoleManagementApi';
 import { assignUserRole, createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
 import { refreshPermissions } from '../../Constant/AdminAuth';
+import { getBranches } from '../../Constant/AcademicSetupApi';
 import { usePermissions } from '../../Hooks/usePermissions';
 
 const emptyForm = {
@@ -17,6 +18,7 @@ const emptyForm = {
   password: '',
   confirmPassword: '',
   roleId: '',
+  branchId: '',
   status: 'active',
 };
 
@@ -159,6 +161,7 @@ export const UserManagement = () => {
 
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [search, setSearch] = useState('');
@@ -200,9 +203,25 @@ export const UserManagement = () => {
     ...roles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
   ], [roles]);
 
+  const branchOptions = useMemo(() => [
+    { value: '', label: 'برانچ منتخب کریں' },
+    ...branches
+      .filter((branch) => getUserStatus(branch) === 'active')
+      .map((branch) => ({ value: String(branch.id), label: branch.name || branch.code || `#${branch.id}` })),
+  ], [branches]);
+
   const loadRoles = useCallback(async () => {
     const result = await getRoles({ page: 1, limit: 100 });
     setRoles(result.items || []);
+  }, []);
+
+  const loadBranches = useCallback(async () => {
+    try {
+      const result = await getBranches('page=1&limit=100&status=active');
+      setBranches(result.items || []);
+    } catch {
+      setBranches([]);
+    }
   }, []);
 
   const loadUsers = useCallback(async () => {
@@ -234,6 +253,7 @@ export const UserManagement = () => {
         password: '',
         confirmPassword: '',
         roleId: user?.roleId ? String(user.roleId) : '',
+        branchId: user?.branchId ? String(user.branchId) : '',
         status: user?.status || 'active',
       });
     } catch (loadError) {
@@ -245,7 +265,8 @@ export const UserManagement = () => {
 
   useEffect(() => {
     loadRoles().catch((roleError) => setError(roleError.message || 'کردار لوڈ نہیں ہو سکے۔'));
-  }, [loadRoles]);
+    loadBranches();
+  }, [loadBranches, loadRoles]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -265,6 +286,8 @@ export const UserManagement = () => {
   }, [loadUser, loadUsers, mode]);
 
   const handleSubmit = async () => {
+    if (isSaving) return undefined;
+
     if (!formData.name.trim()) return setError('صارف کا نام ضروری ہے۔');
     if (!formData.email.trim()) return setError('ای میل ضروری ہے۔');
     if (!formData.username.trim()) return setError('صارف نام ضروری ہے۔');
@@ -285,6 +308,7 @@ export const UserManagement = () => {
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         username: formData.username.trim(),
+        branchId: formData.branchId ? Number(formData.branchId) : null,
         status: formData.status,
       };
 
@@ -341,7 +365,7 @@ export const UserManagement = () => {
   const renderHeader = () => (
     <div className="flex flex-col gap-5 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)] md:flex-row md:items-center md:justify-between">
       <div className="text-right">
-        <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">User Management / Users</h1>
+        <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">صارف مینجمنٹ / صارفین</h1>
         <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-4">
           صارفین بنائیں، کردار منتخب کریں اور اجازتیں دیکھیں۔
         </p>
@@ -375,14 +399,15 @@ export const UserManagement = () => {
     return (
       <div style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <InputField label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
-          <InputField label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))} />
-          <InputField label="فون" placeholder="0300xxxxxxx" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: event.target.value }))} />
-          <InputField label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))} />
-          <InputField label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type="password" placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
-          <InputField label="تصدیقی پاس ورڈ" required={mode === 'create'} type="password" placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
-          <SelectField label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => setFormData((prev) => ({ ...prev, roleId: event.target.value }))} />
-          <SelectField label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
+          <InputField id="user-name" label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
+          <InputField id="user-email" label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))} />
+          <InputField id="user-phone" label="فون" placeholder="0300xxxxxxx" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: event.target.value }))} />
+          <InputField id="user-username" label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))} />
+          <InputField id="user-password" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type="password" placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
+          <InputField id="user-confirm-password" label="تصدیقی پاس ورڈ" required={mode === 'create'} type="password" placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
+          <SelectField id="user-role" label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => setFormData((prev) => ({ ...prev, roleId: event.target.value }))} />
+          <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))} />
+          <SelectField id="user-status" label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
         </div>
 
         {lockSuperAdminRole ? (
@@ -395,7 +420,7 @@ export const UserManagement = () => {
           <button type="button" onClick={() => navigate('/role-management/users')} className="rounded-2xl border border-[var(--color-border)] px-6 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">
             منسوخ کریں
           </button>
-          <button type="button" onClick={handleSubmit} disabled={isSaving} style={{ backgroundColor: 'var(--color-primary)' }} className="flex items-center justify-center gap-3 rounded-2xl px-8 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70">
+          <button type="button" onClick={handleSubmit} disabled={isSaving} aria-busy={isSaving} style={{ backgroundColor: 'var(--color-primary)' }} className="flex items-center justify-center gap-3 rounded-2xl px-8 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70">
             {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
             <Save size={18} />
           </button>
@@ -428,6 +453,7 @@ export const UserManagement = () => {
                 <span>{currentUser.email}</span>
                 <span>{currentUser.username}</span>
                 <span>{getUserPhone(currentUser)}</span>
+                <span>{currentUser.branch?.name || 'تمام برانچز'}</span>
                 <span className="rounded-xl bg-emerald-500/10 px-3 py-1 font-black text-[#00d094]">{getRoleDisplayName(getRoleName(currentUser))}</span>
               </div>
             </div>
@@ -500,6 +526,7 @@ export const UserManagement = () => {
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ای میل</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">فون</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کردار</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">آخری لاگ اِن</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
@@ -507,7 +534,7 @@ export const UserManagement = () => {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan="7" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">صارفین لوڈ ہو رہے ہیں...</td></tr>
+                <tr><td colSpan="8" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">صارفین لوڈ ہو رہے ہیں...</td></tr>
               ) : users.length ? (
                 users.map((user) => {
                   const active = getUserStatus(user) === 'active';
@@ -521,6 +548,7 @@ export const UserManagement = () => {
                       <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{user.email}</td>
                       <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]" dir="ltr">{getUserPhone(user)}</td>
                       <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{getRoleDisplayName(getRoleName(user))}</td>
+                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{user.branch?.name || 'تمام برانچز'}</td>
                       <td className="px-6 py-4">
                         <span className={`rounded-xl px-3 py-1 text-xs font-black ${active ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
                           {active ? 'فعال' : 'غیر فعال'}
@@ -555,7 +583,7 @@ export const UserManagement = () => {
                   );
                 })
               ) : (
-                <tr><td colSpan="7" className="px-6 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی صارف موجود نہیں۔ سرچ یا فلٹر تبدیل کریں۔</td></tr>
+                <tr><td colSpan="8" className="px-6 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی صارف موجود نہیں۔ سرچ یا فلٹر تبدیل کریں۔</td></tr>
               )}
             </tbody>
           </table>

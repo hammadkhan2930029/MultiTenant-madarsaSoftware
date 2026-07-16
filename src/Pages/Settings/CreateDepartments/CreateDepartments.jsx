@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Building2, Plus, Edit2, Trash2, Users, Target, Shield } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, Users, Target, Shield, Save } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createDepartment, deleteDepartment, getDepartments, updateDepartment } from '../../../Constant/DepartmentApi';
@@ -165,25 +165,26 @@ export const DepartmentManagement = () => {
                     </div>
                 </div>
 
-                {editMode ? (
+                <div className="mt-8 flex flex-wrap justify-end gap-3">
+                    {editMode ? (
+                        <button
+                            type="button"
+                            onClick={resetForm}
+                            className="rounded-2xl border border-[var(--color-border)] px-6 py-4 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]"
+                        >
+                            منسوخ
+                        </button>
+                    ) : null}
                     <button
-                        type="button"
-                        onClick={resetForm}
-                        className="mt-8 w-full md:w-auto px-10 py-4 rounded-2xl border border-[var(--color-border)] text-[var(--color-text-muted)] font-black flex items-center justify-center gap-3 hover:bg-[var(--color-bg)] transition-all"
+                        onClick={handleSubmit}
+                        disabled={isSaving}
+                        style={{ backgroundColor: 'var(--color-primary)' }}
+                        className="px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
                     >
-                        منسوخ
+                        {editMode ? <Save size={20} /> : <Plus size={20} />}
+                        <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'تبدیل کریں' : 'نیا شعبہ شامل کریں'}</span>
                     </button>
-                ) : null}
-
-                <button
-                    onClick={handleSubmit}
-                    disabled={isSaving}
-                    style={{ backgroundColor: 'var(--color-primary)' }}
-                    className="mt-8 w-full md:w-auto px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
-                >
-                    <Plus size={20} />
-                    <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'شعبہ تبدیل کریں' : 'نیا شعبہ شامل کریں'}</span>
-                </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

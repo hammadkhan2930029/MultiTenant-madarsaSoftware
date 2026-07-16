@@ -7,6 +7,9 @@ export const PAGE_PERMISSIONS = {
   '/HRManagement?staffType=staff': 'staff.create',
   '/staff/list': 'staff.view',
   '/students/attendance-history/:id': 'attendance.history.view',
+  '/branch-management': 'branches.view',
+  '/branch-management/create-branch': 'branches.view',
+  '/branch-management/:branchId': 'branches.view',
 
   '/class-management/Classes': 'classes.view',
   '/class-management/sections': 'sections.view',
@@ -192,6 +195,16 @@ export const ROLE_PERMISSION_MODULES = [
       { key: 'sections.delete', name: 'سیکشن حذف کریں' },
       { key: 'sessions.view', name: 'سیشن دیکھیں' },
       { key: 'subjects.view', name: 'مضامین دیکھیں' },
+    ],
+  },
+  {
+    id: 'branches',
+    label: 'برانچ مینجمنٹ',
+    permissions: [
+      { key: 'branches.view', name: 'برانچز دیکھیں' },
+      { key: 'branches.create', name: 'برانچ محفوظ کریں' },
+      { key: 'branches.update', name: 'برانچ تبدیل کریں' },
+      { key: 'branches.delete', name: 'برانچ غیر فعال کریں' },
     ],
   },
   {

@@ -12,12 +12,10 @@ const getApiBaseUrl = () => {
   return 'http://localhost:5002/api';
 };
 
-// const API_BASE_URL = getApiBaseUrl();
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://appapi.madrasasoftware.com/api';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://demoapi.madrasasoftware.com/api';
-
+const API_BASE_URL = getApiBaseUrl();
 
 const AUTH_KEY = 'madarsa_admin_auth';
+const BRANCH_CONTEXT_KEY = 'madarsa_branch_context';
 const SESSION_EXPIRED_MESSAGE_KEY = 'madarsa_session_expired_message';
 const SESSION_EXPIRED_EVENT = 'madarsa:session-expired';
 const PERMISSION_DENIED_EVENT = 'madarsa:permission-denied';
@@ -45,6 +43,114 @@ const TENANT_OR_SESSION_ERROR_PATTERNS = [
 ];
 
 const canUseStorage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
+const BRANCH_FILTERED_GET_PREFIXES = [
+  '/students',
+  '/parents',
+  '/teachers',
+  '/attendance',
+  '/hifz',
+  '/finance',
+  '/financial',
+  '/fees',
+  '/store',
+  '/reports',
+  '/exam',
+  '/exams',
+  '/exam-results',
+  '/exam-schedules',
+  '/schedules',
+  '/teacher-schedules',
+  '/classes',
+  '/sections',
+  '/audit-logs',
+  '/support',
+  '/suggestions',
+];
+
+const getRoleNameFromSession = (session) => {
+  const role = session?.role || session?.admin?.roleDetails || session?.admin?.role || session?.user?.role || null;
+  if (typeof role === 'string') return role;
+  return role?.roleName || role?.role_name || role?.name || '';
+};
+
+const getSessionTenantId = (session) => {
+  const value = session?.admin?.tenantId ?? session?.user?.tenantId ?? session?.tenantId ?? null;
+  return value === null || value === undefined || value === '' ? null : Number(value);
+};
+
+const getSessionBranchId = (session) => {
+  const value = session?.admin?.branchId ?? session?.user?.branchId ?? null;
+  return value === null || value === undefined || value === '' ? null : Number(value);
+};
+
+const isTenantAdminSession = (session) => String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin';
+
+const isSuperAdminSession = (session) => String(getRoleNameFromSession(session)).trim().toLowerCase() === 'super_admin';
+
+const isBranchScopedSession = (session) => {
+  const branchId = getSessionBranchId(session);
+  return Boolean(branchId) && !isSuperAdminSession(session) && !isTenantAdminSession(session);
+};
+
+const isBranchSystemEnabled = (session) => Boolean(
+  session?.tenantBranding?.settings?.branchEnabled ||
+  session?.currentTenant?.branchEnabled,
+);
+
+const getSelectedTenantBranchId = () => {
+  if (!canUseStorage) return null;
+
+  try {
+    const session = JSON.parse(window.localStorage.getItem(AUTH_KEY) || 'null');
+    if (
+      !session ||
+      !isTenantAdminSession(session) ||
+      isSuperAdminSession(session) ||
+      isBranchScopedSession(session) ||
+      !isBranchSystemEnabled(session)
+    ) {
+      return null;
+    }
+
+    const tenantId = getSessionTenantId(session);
+    const stored = JSON.parse(window.localStorage.getItem(BRANCH_CONTEXT_KEY) || 'null');
+    const branchId = stored?.branchId === null || stored?.branchId === undefined || stored?.branchId === ''
+      ? null
+      : Number(stored.branchId);
+
+    if (!tenantId || Number(stored?.tenantId) !== tenantId || !Number.isFinite(branchId) || branchId <= 0) {
+      return null;
+    }
+
+    return branchId;
+  } catch {
+    return null;
+  }
+};
+
+const shouldApplyBranchFilter = (endpoint, method = 'GET') => {
+  if (String(method || 'GET').toUpperCase() !== 'GET') return false;
+  if (!endpoint || endpoint.includes('branchId=')) return false;
+
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return BRANCH_FILTERED_GET_PREFIXES.some((prefix) => (
+    normalizedEndpoint === prefix ||
+    normalizedEndpoint.startsWith(`${prefix}/`) ||
+    normalizedEndpoint.startsWith(`${prefix}?`)
+  ));
+};
+
+const appendSelectedBranchFilter = (endpoint, options = {}) => {
+  const method = options.method || 'GET';
+  const branchId = shouldApplyBranchFilter(endpoint, method) ? getSelectedTenantBranchId() : null;
+  if (!branchId) return endpoint;
+
+  const separator = endpoint.includes('?') ? '&' : '?';
+  return `${endpoint}${separator}branchId=${encodeURIComponent(String(branchId))}`;
+};
+
+export const appendApiBranchContext = (endpoint, options = {}) => appendSelectedBranchFilter(endpoint, options);
 
 const getStoredToken = () => {
   if (!canUseStorage) return '';
@@ -90,8 +196,9 @@ const buildHeaders = (headers = {}, token) => {
 export const apiRequest = async (endpoint, options = {}) => {
   const { token, headers, skipAuth = false, ...restOptions } = options;
   const authToken = token || (!skipAuth ? getStoredToken() : '');
+  const requestEndpoint = appendSelectedBranchFilter(endpoint, restOptions);
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}${requestEndpoint}`, {
     ...restOptions,
     headers: buildHeaders(headers, authToken),
   });

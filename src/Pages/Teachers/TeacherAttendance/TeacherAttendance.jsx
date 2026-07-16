@@ -50,7 +50,7 @@ export const TeacherAttendance = () => {
 
         try {
             const [teacherResult, attendanceResult] = await Promise.all([
-                getTeachers('page=1&limit=100&staffType=teacher'),
+                getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 getTeacherAttendance(`page=1&limit=100&branchId=${selectedBranchId}&date=${selectedDate}`),
             ]);
 
@@ -81,7 +81,7 @@ export const TeacherAttendance = () => {
             try {
                 const [defaultBranch, teacherResult] = await Promise.all([
                     getDefaultBranch(),
-                    getTeachers('page=1&limit=100&staffType=teacher'),
+                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
 
                 setSelectedBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');

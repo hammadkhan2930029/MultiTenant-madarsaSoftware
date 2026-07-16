@@ -92,8 +92,8 @@ export const ExamResult = () => {
             setError('');
             try {
                 const [studentsResult, subjectsResult] = await Promise.all([
-                    getStudents('page=1&limit=100'),
-                    getSubjects('page=1&limit=100'),
+                    getStudents('page=1&limit=100&status=active'),
+                    getSubjects('page=1&limit=100&status=active'),
                 ]);
                 setStudents(studentsResult.items || []);
                 setSubjects(activeOnly(subjectsResult.items));

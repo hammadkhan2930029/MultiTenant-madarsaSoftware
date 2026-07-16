@@ -378,8 +378,8 @@ export const ExamResultIndex = () => {
         setError('');
         try {
             const [classesResult, sessionsResult, resultsResult] = await Promise.all([
-                getClasses('page=1&limit=100'),
-                getSessions('page=1&limit=100'),
+                getClasses('page=1&limit=100&status=active'),
+                getSessions('page=1&limit=100&status=active'),
                 getExamResults(buildQuery(filters, page)),
             ]);
             setClassOptions(activeOnly(classesResult.items));

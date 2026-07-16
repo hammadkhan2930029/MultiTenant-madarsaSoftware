@@ -336,9 +336,9 @@ export const AdmissionForm = () => {
         const loadDropdownOptions = async () => {
             try {
                 const [classesResponse, sectionsResponse, teachersResponse] = await Promise.all([
-                    getClasses('page=1&limit=100'),
-                    getSections('page=1&limit=100'),
-                    getTeachers('page=1&limit=100&staffType=teacher'),
+                    getClasses('page=1&limit=100&status=active'),
+                    getSections('page=1&limit=100&status=active'),
+                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
 
                 setClassOptions((classesResponse?.items || []).filter((item) => item.status === 'active'));

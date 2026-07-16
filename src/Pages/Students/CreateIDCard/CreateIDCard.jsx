@@ -96,7 +96,7 @@ export const CreateIdCard = () => {
 
             try {
                 const [studentsResult, profileResult] = await Promise.all([
-                    getStudents('page=1&limit=100'),
+                    getStudents('page=1&limit=100&status=active'),
                     fetchMadrassaProfile().catch(() => getAdminSession()?.madrassaProfile || null),
                 ]);
 
@@ -137,7 +137,7 @@ export const CreateIdCard = () => {
             setIsSearching(true);
 
             try {
-                const result = await getStudents(`page=1&limit=20&search=${encodeURIComponent(query)}`);
+                const result = await getStudents(`page=1&limit=20&status=active&search=${encodeURIComponent(query)}`);
                 setSearchResults(normalizeStudentItems(result));
             } catch {
                 setSearchResults([]);
@@ -172,7 +172,7 @@ export const CreateIdCard = () => {
                 return;
             }
 
-            const result = await getStudents(`page=1&limit=20&search=${encodeURIComponent(query)}`);
+            const result = await getStudents(`page=1&limit=20&status=active&search=${encodeURIComponent(query)}`);
             const serverStudents = normalizeStudentItems(result);
             const serverMatch = findStudentMatch(serverStudents, query) || serverStudents[0];
 

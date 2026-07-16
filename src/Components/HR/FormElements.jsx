@@ -3,35 +3,42 @@ import { ChevronDown } from 'lucide-react';
 import { ThemedDatePicker } from '../DatePicker/ThemedDatePicker';
 //---------------------------------------------------------------------------------------
 
-export const InputField = ({ label, placeholder, isDark, type = "text", className = '', required = false, ...props }) => (
+export const InputField = ({ label, placeholder, isDark, type = "text", className = '', required = false, error = '', id, ...props }) => (
   <div className="space-y-2">
     {label ? (
-      <label className="text-[11px]  font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
+      <label htmlFor={id} className="text-[11px]  font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
         {label}{required ? <span className="text-red-500"> *</span> : null}
       </label>
     ) : null}
     <input
+      id={id}
       type={type}
       placeholder={placeholder}
       required={required}
+      aria-invalid={Boolean(error)}
+      aria-describedby={error && id ? `${id}-error` : undefined}
       {...props}
       className={`w-full p-4 font-arabic rounded-2xl border outline-none font-bold transition-all  focus:ring-4 focus:ring-emerald-500/10 ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
         } ${className}`}
     />
+    {error ? <p id={id ? `${id}-error` : undefined} className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
   </div>
 );
 //---------------------------------------------------------------------------------------
 
-export const SelectField = ({ label, options, isDark, className = '', required = false, ...props }) => (
+export const SelectField = ({ label, options, isDark, className = '', required = false, error = '', id, ...props }) => (
   <div className="space-y-2 relative">
     {label ? (
-      <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
+      <label htmlFor={id} className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
         {label}{required ? <span className="text-red-500"> *</span> : null}
       </label>
     ) : null}
     <div className="relative">
       <select
+        id={id}
         required={required}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error && id ? `${id}-error` : undefined}
         {...props}
         className={`w-full p-4 rounded-2xl border outline-none font-bold appearance-none transition-all ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
         } ${className}`}
@@ -49,6 +56,7 @@ export const SelectField = ({ label, options, isDark, className = '', required =
       </select>
       <ChevronDown size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)] pointer-events-none" />
     </div>
+    {error ? <p id={id ? `${id}-error` : undefined} className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
   </div>
 );
 //---------------------------------------------------------------------------------------

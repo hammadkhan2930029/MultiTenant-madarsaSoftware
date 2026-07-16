@@ -3,6 +3,7 @@ import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSection, deleteSection, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const emptyForm = {
     classId: '',
@@ -24,6 +25,7 @@ export const CreateSections = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const formRef = useRef(null);
+    const notify = useNotifier();
     useNotificationBridge({ error, success });
 
     const scrollToForm = () => {
@@ -80,12 +82,16 @@ export const CreateSections = () => {
 
     const handleSubmit = async () => {
         if (formData.classId && !formData.name.trim()) {
-            setError('سیکشن نام درج کرنا ضروری ہے۔ جماعت کے ساتھ سیکشن نام بھی لکھیں۔');
+            const message = 'سیکشن نام درج کرنا ضروری ہے۔ جماعت کے ساتھ سیکشن نام بھی لکھیں۔';
+            setError('');
+            notify.error(message, 'نامکمل معلومات');
             return;
         }
 
         if (!formData.classId || !formData.name.trim()) {
-            setError('جماعت اور سیکشن کا نام دونوں درج کرنا ضروری ہیں۔');
+            const message = 'جماعت اور سیکشن کا نام دونوں درج کرنا ضروری ہیں۔';
+            setError('');
+            notify.error(message, 'نامکمل معلومات');
             return;
         }
 
@@ -205,7 +211,7 @@ export const CreateSections = () => {
                 <div ref={formRef} className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نیا سیکشن اندراج'}</span>
+                        <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نیا سیکشن کا اندراج'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -249,7 +255,7 @@ export const CreateSections = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
                         >
-                            {editMode ? 'تبدیل کریں' : 'اندراج'}
+                            {editMode ? 'تبدیل کریں' : 'محفوظ کریں'}
                             {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>

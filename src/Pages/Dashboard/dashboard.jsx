@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
     UserPlus, Users, Calendar, Wallet, UserCheck,
-    TrendingUp, BookOpen, ChevronLeft, Settings2, X, Check
+    TrendingUp, BookOpen, ChevronLeft, Settings2, X, Check, Landmark
 } from 'lucide-react';
 /* eslint-disable-next-line no-unused-vars */
 import { motion } from 'framer-motion';
@@ -19,7 +19,9 @@ import {
     getSiparaHifzEntries,
     getWeeklyHifzEntries,
 } from '../../Constant/HifzApi';
-import { getAdminSession } from '../../Constant/AdminAuth';
+import { getBranches } from '../../Constant/AcademicSetupApi';
+import { canUseTenantBranchContext, getAdminSession, getSelectedBranchContext } from '../../Constant/AdminAuth';
+import { usePermissions } from '../../Hooks/usePermissions';
 
 //--------------------------------------------------------------------------
 
@@ -146,6 +148,18 @@ const withStatusLabel = (label, status) => {
     return statusLabel ? `${label} · ${statusLabel}` : label;
 };
 
+const loadOptional = async (allowed, request) => {
+    if (!allowed) return { skipped: true, value: null };
+
+    try {
+        return { skipped: false, value: await request() };
+    } catch {
+        return { skipped: false, value: null, error: true };
+    }
+};
+
+const hasLoadedValue = (result) => !result?.skipped && result?.value;
+
 //--------------------------------------------------------------------------
 const StatCard =
     (
@@ -194,11 +208,32 @@ const StatCard =
 
 export const Dashboard = () => {
     const navigate = useNavigate();
+    const { hasPageAccess, hasPermission, hasAnyPermission } = usePermissions();
+    const session = getAdminSession();
+    const canUseBranchContext = canUseTenantBranchContext(session);
+    const selectedBranchContext = getSelectedBranchContext(session);
+    const scopeSubValue = canUseBranchContext
+        ? (selectedBranchContext.branchId ? 'منتخب برانچ' : 'تمام برانچز')
+        : '';
+    const canViewStudents = hasPermission('students.view');
+    const canViewTeachers = hasPermission('teachers.view');
+    const canViewStaff = hasPermission('staff.view');
+    const canViewParents = hasPermission('parents.view');
+    const canViewAttendance = hasPermission('attendance.view');
+    const canViewFinance = hasAnyPermission(['fees.view', 'finance.view', 'finance.transactions.view', 'finance.reports.view']);
+    const canViewExamSchedules = hasPermission('exams.view');
+    const canViewExamResults = hasPermission('exam_results.view');
+    const canViewDailyHifz = hasPermission('hifz.daily.view');
+    const canViewWeeklyHifz = hasPermission('hifz.weekly.view');
+    const canViewMonthlyHifz = hasPermission('hifz.monthly.view');
+    const canViewSiparaHifz = hasPermission('hifz.para.view');
+    const canViewBranchSummary = canUseBranchContext && hasPermission('branches.view');
     const [quickActionIds, setQuickActionIds] = useState(getInitialQuickActionIds);
     const [isQuickActionSettingsOpen, setIsQuickActionSettingsOpen] = useState(false);
     const [topStats, setTopStats] = useState({
         students: '350',
         teachers: '15',
+        staff: '0',
         fees: 'PKR 1.7M',
     });
     const [chartStats, setChartStats] = useState({
@@ -213,12 +248,20 @@ export const Dashboard = () => {
         stats: 'loading',
         charts: 'loading',
         activities: 'loading',
+        branches: 'loading',
     });
     const [financeCards, setFinanceCards] = useState({
         payableAmount: 0,
         receivableAmount: 0,
         totalKharch: 0,
         total: 0,
+    });
+    const [branchStats, setBranchStats] = useState({
+        total: 0,
+        active: 0,
+        inactive: 0,
+        limit: null,
+        remaining: 0,
     });
 
     useEffect(() => {
@@ -229,11 +272,15 @@ export const Dashboard = () => {
         localStorage.setItem(getQuickActionStorageKey(), JSON.stringify(quickActionIds));
     }, [quickActionIds]);
 
+    const allowedQuickActions = quickActionCatalog.filter((action) => hasPageAccess(action.path));
+
     const selectedQuickActions = quickActionIds
         .map((id) => quickActionCatalog.find((action) => action.id === id))
+        .filter((action) => action && hasPageAccess(action.path))
         .filter(Boolean);
 
     const toggleQuickAction = (actionId) => {
+        if (!allowedQuickActions.some((action) => action.id === actionId)) return;
         setQuickActionIds((current) => (
             current.includes(actionId)
                 ? current.filter((id) => id !== actionId)
@@ -246,34 +293,37 @@ export const Dashboard = () => {
 
         const loadDashboardStats = async () => {
             try {
-                const [studentsResult, teachersResult, financeResult] = await Promise.allSettled([
-                    getStudents('page=1&limit=1'),
-                    getTeachers('page=1&limit=1&staffType=teacher'),
-                    getFinancialRecords('page=1&limit=1'),
+                const [studentsResult, teachersResult, staffResult, financeResult] = await Promise.all([
+                    loadOptional(canViewStudents, () => getStudents('page=1&limit=1')),
+                    loadOptional(canViewTeachers, () => getTeachers('page=1&limit=1&staffType=teacher')),
+                    loadOptional(canViewStaff, () => getTeachers('page=1&limit=1&staffType=staff')),
+                    loadOptional(canViewFinance, () => getFinancialRecords('page=1&limit=1')),
                 ]);
 
                 if (!isMounted) return;
 
                 setTopStats((current) => {
-                    const studentsTotal = studentsResult.status === 'fulfilled' ? getTotalItems(studentsResult.value) : null;
-                    const teachersTotal = teachersResult.status === 'fulfilled' ? getTotalItems(teachersResult.value) : null;
-                    const totalFees = financeResult.status === 'fulfilled'
+                    const studentsTotal = hasLoadedValue(studentsResult) ? getTotalItems(studentsResult.value) : null;
+                    const teachersTotal = hasLoadedValue(teachersResult) ? getTotalItems(teachersResult.value) : null;
+                    const staffTotal = hasLoadedValue(staffResult) ? getTotalItems(staffResult.value) : null;
+                    const totalFees = hasLoadedValue(financeResult)
                         ? financeResult.value?.summary?.totalAmdan
                         : null;
 
                     return {
                         students: studentsTotal !== null ? formatCount(studentsTotal, current.students) : current.students,
                         teachers: teachersTotal !== null ? formatCount(teachersTotal, current.teachers) : current.teachers,
+                        staff: staffTotal !== null ? formatCount(staffTotal, current.staff) : current.staff,
                         fees: totalFees !== null && totalFees !== undefined ? formatCurrency(totalFees, current.fees) : current.fees,
                     };
                 });
 
-                const hasStatsData = [studentsResult, teachersResult, financeResult].some((result) => result.status === 'fulfilled');
+                const hasStatsData = [studentsResult, teachersResult, staffResult, financeResult].some(hasLoadedValue);
                 setDashboardStatus((current) => ({ ...current, stats: hasStatsData ? 'ready' : 'error' }));
 
                 let hasChartData = false;
 
-                if (financeResult.status === 'fulfilled') {
+                if (hasLoadedValue(financeResult)) {
                     const summary = financeResult.value?.summary || {};
                     const income = Number(summary.totalAmdan || 0);
                     const expense = Number(summary.totalKharch || 0);
@@ -300,11 +350,13 @@ export const Dashboard = () => {
                     }
                 }
 
-                const attendanceResults = await Promise.allSettled(
-                    getLastSevenDays().map((date) =>
-                        getStudentAttendance(`page=1&limit=100&date=${toDateKey(date)}`),
-                    ),
-                );
+                const attendanceResults = canViewAttendance
+                    ? await Promise.allSettled(
+                        getLastSevenDays().map((date) =>
+                            getStudentAttendance(`page=1&limit=100&date=${toDateKey(date)}`),
+                        ),
+                    )
+                    : [];
 
                 if (!isMounted) return;
 
@@ -345,7 +397,47 @@ export const Dashboard = () => {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [canViewAttendance, canViewFinance, canViewStaff, canViewStudents, canViewTeachers]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadBranchStats = async () => {
+            if (!canViewBranchSummary) {
+                setDashboardStatus((current) => ({ ...current, branches: 'ready' }));
+                return;
+            }
+
+            try {
+                const [allBranches, activeBranches, inactiveBranches] = await Promise.all([
+                    getBranches('page=1&limit=1'),
+                    getBranches('page=1&limit=1&status=active'),
+                    getBranches('page=1&limit=1&status=inactive'),
+                ]);
+
+                if (!isMounted) return;
+
+                const branchLimit = allBranches?.branchLimit || {};
+                setBranchStats({
+                    total: Number(allBranches?.meta?.totalItems ?? allBranches?.items?.length ?? 0),
+                    active: Number(activeBranches?.meta?.totalItems ?? activeBranches?.items?.length ?? 0),
+                    inactive: Number(inactiveBranches?.meta?.totalItems ?? inactiveBranches?.items?.length ?? 0),
+                    limit: branchLimit.branchLimit ?? branchLimit.limit ?? null,
+                    remaining: Number(branchLimit.remainingBranches ?? branchLimit.remaining ?? 0),
+                });
+                setDashboardStatus((current) => ({ ...current, branches: 'ready' }));
+            } catch {
+                if (!isMounted) return;
+                setDashboardStatus((current) => ({ ...current, branches: 'error' }));
+            }
+        };
+
+        loadBranchStats();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [canViewBranchSummary]);
 
     useEffect(() => {
         let isMounted = true;
@@ -364,23 +456,23 @@ export const Dashboard = () => {
                     weeklyHifzResult,
                     monthlyHifzResult,
                     siparaHifzResult,
-                ] = await Promise.allSettled([
-                    getStudents('page=1&limit=10'),
-                    getTeachers('page=1&limit=10'),
-                    getParents('page=1&limit=10'),
-                    getFinancialRecords('page=1&limit=10'),
-                    getStudentAttendance('page=1&limit=10'),
-                    getExamSchedules('page=1&limit=10'),
-                    getExamResults('page=1&limit=10'),
-                    getDailyHifzEntries('page=1&limit=10'),
-                    getWeeklyHifzEntries('page=1&limit=10'),
-                    getMonthlyHifzEntries('page=1&limit=10'),
-                    getSiparaHifzEntries('page=1&limit=10'),
+                ] = await Promise.all([
+                    loadOptional(canViewStudents, () => getStudents('page=1&limit=10')),
+                    loadOptional(canViewTeachers || canViewStaff, () => getTeachers('page=1&limit=10')),
+                    loadOptional(canViewParents, () => getParents('page=1&limit=10')),
+                    loadOptional(canViewFinance, () => getFinancialRecords('page=1&limit=10')),
+                    loadOptional(canViewAttendance, () => getStudentAttendance('page=1&limit=10')),
+                    loadOptional(canViewExamSchedules, () => getExamSchedules('page=1&limit=10')),
+                    loadOptional(canViewExamResults, () => getExamResults('page=1&limit=10')),
+                    loadOptional(canViewDailyHifz, () => getDailyHifzEntries('page=1&limit=10')),
+                    loadOptional(canViewWeeklyHifz, () => getWeeklyHifzEntries('page=1&limit=10')),
+                    loadOptional(canViewMonthlyHifz, () => getMonthlyHifzEntries('page=1&limit=10')),
+                    loadOptional(canViewSiparaHifz, () => getSiparaHifzEntries('page=1&limit=10')),
                 ]);
 
                 if (!isMounted) return;
 
-                const studentActivities = studentsResult.status === 'fulfilled'
+                const studentActivities = hasLoadedValue(studentsResult)
                     ? getItems(studentsResult.value).map((student) => createActivity({
                         record: student,
                         title: `${student.fullName || 'طالب علم'} کا ریکارڈ ${wasUpdated(student) ? 'اپڈیٹ ہوا' : 'شامل ہوا'}`,
@@ -390,17 +482,19 @@ export const Dashboard = () => {
                     }))
                     : [];
 
-                const teacherActivities = teachersResult.status === 'fulfilled'
-                    ? getItems(teachersResult.value).map((teacher) => createActivity({
-                        record: teacher,
-                        title: `${teacher.fullName || 'استاد / عملہ'} کا ریکارڈ ${wasUpdated(teacher) ? 'اپڈیٹ ہوا' : 'شامل ہوا'}`,
-                        amount: teacher.staffType === 'staff' ? 'دیگر عملہ' : (teacher.subject || 'استاد'),
-                        color: 'bg-teal-500',
-                        path: teacher.staffType === 'staff' ? '/staff/list' : `/teachers/details/${teacher.id}`,
-                    }))
+                const teacherActivities = hasLoadedValue(teachersResult)
+                    ? getItems(teachersResult.value)
+                        .filter((teacher) => (teacher.staffType === 'staff' ? canViewStaff : canViewTeachers))
+                        .map((teacher) => createActivity({
+                            record: teacher,
+                            title: `${teacher.fullName || 'استاد / عملہ'} کا ریکارڈ ${wasUpdated(teacher) ? 'اپڈیٹ ہوا' : 'شامل ہوا'}`,
+                            amount: teacher.staffType === 'staff' ? 'دیگر عملہ' : (teacher.subject || 'استاد'),
+                            color: 'bg-teal-500',
+                            path: teacher.staffType === 'staff' ? '/staff/list' : `/teachers/details/${teacher.id}`,
+                        }))
                     : [];
 
-                const parentActivities = parentsResult.status === 'fulfilled'
+                const parentActivities = hasLoadedValue(parentsResult)
                     ? getItems(parentsResult.value).map((parent) => createActivity({
                         record: parent,
                         title: `${parent.fullName || 'والدین'} کا ریکارڈ ${wasUpdated(parent) ? 'اپڈیٹ ہوا' : 'شامل ہوا'}`,
@@ -410,7 +504,7 @@ export const Dashboard = () => {
                     }))
                     : [];
 
-                const financeActivities = financeResult.status === 'fulfilled'
+                const financeActivities = hasLoadedValue(financeResult)
                     ? getItems(financeResult.value).map((record) => {
                         const isIncome = record.type === 'amdan' || record.type === 'income';
                         return createActivity({
@@ -423,7 +517,7 @@ export const Dashboard = () => {
                     })
                     : [];
 
-                const attendanceActivities = attendanceResult.status === 'fulfilled'
+                const attendanceActivities = hasLoadedValue(attendanceResult)
                     ? getItems(attendanceResult.value).map((attendance) => createActivity({
                         record: attendance,
                         title: `${attendance.student?.fullName || 'طالب علم'} کی حاضری درج ہوئی`,
@@ -433,7 +527,7 @@ export const Dashboard = () => {
                     }))
                     : [];
 
-                const examScheduleActivities = examSchedulesResult.status === 'fulfilled'
+                const examScheduleActivities = hasLoadedValue(examSchedulesResult)
                     ? getItems(examSchedulesResult.value).map((schedule) => createActivity({
                         record: schedule,
                         title: `${schedule.examName || 'امتحانی شیڈول'} ${wasUpdated(schedule) ? 'اپڈیٹ ہوا' : 'بنایا گیا'}`,
@@ -443,7 +537,7 @@ export const Dashboard = () => {
                     }))
                     : [];
 
-                const examResultActivities = examResultsResult.status === 'fulfilled'
+                const examResultActivities = hasLoadedValue(examResultsResult)
                     ? getItems(examResultsResult.value).map((result) => createActivity({
                         record: result,
                         title: `${result.student?.fullName || 'طالب علم'} کا امتحانی نتیجہ ${wasUpdated(result) ? 'اپڈیٹ ہوا' : 'محفوظ ہوا'}`,
@@ -454,7 +548,7 @@ export const Dashboard = () => {
                     : [];
 
                 const mapHifzActivities = (result, label, path, color) => (
-                    result.status === 'fulfilled'
+                    hasLoadedValue(result)
                         ? getItems(result.value).map((entry) => createActivity({
                             record: entry,
                             title: `${entry.student?.fullName || 'طالب علم'} کا ${label} ${wasUpdated(entry) ? 'اپڈیٹ ہوا' : 'درج ہوا'}`,
@@ -504,7 +598,7 @@ export const Dashboard = () => {
                     weeklyHifzResult,
                     monthlyHifzResult,
                     siparaHifzResult,
-                ].some((result) => result.status === 'fulfilled');
+                ].some(hasLoadedValue);
 
                 setDashboardStatus((current) => ({ ...current, activities: hasActivitySource ? 'ready' : 'error' }));
             } catch {
@@ -519,24 +613,56 @@ export const Dashboard = () => {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [
+        canViewAttendance,
+        canViewDailyHifz,
+        canViewExamResults,
+        canViewExamSchedules,
+        canViewFinance,
+        canViewMonthlyHifz,
+        canViewParents,
+        canViewSiparaHifz,
+        canViewStaff,
+        canViewStudents,
+        canViewTeachers,
+        canViewWeeklyHifz,
+    ]);
+
+    const topStatCards = [
+        canViewStudents ? { id: 'students', title: withStatusLabel('کل طلباء', dashboardStatus.stats), value: topStats.students, icon: Users, colorClass: 'bg-blue-500', borderClass: 'bg-blue-500', subValue: scopeSubValue } : null,
+        canViewTeachers ? { id: 'teachers', title: withStatusLabel('کل اساتذہ', dashboardStatus.stats), value: topStats.teachers, icon: UserCheck, colorClass: 'bg-teal-500', borderClass: 'bg-teal-500', subValue: scopeSubValue } : null,
+        canViewStaff ? { id: 'staff', title: withStatusLabel('کل عملہ', dashboardStatus.stats), value: topStats.staff, icon: Users, colorClass: 'bg-indigo-500', borderClass: 'bg-indigo-500', subValue: scopeSubValue } : null,
+        canViewFinance ? { id: 'fees', title: withStatusLabel('مجموعی فیس', dashboardStatus.stats), value: topStats.fees, icon: Wallet, colorClass: 'bg-rose-500', borderClass: 'bg-rose-500', subValue: scopeSubValue } : null,
+    ].filter(Boolean);
+
+    const branchStatCards = canViewBranchSummary ? [
+        { id: 'total-branches', title: withStatusLabel('کل برانچز', dashboardStatus.branches), value: formatCount(branchStats.total, '0'), icon: Landmark, colorClass: 'bg-blue-500', borderClass: 'bg-blue-500', subValue: 'آرکائیو برانچز شامل نہیں' },
+        { id: 'active-branches', title: withStatusLabel('فعال برانچز', dashboardStatus.branches), value: formatCount(branchStats.active, '0'), icon: Landmark, colorClass: 'bg-emerald-500', borderClass: 'bg-emerald-500' },
+        { id: 'inactive-branches', title: withStatusLabel('غیر فعال برانچز', dashboardStatus.branches), value: formatCount(branchStats.inactive, '0'), icon: Landmark, colorClass: 'bg-orange-500', borderClass: 'bg-orange-500' },
+        { id: 'branch-limit', title: withStatusLabel('برانچ حد', dashboardStatus.branches), value: branchStats.limit === null || branchStats.limit === undefined ? '—' : formatCount(branchStats.limit, '0'), icon: Landmark, colorClass: 'bg-cyan-600', borderClass: 'bg-cyan-600', subValue: `باقی گنجائش: ${formatCount(branchStats.remaining, '0')}` },
+    ] : [];
 
     return (
         <div className="w-full animate-in fade-in duration-700 font-urdu p-4 bg-[var(--color-bg)] min-h-screen text-[var(--color-text)]">
             {/* 1. Top Core Stats */}
             <div className="flex flex-wrap gap-6 mb-8" dir="rtl">
-                <StatCard title={withStatusLabel('کل طلباء', dashboardStatus.stats)} value={topStats.students} icon={Users} colorClass="bg-blue-500" borderClass="bg-blue-500" />
-                <StatCard title={withStatusLabel('کل اساتذہ', dashboardStatus.stats)} value={topStats.teachers} icon={UserCheck} colorClass="bg-teal-500" borderClass="bg-teal-500" />
-                <StatCard title={withStatusLabel('مجموعی فیس', dashboardStatus.stats)} value={topStats.fees} icon={Wallet} colorClass="bg-rose-500" borderClass="bg-rose-500" />
+                {topStatCards.map((card) => (
+                    <StatCard key={card.id} {...card} />
+                ))}
+                {branchStatCards.map((card) => (
+                    <StatCard key={card.id} {...card} />
+                ))}
             </div>
 
             {/* 2. Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" dir="rtl">
+            {(canViewFinance || canViewAttendance) ? (
+            <div className={`grid grid-cols-1 ${canViewFinance && canViewAttendance ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} gap-8 mb-8`} dir="rtl">
+                {canViewFinance ? (
                 <motion.div
                     className="min-h-[450px] bg-[var(--color-surface)] p-8 rounded-[3rem] border border-[var(--color-border)] flex flex-col justify-between shadow-sm"
                 >
                     <div className="flex flex-row justify-between items-center mb-6 ">
-                        <span className="text-[10px] bg-[var(--color-bg)] px-2 sm:px-2 md:px-4 lg:px-4 py-1.5 rounded-full text-[var(--color-text-muted)] font-black tracking-widest uppercase border border-[var(--color-border)]">{withStatusLabel('Monthly Overview', dashboardStatus.charts)}</span>
+                        <span className="text-[10px] bg-[var(--color-bg)] px-2 sm:px-2 md:px-4 lg:px-4 py-1.5 rounded-full text-[var(--color-text-muted)] font-black tracking-widest uppercase border border-[var(--color-border)]">{withStatusLabel('ماہانہ جائزہ', dashboardStatus.charts)}</span>
                         <h3 className="font-black text-[var(--color-text)] text-lg text-center">فیس کی مجموعی صورتحال</h3>
                     </div>
                     <div className="h-64 flex items-center justify-center relative">
@@ -561,12 +687,14 @@ export const Dashboard = () => {
                         </div>
                     </div>
                 </motion.div>
+                ) : null}
 
+                {canViewAttendance ? (
                 <motion.div
                     className="bg-[var(--color-surface)] p-8 rounded-[3rem] border border-[var(--color-border)] flex flex-col min-h-[450px] shadow-sm"
                 >
                     <div className="flex justify-between items-center mb-10">
-                        <div className="bg-emerald-500/10 text-emerald-500 px-5 py-2 rounded-full text-[10px] font-black tracking-tight border border-emerald-500/20 uppercase">{withStatusLabel(`${chartStats.attendancePercent}% Attendance`, dashboardStatus.charts)}</div>
+                        <div className="bg-emerald-500/10 text-emerald-500 px-5 py-2 rounded-full text-[10px] font-black tracking-tight border border-emerald-500/20 uppercase">{withStatusLabel(`${chartStats.attendancePercent}% حاضری`, dashboardStatus.charts)}</div>
                         <h3 className="font-black text-[var(--color-text)] text-lg">حاضری کا جائزہ</h3>
                     </div>
                     <ResponsiveContainer width="100%" height="100%">
@@ -613,7 +741,9 @@ export const Dashboard = () => {
                         </LineChart>
                     </ResponsiveContainer>
                 </motion.div>
+                ) : null}
             </div>
+            ) : null}
 
             {/* 3. Quick Actions & Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8" dir="rtl">
@@ -690,6 +820,7 @@ export const Dashboard = () => {
             </div>
 
             {/* 4. Bottom Financial Cards */}
+            {canViewFinance ? (
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -699,6 +830,7 @@ export const Dashboard = () => {
                 <StatCard title="کل خرچ" value={formatCurrency(financeCards.totalKharch, 'PKR 0')} subValue="مالیاتی ریکارڈ کے مطابق" icon={TrendingUp} colorClass="bg-indigo-500" borderClass="bg-indigo-500" />
                 <StatCard title="کل" value={formatCurrency(financeCards.total, 'PKR 0')} subValue="کل آمدن منفی کل خرچ" icon={Wallet} colorClass="bg-orange-500" borderClass="bg-orange-500" isIncome={true} />
             </motion.div>
+            ) : null}
 
             {isQuickActionSettingsOpen ? (
                 <div
@@ -727,7 +859,7 @@ export const Dashboard = () => {
                         </div>
 
                         <div className="mt-6 grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto pl-1 sm:grid-cols-2 vip-scrollbar">
-                            {quickActionCatalog.map((action) => {
+                            {allowedQuickActions.map((action) => {
                                 const isSelected = quickActionIds.includes(action.id);
                                 const Icon = action.icon;
 

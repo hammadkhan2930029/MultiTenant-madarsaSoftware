@@ -47,6 +47,21 @@ export const deleteBranch = async (id) => {
   return result?.data;
 };
 
+export const getLegacyBranchMigrationStatus = async () => {
+  const result = await apiRequest('/branches/legacy-migration/status', withToken({ method: 'GET' }));
+  return result?.data;
+};
+
+export const previewLegacyBranchMigration = async (query = '') => {
+  const result = await apiRequest(`/branches/legacy-migration/preview${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data;
+};
+
+export const executeLegacyBranchMigration = async (payload = {}) => {
+  const result = await apiRequest('/branches/legacy-migration/execute', withJson('POST', payload));
+  return result?.data;
+};
+
 export const getClasses = async (query = '') => {
   const result = await apiRequest(`/classes${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
   return result?.data || { items: [], meta: null };

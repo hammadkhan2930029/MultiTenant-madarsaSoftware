@@ -9,9 +9,10 @@ import {
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
-import { refreshPermissions, fetchMadrassaProfile, getAdminSession, getApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT } from '../../Constant/AdminAuth'
+import { refreshPermissions, fetchMadrassaProfile, getAdminSession, getApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT, canAccessBranchManagement, isBranchScopedSession as getIsBranchScopedSession } from '../../Constant/AdminAuth'
 import { usePermissions } from '../../Hooks/usePermissions';
 import { getPagePermission, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
+import { BranchContextSelector } from '../BranchContextSelector';
 
 const profileRoleDisplayNames = {
     super_admin: 'سپر ایڈمن',
@@ -153,6 +154,8 @@ export const SideBar = () => {
     const profileRoleLabel = profileRoleDisplayNames[profileRoleName] || profileRoleName || 'ایڈمن';
     const sidebarBadge = madrassaProfile?.city?.trim() || 'Main Campus';
     const hasMadrassaLogo = Boolean(avatarSrc);
+    const isBranchManagementEnabled = canAccessBranchManagement(currentSession);
+    const isBranchScopedSession = getIsBranchScopedSession(currentSession);
     const handleLogout = () => {
         logoutAdmin();
         setIsProfileOpen(false);
@@ -160,6 +163,13 @@ export const SideBar = () => {
     };
 
     const canAccessItem = (item) => {
+        if (
+            isBranchScopedSession &&
+            ['role_management', 'user_management', 'tenant_management', 'branch_management'].includes(item.id)
+        ) {
+            return false;
+        }
+
         const permissionList = [
             ...(item.permission ? [item.permission] : []),
             ...(item.permissions || []),
@@ -214,9 +224,16 @@ export const SideBar = () => {
             icon: LayoutDashboard,
             path: '/dashboard'
         },
+        ...(isBranchManagementEnabled ? [{
+            id: 'branch_management',
+            label: 'برانچ مینجمنٹ',
+            icon: Building2,
+            path: '/branch-management',
+            permissions: ['branches.view'],
+        }] : []),
         {
             id: 'class_mgmt',
-            label: 'کلاس مینجمنٹ',
+            label: 'جماعت مینجمنٹ',
             icon: ClipboardList,
             subMenu: [
                 { id: 'classes', label: ' جماعت', path: '/class-management/Classes' },
@@ -281,7 +298,7 @@ export const SideBar = () => {
                 { id: 'std_list', label: 'طلباء کی فہرست', path: '/students/list' },
                 { id: 'std_id_card', label: 'آئی ڈی کارڈ بنائیں', path: '/students/create-id-card' },
                 { id: 'std_attendance', label: 'طلبہ کی حاضری', path: '/students/attendance' },
-                { id: 'std_class_asign', label: 'طلبہ کو کلاس میں ایڈ کریں', path: '/students/class_asign' },
+                { id: 'std_class_asign', label: 'طلباء کو جماعت میں شامل کریں', path: '/students/class_asign' },
                 { id: 'std_schedule ', label: 'نظام الاوقات', path: '/students/schedule' },
                 { id: 'std_fees ', label: 'فیس جینریشن', path: '/students/fees' },
 
@@ -491,9 +508,10 @@ export const SideBar = () => {
 
     const urduMenuLabels = {
         dashboard: 'ڈیش بورڈ',
-        class_mgmt: 'کلاس مینجمنٹ',
+        branch_management: 'برانچ مینجمنٹ',
+        class_mgmt: 'جماعت مینجمنٹ',
         classes: 'جماعت',
-        sections: 'جماعت سیکشن مینجمنٹ',
+        sections: 'جماعت سیکشن',
         session: 'سیشن',
         subjects: 'مضامین',
         hifz: 'شعبہ حفظ',
@@ -515,7 +533,7 @@ export const SideBar = () => {
         std_list: 'طلباء کی فہرست',
         std_id_card: 'آئی ڈی کارڈ بنائیں',
         std_attendance: 'طلباء کی حاضری',
-        std_class_asign: 'طلباء کو کلاس میں شامل کریں',
+        std_class_asign: 'طلباء کو جماعت میں شامل کریں',
         'std_schedule ': 'نظام الاوقات',
         'std_fees ': 'فیس جنریشن',
         teachers: 'اساتذہ',
@@ -927,6 +945,7 @@ export const SideBar = () => {
                 </nav>
 
                 <main className="p-4 md:p-6 lg:p-8">
+                    <BranchContextSelector />
                     <Outlet />
                 </main>
             </div>

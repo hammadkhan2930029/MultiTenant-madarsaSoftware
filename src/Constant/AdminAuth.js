@@ -2,9 +2,11 @@ import { API_BASE_URL, SESSION_EXPIRED_MESSAGE_KEY, apiRequest } from './Api';
 import { SUPER_ADMIN_ROLE } from './Permissions';
 
 const AUTH_KEY = 'madarsa_admin_auth';
+const BRANCH_CONTEXT_KEY = 'madarsa_branch_context';
 export const MADRASSA_PROFILE_UPDATED_EVENT = 'madarsa:madrassa-profile-updated';
 export const TENANT_BRANDING_UPDATED_EVENT = 'madarsa:tenant-branding-updated';
 export const ADMIN_SESSION_UPDATED_EVENT = 'madarsa:admin-session-updated';
+export const BRANCH_CONTEXT_UPDATED_EVENT = 'madarsa:branch-context-updated';
 const TENANT_SESSION_EXPIRED_MESSAGE = 'آپ کا سیشن اس مدرسہ ڈومین کے لیے درست نہیں ہے۔ براہ کرم دوبارہ لاگ اِن کریں۔';
 
 export const defaultAdminCredentials = {
@@ -193,6 +195,92 @@ export const isTenantAdmin = () => {
   const legacyRoleName = readSession()?.admin?.role;
 
   return roleName === 'admin' || legacyRoleName === 'admin';
+};
+
+export const getSessionBranchId = (session = readSession()) => {
+  const value = session?.admin?.branchId ?? session?.user?.branchId ?? null;
+  return value === null || value === undefined || value === '' ? null : Number(value);
+};
+
+export const getTenantBranchSettings = (session = readSession()) => ({
+  ...(session?.tenantBranding?.settings || {}),
+  ...(session?.currentTenant || {}),
+});
+
+export const isBranchSystemEnabled = (session = readSession()) => Boolean(
+  getTenantBranchSettings(session)?.branchEnabled,
+);
+
+export const isBranchScopedSession = (session = readSession()) => {
+  const branchId = getSessionBranchId(session);
+  if (!branchId || isSuperAdmin()) return false;
+
+  const role = normalizeRole(session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || null);
+  const roleName = String(role?.roleName || session?.admin?.role || session?.user?.role || '').trim().toLowerCase();
+  return roleName !== 'admin';
+};
+
+export const canAccessBranchManagement = (session = readSession()) => (
+  isBranchSystemEnabled(session) &&
+  isTenantAdmin() &&
+  !isSuperAdmin() &&
+  !isBranchScopedSession(session)
+);
+
+export const canUseTenantBranchContext = (session = readSession()) => (
+  isBranchSystemEnabled(session) &&
+  isTenantAdmin() &&
+  !isSuperAdmin() &&
+  !isBranchScopedSession(session)
+);
+
+export const getSelectedBranchContext = (session = readSession()) => {
+  const tenantId = getSessionTenantId(session);
+  const fallback = { tenantId, branchId: null, mode: 'all' };
+
+  if (!canUseStorage || !canUseTenantBranchContext(session) || !tenantId) return fallback;
+
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(BRANCH_CONTEXT_KEY) || 'null');
+    if (!stored || Number(stored.tenantId) !== tenantId) return fallback;
+
+    const branchId = stored.branchId === null || stored.branchId === undefined || stored.branchId === ''
+      ? null
+      : Number(stored.branchId);
+
+    return {
+      tenantId,
+      branchId: Number.isFinite(branchId) && branchId > 0 ? branchId : null,
+      mode: Number.isFinite(branchId) && branchId > 0 ? 'branch' : 'all',
+    };
+  } catch {
+    return fallback;
+  }
+};
+
+export const setSelectedBranchContext = (branchId = null, session = readSession()) => {
+  if (!canUseStorage || !canUseTenantBranchContext(session)) return getSelectedBranchContext(session);
+
+  const tenantId = getSessionTenantId(session);
+  const normalizedBranchId = branchId === null || branchId === undefined || branchId === ''
+    ? null
+    : Number(branchId);
+  const nextContext = {
+    tenantId,
+    branchId: Number.isFinite(normalizedBranchId) && normalizedBranchId > 0 ? normalizedBranchId : null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  window.localStorage.setItem(BRANCH_CONTEXT_KEY, JSON.stringify(nextContext));
+  window.dispatchEvent(new CustomEvent(BRANCH_CONTEXT_UPDATED_EVENT, { detail: nextContext }));
+
+  return getSelectedBranchContext(session);
+};
+
+export const clearSelectedBranchContext = () => {
+  if (!canUseStorage) return;
+  window.localStorage.removeItem(BRANCH_CONTEXT_KEY);
+  window.dispatchEvent(new CustomEvent(BRANCH_CONTEXT_UPDATED_EVENT, { detail: { branchId: null, mode: 'all' } }));
 };
 
 export const hasPermission = (permission) => {

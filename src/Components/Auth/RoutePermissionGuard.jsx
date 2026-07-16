@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { can, isSuperAdmin } from '../../Constant/AdminAuth';
+import { can, canAccessBranchManagement, getAdminSession, isBranchScopedSession, isSuperAdmin } from '../../Constant/AdminAuth';
 import { getPagePermission } from '../../Constant/Permissions';
 
 export const AccessDeniedPage = () => {
@@ -59,10 +59,23 @@ export const AccessDeniedPage = () => {
 
 export const RoutePermissionGuard = ({ children }) => {
   const location = useLocation();
+  const currentSession = getAdminSession();
+  const normalizedPath = location.pathname || '';
   const requiredPermission = getPagePermission(location.pathname);
-  const superAdminOnly = location.pathname.startsWith('/tenant-management');
+  const superAdminOnly = normalizedPath.startsWith('/tenant-management');
+  const branchManagementRoute = normalizedPath.startsWith('/branch-management');
+  const branchScopedBlockedRoute = ['/role-management', '/tenant-management', '/branch-management']
+    .some((path) => normalizedPath.startsWith(path));
 
   if (superAdminOnly && !isSuperAdmin()) {
+    return <AccessDeniedPage />;
+  }
+
+  if (branchManagementRoute && !canAccessBranchManagement(currentSession)) {
+    return <AccessDeniedPage />;
+  }
+
+  if (isBranchScopedSession(currentSession) && branchScopedBlockedRoute) {
     return <AccessDeniedPage />;
   }
 

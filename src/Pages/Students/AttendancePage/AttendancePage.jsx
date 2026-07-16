@@ -64,8 +64,8 @@ export const AttendancePage = () => {
         const loadBaseData = async () => {
             try {
                 const [sessionResult, classesResult] = await Promise.all([
-                    getSessions('page=1&limit=100'),
-                    getClasses('page=1&limit=100'),
+                    getSessions('page=1&limit=100&status=active'),
+                    getClasses('page=1&limit=100&status=active'),
                 ]);
 
                 setSessions(sessionResult.items || []);
@@ -86,7 +86,7 @@ export const AttendancePage = () => {
             }
 
             try {
-                const result = await getSections(`page=1&limit=100&classId=${searchFilters.classId}`);
+                const result = await getSections(`page=1&limit=100&status=active&classId=${searchFilters.classId}`);
                 setSections(result.items || []);
             } catch (loadError) {
                 setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
@@ -123,7 +123,7 @@ export const AttendancePage = () => {
         const selectedClass = classes.find((item) => String(item.id) === String(searchFilters.classId));
 
         if (!searchFilters.classId || !searchFilters.sectionId || !searchFilters.sessionId || !selectedClass?.branchId) {
-            setError('براہ کرم سیشن، کلاس اور سیکشن منتخب کریں۔');
+            setError('براہ کرم سیشن، جماعت اور سیکشن منتخب کریں۔');
             return;
         }
 
@@ -288,10 +288,10 @@ export const AttendancePage = () => {
         <div className="p-4 md:p-6 space-y-6 bg-[var(--color-bg)] min-h-screen font-urdu text-right" dir="rtl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-surface)] p-6 rounded-[2rem] shadow-sm border border-[var(--color-border)]">
                 <div>
-                    <h2 className="text-3xl font-black text-[var(--color-text)]">روزانہ حاضری</h2>
-                    <p className="text-sm text-[var(--color-text-muted)] font-bold mt-4">طلباء کی روزانہ حاضری</p>
+                    <h2 className="text-3xl font-black text-[var(--color-text)]">طلباء کی حاضری</h2>
+                    <p className="text-sm text-[var(--color-text-muted)] font-bold mt-4">طلباء کی روزانہ حاضری کا اندراج کریں یا پرانی حاضری دیکھیں</p>
                     <p className="mt-2 text-sm font-bold text-[var(--color-primary)]">
-                        پچھلی حاضری دیکھنے کے لیے تاریخ، سیشن، کلاس اور سیکشن منتخب کر کے حاضری لسٹ دکھائیں۔
+                        پچھلی حاضری دیکھنے کے لیے تاریخ، سیشن، جماعت اور سیکشن منتخب کر کے حاضری کی فہرست دیکھیں۔
                     </p>
                 </div>
 
@@ -315,11 +315,11 @@ export const AttendancePage = () => {
                         options={formatOptions(sessions, 'سیشن منتخب کریں')}
                     />
                     <SelectField
-                        label="کلاس"
+                        label="جماعت"
                         required
                         value={searchFilters.classId}
                         onChange={(e) => handleFilterChange('classId', e.target.value)}
-                        options={formatOptions(classes, 'کلاس منتخب کریں')}
+                        options={formatOptions(classes, 'جماعت منتخب کریں')}
                     />
                     <SelectField
                         label="سیکشن"
@@ -335,7 +335,7 @@ export const AttendancePage = () => {
                     disabled={isLoading}
                     className="w-full h-[55px] bg-[var(--color-primary)] text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-[var(--color-primary)]/20 active:scale-[0.98] disabled:opacity-60"
                 >
-                    <Search size={18} /> {isLoading ? 'لوڈ ہو رہا ہے...' : 'حاضری لسٹ دکھائیں'}
+                    <Search size={18} /> {isLoading ? 'فہرست لوڈ ہو رہی ہے...' : 'حاضری کی فہرست دیکھیں'}
                 </button>
             </div>
 
@@ -344,9 +344,9 @@ export const AttendancePage = () => {
                     <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div>
-                                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase">کل طلباء: {students.length}</p>
-                                <p className="mt-1 text-xs font-bold text-[var(--color-text-main)]">
-                                    تاریخ: <span className="font-sans">{searchFilters.date}</span>
+                                <p className="text-xs font-black text-[var(--color-text-muted)] uppercase">کل طلباء: {students.length}</p>
+                                <p className="mt-1 text-sm font-bold text-[var(--color-text-main)]">
+                                    تاریخ: <span className="font-sans mr-2">{searchFilters.date}</span>
                                 </p>
                             </div>
                             {students.length ? (
@@ -382,12 +382,9 @@ export const AttendancePage = () => {
                         {students.map((student) => (
                             <div key={student.id} className="p-4 grid grid-cols-1 gap-3 hover:bg-[var(--color-input)]/30 transition-colors lg:grid-cols-[1fr_160px_260px_auto] lg:items-center">
                                 <div className="flex items-center gap-4 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center text-[var(--color-primary)] font-black text-xs border border-[var(--color-primary)]/20 shrink-0">
-                                        {student.rollNo}
-                                    </div>
                                     <div className="min-w-0">
                                         <h4 className="font-black text-sm text-[var(--color-text)] truncate">{student.name}</h4>
-                                        <p className="text-[9px] text-[var(--color-text-muted)] font-bold">Roll / Admission: {student.rollNo}</p>
+                                        <p className="text-[9px] text-[var(--color-text-muted)] font-bold">{student.rollNo} :داخلہ نمبر</p>
                                     </div>
                                 </div>
 

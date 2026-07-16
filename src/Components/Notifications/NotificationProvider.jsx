@@ -26,6 +26,8 @@ export const NotificationProvider = ({ children }) => {
     const nextPayload = typeof payload === 'string' ? { message: payload } : payload;
     const severity = nextPayload.severity || nextPayload.type || 'info';
 
+    const hasAutoHideDuration = Object.prototype.hasOwnProperty.call(nextPayload, 'autoHideDuration');
+
     setNotification({
       open: true,
       severity,
@@ -34,7 +36,7 @@ export const NotificationProvider = ({ children }) => {
         nextPayload.message,
         severity === 'success' ? 'کارروائی کامیابی سے مکمل ہو گئی۔' : 'کارروائی مکمل نہیں ہو سکی۔',
       ),
-      autoHideDuration: nextPayload.autoHideDuration || 3200,
+      autoHideDuration: hasAutoHideDuration ? nextPayload.autoHideDuration : 3200,
     });
   }, []);
 
@@ -83,7 +85,7 @@ export const NotificationProvider = ({ children }) => {
 
       <Snackbar
         open={Boolean(notification?.open)}
-        autoHideDuration={notification?.autoHideDuration || 3200}
+        autoHideDuration={notification?.autoHideDuration === undefined ? 3200 : notification.autoHideDuration}
         onClose={closeNotification}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         TransitionComponent={SlideDown}

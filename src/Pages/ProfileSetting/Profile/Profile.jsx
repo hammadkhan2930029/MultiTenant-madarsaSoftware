@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import {
     Mail, Phone, MapPin,
-    Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2
+    Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2, ReceiptText
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
 import { fetchMadrassaProfile, getAdminRole, getApiAssetUrl, isSuperAdmin as isSuperAdminSession, updateMadrassaProfile } from '../../../Constant/AdminAuth';
@@ -35,7 +35,8 @@ export const Profile = () => {
         branch: 'مین کیمپس',
         city: 'کراچی',
         familyNoSeq: 'FAM-2026-001',
-        regNo: 'REG-QA-9921'
+        regNo: 'REG-QA-9921',
+        feeVoucherNoSeq: 'FEE-0001'
     });
 
     const [tempData, setTempData] = useState({ ...madrassaData, logoUrl: '' });
@@ -59,6 +60,7 @@ export const Profile = () => {
                     city: profile.city || '',
                     familyNoSeq: profile.familyNoSeq || '',
                     regNo: profile.regNo || '',
+                    feeVoucherNoSeq: profile.feeVoucherNoSeq || 'FEE-0001',
                     logoUrl: profile.logoUrl || '',
                     updatedAt: profile.updatedAt || '',
                 };
@@ -219,6 +221,7 @@ export const Profile = () => {
             formData.append('city', tempData.city || '');
             formData.append('familyNoSeq', tempData.familyNoSeq || '');
             formData.append('regNo', tempData.regNo || '');
+            formData.append('feeVoucherNoSeq', tempData.feeVoucherNoSeq || '');
             formData.append('logoUrl', tempData.logoUrl || '');
             formData.append('status', tempData.status || 'active');
 
@@ -237,6 +240,7 @@ export const Profile = () => {
                 city: savedProfile.city || '',
                 familyNoSeq: savedProfile.familyNoSeq || '',
                 regNo: savedProfile.regNo || '',
+                feeVoucherNoSeq: savedProfile.feeVoucherNoSeq || 'FEE-0001',
                 logoUrl: savedProfile.logoUrl || '',
                 updatedAt: savedProfile.updatedAt || '',
             };
@@ -363,7 +367,7 @@ export const Profile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="bg-[var(--color-surface)] border border-[var(--color-border)] p-8 rounded-[3rem] shadow-sm space-y-6 md:col-span-2">
                     <h3 className="text-lg font-black text-[var(--color-text)] border-r-4 border-[#00d094] pr-4">انتظامی معلومات</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <InfoField
                             label="رجسٹریشن نمبر"
                             icon={<ClipboardList size={16} />}
@@ -379,6 +383,14 @@ export const Profile = () => {
                             isEditing={isEditing}
                             tempValue={tempData.familyNoSeq}
                             onChange={(v) => setTempData({ ...tempData, familyNoSeq: v })}
+                        />
+                        <InfoField
+                            label="فیس واؤچر نمبر سیکوینس"
+                            icon={<ReceiptText size={16} />}
+                            value={madrassaData.feeVoucherNoSeq}
+                            isEditing={isEditing}
+                            tempValue={tempData.feeVoucherNoSeq}
+                            onChange={(v) => setTempData({ ...tempData, feeVoucherNoSeq: v })}
                         />
                     </div>
                 </div>

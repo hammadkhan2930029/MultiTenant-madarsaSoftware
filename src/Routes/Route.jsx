@@ -24,6 +24,7 @@ import { withPermission } from '../Components/Auth/permissionGuards';
 import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
 import { TenantManagement } from '../Pages/TenantManagement/TenantManagement';
+import { CreateBranch } from '../Pages/CreateBranches/CreateBranches';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -98,8 +99,9 @@ export const AppRoutes = () => {
 
       <Route path="/" element={<ProtectedAppShell />}>
         <Route path="dashboard" element={withPermission(<Dashboard />, 'dashboard.view')} />
-        <Route path="branch-management/create-branch" element={<Navigate to="/dashboard" replace />} />
-        <Route path="branch-management/:branchId" element={<Navigate to="/dashboard" replace />} />
+        <Route path="branch-management" element={withPermission(<CreateBranch />, 'branches.view')} />
+        <Route path="branch-management/create-branch" element={withPermission(<CreateBranch />, 'branches.view')} />
+        <Route path="branch-management/:branchId" element={withPermission(<CreateBranch />, 'branches.view')} />
         <Route path="HRManagement" element={<RequirePermission anyPermissions={['teachers.create', 'staff.create']}><HRManagement /></RequirePermission>} />
         <Route path="staff/list" element={withPermission(<TeachersList staffType="staff" />, 'staff.view')} />
         <Route path="students/attendance-history/:id" element={withPermission(<StudentAttendanceHistory />, 'attendance.history.view')} />

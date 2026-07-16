@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiRequest } from './Api';
+import { API_BASE_URL, appendApiBranchContext, apiRequest } from './Api';
 import { getAdminToken } from './AdminAuth';
 
 const withToken = (options = {}) => ({
@@ -16,7 +16,8 @@ const buildQuery = (filters = {}, keys = []) => {
 };
 
 const fetchStoreFile = async (endpoint) => {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const requestEndpoint = appendApiBranchContext(endpoint, { method: 'GET' });
+  const response = await fetch(`${API_BASE_URL}${requestEndpoint}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${getAdminToken()}`,

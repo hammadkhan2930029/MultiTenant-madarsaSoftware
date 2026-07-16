@@ -436,8 +436,8 @@ export const FeesCollection = () => {
         const loadSetup = async () => {
             try {
                 const [sessionResult, classResult, profileResult] = await Promise.all([
-                    getSessions('page=1&limit=100'),
-                    getClasses('page=1&limit=100'),
+                    getSessions('page=1&limit=100&status=active'),
+                    getClasses('page=1&limit=100&status=active'),
                     fetchMadrassaProfile().catch(() => getAdminSession()?.madrassaProfile || null),
                 ]);
                 setSessions(sessionResult.items || []);
@@ -459,7 +459,7 @@ export const FeesCollection = () => {
             }
 
             try {
-                const result = await getSections(`page=1&limit=100&classId=${filters.classId}`);
+                const result = await getSections(`page=1&limit=100&status=active&classId=${filters.classId}`);
                 setSections(result.items || []);
             } catch (loadError) {
                 setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
@@ -659,7 +659,7 @@ export const FeesCollection = () => {
                             <option value="">تمام</option>
                             {sessions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                         </Select>
-                        <Select label="کلاس" value={filters.classId} onChange={(value) => handleFilterChange('classId', value)}>
+                        <Select label="جماعت" value={filters.classId} onChange={(value) => handleFilterChange('classId', value)}>
                             <option value="">تمام</option>
                             {classes.filter((item) => item.status === 'active').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                         </Select>
@@ -711,7 +711,7 @@ export const FeesCollection = () => {
                                 <tr>
                                     <th className="px-5 py-4">واؤچر</th>
                                     <th className="px-5 py-4">طالب علم</th>
-                                    <th className="px-5 py-4">کلاس</th>
+                                    <th className="px-5 py-4">جماعت</th>
                                     <th className="px-5 py-4">مہینہ</th>
                                     <th className="px-5 py-4">کل رقم</th>
                                     <th className="px-5 py-4">ادا شدہ</th>
@@ -799,7 +799,7 @@ export const FeesCollection = () => {
 
 const Field = ({ label, value, onChange, type = 'text', required = false }) => (
     <label className="block space-y-2">
-        {label ? <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span> : null}
+        {label ? <span className="mr-1 text-sm font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span> : null}
         <input
             type={type}
             value={value}
@@ -812,7 +812,7 @@ const Field = ({ label, value, onChange, type = 'text', required = false }) => (
 
 const Select = ({ label, value, onChange, children, compact = false, required = false }) => (
     <label className={`block space-y-2 ${compact ? 'min-w-52' : ''}`}>
-        {label ? <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span> : null}
+        {label ? <span className="mr-1 text-sm font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span> : null}
         <select
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -828,7 +828,7 @@ const SummaryCard = ({ icon, label, value, danger }) => (
     <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
         <div className="flex items-center justify-between">
             <div>
-                <p className="text-xs font-black text-[var(--color-text-muted)]">{label}</p>
+                <p className="text-sm font-black text-[var(--color-text-muted)]">{label}</p>
                 <h3 className={`mt-2 text-2xl font-black ${danger ? 'text-rose-500' : 'text-[var(--color-text-main)]'}`}>{value}</h3>
             </div>
             <div className="rounded-2xl bg-[var(--color-primary)]/10 p-3 text-[var(--color-primary)]">

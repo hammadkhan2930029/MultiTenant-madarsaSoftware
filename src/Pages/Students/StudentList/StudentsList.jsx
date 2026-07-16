@@ -126,6 +126,7 @@ export const StudentList = () => {
     const [students, setStudents] = useState([]);
     const [studentRecords, setStudentRecords] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedClass, setSelectedClass] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -171,7 +172,7 @@ export const StudentList = () => {
                 setStudents(mapStudentsForList(items));
             } catch (loadError) {
                 if (!isCurrentSearch) return;
-                setError(loadError.message || 'Ø·Ù„Ø¨Û Ú©ÛŒ ÙÛØ±Ø³Øª Ù„ÙˆÚˆ Ù†ÛÛŒÚº ÛÙˆ Ø³Ú©ÛŒÛ”');
+                setError(loadError.message || 'طلبہ کی فہرست لوڈ نہیں ہو سکی۔');
             } finally {
                 if (!isCurrentSearch) return;
                 setIsLoading(false);
@@ -206,14 +207,22 @@ export const StudentList = () => {
         }
     };
 
+    const classOptions = useMemo(
+        () =>
+            Array.from(new Set(students.map((student) => student.className).filter((className) => className && className !== emptyValue)))
+                .sort((firstClass, secondClass) => firstClass.localeCompare(secondClass)),
+        [students],
+    );
+
     const filteredStudents = useMemo(
         () =>
             students.filter((student) =>
+                (!selectedClass || student.className === selectedClass) &&
                 [student.name, student.idNo, student.fatherName, student.familyNo]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
-        [searchTerm, students],
+        [searchTerm, selectedClass, students],
     );
 
     const exportRows = useMemo(() => {
@@ -223,6 +232,11 @@ export const StudentList = () => {
             .filter((student) => {
                 const activeAssignment = getActiveAssignment(student);
                 const primaryParent = getPrimaryParent(student);
+                const className = activeAssignment?.class?.name;
+
+                if (selectedClass && className !== selectedClass) {
+                    return false;
+                }
 
                 return [
                     student.fullName,
@@ -231,14 +245,14 @@ export const StudentList = () => {
                     student.phone,
                     primaryParent?.familyNumber,
                     primaryParent?.phone,
-                    activeAssignment?.class?.name,
+                    className,
                     activeAssignment?.section?.name,
                 ]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(query));
             })
             .map(mapStudentForExport);
-    }, [searchTerm, studentRecords]);
+    }, [searchTerm, selectedClass, studentRecords]);
 
     const exportColumns = useMemo(() => [
         { header: 'Student ID', accessor: 'id' },
@@ -315,14 +329,29 @@ export const StudentList = () => {
                     <Can permission="students.export">
                         <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="students-complete-list" className="w-full md:w-auto" />
                     </Can>
-                    <div className="relative group flex-1">
-                        <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" size={20} />
-                        <input
-                            type="text"
-                            placeholder="نام، آئی ڈی یا فون سے تلاش کریں..."
-                            className="w-full pr-14 pl-6 py-4 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]"
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    <div className="flex flex-1 flex-col gap-3 sm:flex-row">
+                        <div className="relative group flex-1">
+                            <Search className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" size={20} />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                placeholder="نام، آئی ڈی یا فون سے تلاش کریں..."
+                                className="w-full pr-14 pl-6 py-4 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]"
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <select
+                            value={selectedClass}
+                            onChange={(event) => setSelectedClass(event.target.value)}
+                            className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
+                        >
+                            <option value="">تمام جماعتیں</option>
+                            {classOptions.map((className) => (
+                                <option key={className} value={className}>
+                                    {className}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </div>
@@ -387,7 +416,7 @@ export const StudentList = () => {
                         <tr>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">آئی ڈی</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">طالب علم کی تفصیلات</th>
-                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">کلاس</th>
+                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">جماعت</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">ایکشن</th>
                         </tr>
                     </thead>

@@ -1,10 +1,20 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Building2, Edit2, Eye, Globe2, Plus, Save, Search } from 'lucide-react';
+import { ArrowRight, Building2, Edit2, Eye, Globe2, Plus, Save, Search, SlidersHorizontal } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
+import { DeleteConfirmationModal } from '../../Components/Common/DeleteConfirmationModal';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { getUsers } from '../../Constant/UserManagementApi';
-import { createTenant, getTenantById, getTenants, updateTenant } from '../../Constant/TenantManagementApi';
+import {
+  createTenant,
+  getTenantBranchSettings,
+  getTenantBranches,
+  getTenantBranchSummary,
+  getTenantById,
+  updateTenant,
+  updateTenantBranchLimit,
+  updateTenantBranchSettings,
+} from '../../Constant/TenantManagementApi';
 import { usePermissions } from '../../Hooks/usePermissions';
 
 const emptyForm = {
@@ -14,6 +24,8 @@ const emptyForm = {
   customDomain: '',
   ownerAdminId: '',
   status: 'active',
+  branchEnabled: 'false',
+  branchLimit: '',
   adminName: '',
   adminEmail: '',
   adminUsername: '',
@@ -44,12 +56,15 @@ const normalizeDomain = (value) => {
 };
 
 const buildPayload = (formData, mode) => {
+  const branchEnabled = formData.branchEnabled === 'true';
   const payload = {
     name: formData.name.trim(),
     subdomain: normalizeDomain(formData.subdomain) || null,
     customDomain: normalizeDomain(formData.customDomain) || null,
     ownerAdminId: formData.ownerAdminId ? Number(formData.ownerAdminId) : null,
     status: formData.status,
+    branchEnabled,
+    branchLimit: formData.branchLimit === '' ? null : Number(formData.branchLimit),
   };
 
   if (mode === 'create') {
@@ -81,6 +96,25 @@ const getOwnerLabel = (owner) => {
   return `${owner.name || owner.username} (${roleLabel})`;
 };
 
+const getBranchErrorMessage = (message) => {
+  const text = String(message || '');
+  if (text.includes('less than existing branches count')) {
+    return 'برانچ حد موجودہ برانچز کی تعداد سے کم نہیں ہو سکتی۔ موجودہ برانچ ڈیٹا حذف نہیں کیا جائے گا۔';
+  }
+  if (text.includes('at least 1') || text.includes('Branch limit is required')) {
+    return 'برانچ سسٹم فعال ہو تو برانچ حد کم از کم 1 ہونا ضروری ہے۔';
+  }
+  if (text.includes('negative')) {
+    return 'برانچ حد منفی نہیں ہو سکتی۔';
+  }
+  return text;
+};
+
+const formatDate = (value) => {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('ur-PK');
+};
+
 export const TenantManagement = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -90,11 +124,16 @@ export const TenantManagement = () => {
   const [tenants, setTenants] = useState([]);
   const [owners, setOwners] = useState([]);
   const [currentTenant, setCurrentTenant] = useState(null);
+  const [tenantBranches, setTenantBranches] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [branchLimitInputs, setBranchLimitInputs] = useState({});
+  const [branchAction, setBranchAction] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isBranchSaving, setIsBranchSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -127,8 +166,15 @@ export const TenantManagement = () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await getTenants({ page: 1, limit: 100, search, status: statusFilter });
-      setTenants(result.items || []);
+      const result = await getTenantBranchSettings({ page: 1, limit: 100, search, status: statusFilter });
+      const items = result.items || [];
+      setTenants(items);
+      setBranchLimitInputs(
+        items.reduce((values, tenant) => ({
+          ...values,
+          [tenant.tenantId || tenant.id]: tenant.branchLimit ?? '',
+        }), {})
+      );
     } catch (loadError) {
       setError(loadError.message || 'مدارس کی فہرست لوڈ نہیں ہو سکی۔');
     } finally {
@@ -142,15 +188,23 @@ export const TenantManagement = () => {
     setIsLoading(true);
     setError('');
     try {
-      const tenant = await getTenantById(tenantId);
+      const tenant = mode === 'edit'
+        ? await getTenantById(tenantId)
+        : await getTenantBranchSummary(tenantId);
+      const branchesResult = mode === 'details'
+        ? await getTenantBranches(tenantId, { page: 1, limit: 100 })
+        : { items: [] };
       setCurrentTenant(tenant);
+      setTenantBranches(branchesResult.items || []);
       setFormData({
         tenantCode: tenant?.tenantCode || '',
-        name: tenant?.name || '',
+        name: tenant?.name || tenant?.tenantName || '',
         subdomain: tenant?.subdomain || '',
         customDomain: tenant?.customDomain || '',
         ownerAdminId: tenant?.ownerAdminId ? String(tenant.ownerAdminId) : '',
         status: tenant?.status || 'active',
+        branchEnabled: tenant?.branchEnabled ? 'true' : 'false',
+        branchLimit: tenant?.branchLimit ?? '',
       });
     } catch (loadError) {
       setError(loadError.message || 'مدرسہ کی تفصیل لوڈ نہیں ہو سکی۔');
@@ -176,6 +230,7 @@ export const TenantManagement = () => {
 
     if (mode === 'create') {
       setCurrentTenant(null);
+      setTenantBranches([]);
       setFormData(emptyForm);
       setIsLoading(false);
       return undefined;
@@ -186,14 +241,29 @@ export const TenantManagement = () => {
   }, [isSuperAdmin, loadTenant, loadTenants, mode]);
 
   const handleSubmit = async () => {
+    if (isSaving) return undefined;
+
+    const nextErrors = {};
     if (!formData.name.trim()) return setError('مدرسہ کا نام ضروری ہے۔');
     if (mode === 'create' && !formData.tenantCode.trim()) return setError('مدرسہ کوڈ ضروری ہے۔');
     if (mode === 'create' && !formData.adminName.trim()) return setError('مدرسہ ایڈمن کا نام ضروری ہے۔');
     if (mode === 'create' && !formData.adminEmail.trim()) return setError('مدرسہ ایڈمن کا ای میل ضروری ہے۔');
     if (mode === 'create' && !formData.adminUsername.trim()) return setError('مدرسہ ایڈمن کا صارف نام ضروری ہے۔');
     if (mode === 'create' && formData.adminPassword.length < 8) return setError('مدرسہ ایڈمن کا پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔');
+    if (formData.branchEnabled === 'true' && (!formData.branchLimit || Number(formData.branchLimit) < 1)) {
+      nextErrors.branchLimit = 'برانچ سسٹم فعال ہو تو برانچ حد کم از کم 1 ہونا ضروری ہے۔';
+    }
+    if (formData.branchLimit !== '' && Number(formData.branchLimit) < 0) {
+      nextErrors.branchLimit = 'برانچ حد منفی نہیں ہو سکتی۔';
+    }
+    if (Object.keys(nextErrors).length) {
+      setFormErrors(nextErrors);
+      setError(Object.values(nextErrors)[0]);
+      return undefined;
+    }
 
     setIsSaving(true);
+    setFormErrors({});
     setError('');
     setSuccess('');
 
@@ -210,9 +280,101 @@ export const TenantManagement = () => {
         navigate(createdTenant?.id ? `/tenant-management/${createdTenant.id}` : '/tenant-management');
       }
     } catch (saveError) {
-      setError(saveError.message || 'مدرسہ محفوظ نہیں ہو سکا۔');
+      setError(getBranchErrorMessage(saveError.message) || 'مدرسہ محفوظ نہیں ہو سکا۔');
     } finally {
       setIsSaving(false);
+    }
+
+    return undefined;
+  };
+
+  const refreshBranchData = async (id = tenantId) => {
+    if (mode === 'list') {
+      await loadTenants();
+      return;
+    }
+
+    if (id) {
+      const [summary, branchesResult] = await Promise.all([
+        getTenantBranchSummary(id),
+        getTenantBranches(id, { page: 1, limit: 100 }),
+      ]);
+      setCurrentTenant(summary);
+      setTenantBranches(branchesResult.items || []);
+      setBranchLimitInputs((prev) => ({
+        ...prev,
+        [summary.tenantId || summary.id]: summary.branchLimit ?? '',
+      }));
+    }
+  };
+
+  const handleConfirmBranchToggle = async () => {
+    if (!branchAction?.tenant) return;
+    if (isBranchSaving) return;
+
+    const targetTenant = branchAction.tenant;
+    const nextEnabled = branchAction.type === 'enable';
+    const targetTenantId = targetTenant.tenantId || targetTenant.id;
+    const currentLimit = branchLimitInputs[targetTenantId] === ''
+      ? targetTenant.branchLimit
+      : branchLimitInputs[targetTenantId];
+    const branchLimit = currentLimit === '' || currentLimit === null || currentLimit === undefined
+      ? null
+      : Number(currentLimit);
+
+    if (nextEnabled && (!branchLimit || branchLimit < 1)) {
+      setError('برانچ سسٹم فعال کرنے کے لیے برانچ حد کم از کم 1 درج کریں۔');
+      setBranchAction(null);
+      return;
+    }
+
+    setIsBranchSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateTenantBranchSettings(targetTenantId, {
+        branchEnabled: nextEnabled,
+        branchLimit,
+      });
+      setSuccess(nextEnabled ? 'برانچ سسٹم فعال ہو گیا۔' : 'برانچ سسٹم غیر فعال ہو گیا۔');
+      setBranchAction(null);
+      await refreshBranchData(targetTenantId);
+    } catch (actionError) {
+      setError(getBranchErrorMessage(actionError.message) || 'برانچ سیٹنگ محفوظ نہیں ہو سکی۔');
+    } finally {
+      setIsBranchSaving(false);
+    }
+  };
+
+  const handleUpdateBranchLimit = async (tenant) => {
+    if (isBranchSaving) return;
+
+    const targetTenantId = tenant.tenantId || tenant.id;
+    const value = branchLimitInputs[targetTenantId];
+    const branchLimit = value === '' || value === null || value === undefined ? null : Number(value);
+
+    if (tenant.branchEnabled && (!branchLimit || branchLimit < 1)) {
+      setError('برانچ سسٹم فعال ہو تو برانچ حد کم از کم 1 ہونا ضروری ہے۔');
+      return;
+    }
+    if (branchLimit !== null && branchLimit < 0) {
+      setError('برانچ حد منفی نہیں ہو سکتی۔');
+      return;
+    }
+
+    setIsBranchSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateTenantBranchLimit(targetTenantId, { branchLimit });
+      setSuccess('برانچ حد کامیابی سے اپ ڈیٹ ہو گئی۔');
+      await refreshBranchData(targetTenantId);
+    } catch (limitError) {
+      setError(getBranchErrorMessage(limitError.message) || 'برانچ حد اپ ڈیٹ نہیں ہو سکی۔');
+    } finally {
+      setIsBranchSaving(false);
     }
   };
 
@@ -258,6 +420,41 @@ export const TenantManagement = () => {
         <SelectField label="حالت" options={statusOptions} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
       </div>
 
+      <div className="mt-8 border-t border-[var(--color-border)] pt-8">
+        <h2 className="text-right text-lg font-black text-[var(--color-text-main)]">برانچ سیٹنگز</h2>
+        <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <SelectField
+            label="برانچ سسٹم"
+            options={[
+              { value: 'false', label: 'غیر فعال' },
+              { value: 'true', label: 'فعال' },
+            ]}
+            value={formData.branchEnabled}
+            onChange={(event) => setFormData((prev) => ({ ...prev, branchEnabled: event.target.value }))}
+          />
+        <InputField
+            id="tenant-branch-limit"
+            label="برانچ حد"
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            placeholder="مثلاً: 3"
+            value={formData.branchLimit}
+            error={formErrors.branchLimit}
+            onChange={(event) => {
+              setFormData((prev) => ({ ...prev, branchLimit: event.target.value }));
+              setFormErrors((prev) => {
+                if (!prev.branchLimit) return prev;
+                const nextErrors = { ...prev };
+                delete nextErrors.branchLimit;
+                return nextErrors;
+              });
+            }}
+          />
+        </div>
+      </div>
+
       {mode === 'create' ? (
         <>
           <div className="mt-8 border-t border-[var(--color-border)] pt-8">
@@ -289,7 +486,7 @@ export const TenantManagement = () => {
         <button type="button" onClick={() => navigate('/tenant-management')} className="rounded-2xl border border-[var(--color-border)] px-6 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">
           منسوخ کریں
         </button>
-        <button type="button" onClick={handleSubmit} disabled={isSaving} style={{ backgroundColor: 'var(--color-primary)' }} className="flex items-center justify-center gap-3 rounded-2xl px-8 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70">
+        <button type="button" onClick={handleSubmit} disabled={isSaving} aria-busy={isSaving} style={{ backgroundColor: 'var(--color-primary)' }} className="flex items-center justify-center gap-3 rounded-2xl px-8 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70">
           {isSaving ? 'محفوظ ہو رہا ہے...' : 'مدرسہ محفوظ کریں'}
           <Save size={18} />
         </button>
@@ -306,28 +503,90 @@ export const TenantManagement = () => {
       return <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">مدرسہ نہیں ملا۔</div>;
     }
 
-    const owner = owners.find((item) => Number(item.id) === Number(currentTenant.ownerAdminId));
+    const owner = currentTenant.tenantAdmin || owners.find((item) => Number(item.id) === Number(currentTenant.ownerAdminId));
+    const currentTenantId = currentTenant.tenantId || currentTenant.id;
 
     return (
-      <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div className="text-right">
-            <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">{currentTenant.tenantCode}</p>
-            <h2 className="mt-3 text-2xl font-black text-[var(--color-text-main)]">{currentTenant.name}</h2>
-            <div className="mt-4 flex flex-wrap gap-3 text-sm font-bold text-[var(--color-text-muted)]">
-              <span>{currentTenant.subdomain || 'سب ڈومین موجود نہیں'}</span>
-              <span>{currentTenant.customDomain || 'کسٹم ڈومین موجود نہیں'}</span>
-              <span>{owner ? getOwnerLabel(owner) : 'مالک مقرر نہیں'}</span>
-              <span className={`rounded-xl px-3 py-1 font-black ${currentTenant.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
-                {currentTenant.status === 'active' ? 'فعال' : 'غیر فعال'}
-              </span>
+      <div className="space-y-6">
+        <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+            <div className="text-right">
+              <p className="text-xs font-black uppercase tracking-widest text-[var(--color-text-muted)]">{currentTenant.tenantCode}</p>
+              <h2 className="mt-3 text-2xl font-black text-[var(--color-text-main)]">{currentTenant.tenantName || currentTenant.name}</h2>
+              <div className="mt-4 flex flex-wrap gap-3 text-sm font-bold text-[var(--color-text-muted)]">
+                <span>{currentTenant.subdomain || 'سب ڈومین موجود نہیں'}</span>
+                <span>{currentTenant.customDomain || 'کسٹم ڈومین موجود نہیں'}</span>
+                <span>{owner ? getOwnerLabel(owner) : 'مالک مقرر نہیں'}</span>
+                <span className={`rounded-xl px-3 py-1 font-black ${currentTenant.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
+                  {currentTenant.status === 'active' ? 'فعال' : 'غیر فعال'}
+                </span>
+              </div>
+            </div>
+
+            <button type="button" onClick={() => navigate(`/tenant-management/${currentTenantId}/edit`)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
+              <Edit2 size={16} />
+              ترمیم کریں
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {[
+            ['برانچ سسٹم', currentTenant.branchEnabled ? 'فعال' : 'غیر فعال'],
+            ['برانچ حد', currentTenant.branchLimit ?? '-'],
+            ['بن چکی برانچز', currentTenant.branchesCreated ?? 0],
+            ['باقی برانچز', currentTenant.remainingBranches ?? 0],
+            ['فعال برانچز', currentTenant.activeBranches ?? 0],
+            ['غیر فعال برانچز', currentTenant.inactiveBranches ?? 0],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+              <p className="text-xs font-black text-[var(--color-text-muted)]">{label}</p>
+              <p className="mt-3 text-xl font-black text-[var(--color-text-main)]">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-[var(--color-border)] p-5 md:flex-row md:items-center md:justify-between">
+            <div className="text-right">
+              <h3 className="text-xl font-black text-[var(--color-text-main)]">برانچ تفصیل</h3>
+              <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">اس مدرسہ کی برانچز اور موجودہ رسائی کی معلومات</p>
             </div>
           </div>
-
-          <button type="button" onClick={() => navigate(`/tenant-management/${currentTenant.id}/edit`)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
-            <Edit2 size={16} />
-            ترمیم کریں
-          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-right">
+              <thead>
+                <tr className="text-[var(--color-text-muted)]">
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کوڈ</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ ایڈمن / صارف</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">تاریخ</th>
+                  <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اجازتیں</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tenantBranches.length ? tenantBranches.map((branch) => (
+                  <tr key={branch.id} className="border-t border-[var(--color-border)]/60">
+                    <td className="px-6 py-4 font-black text-[var(--color-text-main)]">{branch.name}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{branch.code || '-'}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{branch.creator?.name || '-'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`rounded-xl px-3 py-1 text-xs font-black ${branch.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
+                        {branch.status === 'active' ? 'فعال' : 'غیر فعال'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatDate(branch.createdAt)}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">موجودہ کردار کے مطابق</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">ابھی کوئی برانچ موجود نہیں۔</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -340,9 +599,9 @@ export const TenantManagement = () => {
         <div className="grid w-full grid-cols-1 gap-3 md:w-auto md:grid-cols-[20rem_12rem]">
           <div className="relative">
             <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="مدرسہ تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
+            <input id="tenant-search" aria-label="مدرسہ تلاش کریں" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="مدرسہ تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
           </div>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]">
+          <select id="tenant-status-filter" aria-label="حالت فلٹر" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]">
             <option value="">تمام حالتیں</option>
             <option value="active">فعال</option>
             <option value="inactive">غیر فعال</option>
@@ -352,35 +611,38 @@ export const TenantManagement = () => {
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-right">
+          <table className="w-full min-w-[1180px] text-right">
             <thead>
               <tr className="text-[var(--color-text-muted)]">
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">مدرسہ</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سب ڈومین</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کسٹم ڈومین</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">مالک</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ڈومین / لنک</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایڈمن</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">برانچ سسٹم</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حد</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">بن چکی</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">باقی</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan="6" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">مدارس لوڈ ہو رہے ہیں...</td></tr>
+                <tr><td colSpan="9" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">مدارس لوڈ ہو رہے ہیں...</td></tr>
               ) : tenants.length ? (
                 tenants.map((tenant) => {
-                  const owner = owners.find((item) => Number(item.id) === Number(tenant.ownerAdminId));
+                  const tenantRowId = tenant.tenantId || tenant.id;
+                  const owner = tenant.tenantAdmin || owners.find((item) => Number(item.id) === Number(tenant.ownerAdminId));
 
                   return (
-                    <tr key={tenant.id} className="border-t border-[var(--color-border)]/60">
+                    <tr key={tenantRowId} className="border-t border-[var(--color-border)]/60">
                       <td className="px-6 py-4">
-                        <div className="font-black text-[var(--color-text-main)]">{tenant.name}</div>
+                        <div className="font-black text-[var(--color-text-main)]">{tenant.tenantName || tenant.name}</div>
                         <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{tenant.tenantCode}</div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{tenant.subdomain || '-'}</td>
                       <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">
-                        <span className="inline-flex items-center gap-2">
+                        <span className="inline-flex items-center gap-2 whitespace-nowrap">
                           <Globe2 size={15} className="text-[var(--color-text-muted)]" />
-                          {tenant.customDomain || '-'}
+                          {tenant.link || tenant.customDomain || tenant.subdomain || '-'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{owner ? getOwnerLabel(owner) : '-'}</td>
@@ -390,12 +652,49 @@ export const TenantManagement = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center justify-start gap-2">
-                          <button type="button" onClick={() => navigate(`/tenant-management/${tenant.id}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="دیکھیں">
+                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${tenant.branchEnabled ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
+                          {tenant.branchEnabled ? 'فعال' : 'غیر فعال'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex min-w-40 items-center gap-2">
+                          <input
+                            aria-label={`${tenant.tenantName || tenant.name || 'مدرسہ'} کی برانچ حد`}
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            value={branchLimitInputs[tenantRowId] ?? ''}
+                            onChange={(event) => setBranchLimitInputs((prev) => ({ ...prev, [tenantRowId]: event.target.value }))}
+                            className="h-11 w-20 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-center text-sm font-black text-[var(--color-text-main)] outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateBranchLimit(tenant)}
+                            disabled={isBranchSaving}
+                            className="rounded-xl bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white disabled:opacity-60"
+                          >
+                            محفوظ
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{tenant.branchesCreated ?? 0}</td>
+                      <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{tenant.remainingBranches ?? 0}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-start gap-2 whitespace-nowrap">
+                          <button type="button" onClick={() => navigate(`/tenant-management/${tenantRowId}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="دیکھیں">
                             <Eye size={16} />
                           </button>
-                          <button type="button" onClick={() => navigate(`/tenant-management/${tenant.id}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="ترمیم کریں">
+                          <button type="button" onClick={() => navigate(`/tenant-management/${tenantRowId}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="ترمیم کریں">
                             <Edit2 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBranchAction({ type: tenant.branchEnabled ? 'disable' : 'enable', tenant })}
+                            className={`rounded-xl p-2.5 transition-all ${tenant.branchEnabled ? 'bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white' : 'bg-emerald-500/10 text-[#00d094] hover:bg-[#00d094] hover:text-white'}`}
+                            title={tenant.branchEnabled ? 'برانچ سسٹم غیر فعال کریں' : 'برانچ سسٹم فعال کریں'}
+                          >
+                            <SlidersHorizontal size={16} />
                           </button>
                         </div>
                       </td>
@@ -403,7 +702,7 @@ export const TenantManagement = () => {
                   );
                 })
               ) : (
-                <tr><td colSpan="6" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">ابھی کوئی مدرسہ موجود نہیں۔</td></tr>
+                <tr><td colSpan="9" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">ابھی کوئی مدرسہ موجود نہیں۔</td></tr>
               )}
             </tbody>
           </table>
@@ -426,6 +725,20 @@ export const TenantManagement = () => {
       {mode === 'list' ? renderList() : null}
       {mode === 'create' || mode === 'edit' ? renderForm() : null}
       {mode === 'details' ? renderDetails() : null}
+      {branchAction ? (
+        <DeleteConfirmationModal
+          title={branchAction.type === 'enable' ? 'برانچ سسٹم فعال کرنے کی تصدیق' : 'برانچ سسٹم غیر فعال کرنے کی تصدیق'}
+          message={branchAction.type === 'enable'
+            ? 'کیا آپ واقعی اس مدرسہ کے لیے برانچ سسٹم فعال کرنا چاہتے ہیں؟'
+            : 'کیا آپ واقعی اس مدرسہ کے لیے برانچ سسٹم غیر فعال کرنا چاہتے ہیں؟ موجودہ برانچز حذف نہیں ہوں گی۔'}
+          targetName={branchAction.tenant?.tenantName || branchAction.tenant?.name || ''}
+          isDeleting={isBranchSaving}
+          onClose={() => setBranchAction(null)}
+          onConfirm={handleConfirmBranchToggle}
+          confirmText={branchAction.type === 'enable' ? 'فعال کریں' : 'غیر فعال کریں'}
+          loadingText="محفوظ ہو رہا ہے..."
+        />
+      ) : null}
     </div>
   );
 };

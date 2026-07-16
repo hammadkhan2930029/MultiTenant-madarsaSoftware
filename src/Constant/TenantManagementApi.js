@@ -45,3 +45,38 @@ export const updateTenant = async (id, payload) => {
   });
   return result?.data || null;
 };
+
+export const getTenantBranchSettings = async (filters = {}) => {
+  const query = buildQuery(filters);
+  const result = await apiRequest(`/tenants/branch-settings${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const getTenantBranchSummary = async (id) => {
+  const result = await apiRequest(`/tenants/${id}/branch-summary`, withToken({ method: 'GET' }));
+  return result?.data || null;
+};
+
+export const getTenantBranches = async (id, filters = {}) => {
+  const query = buildQuery(filters);
+  const result = await apiRequest(`/tenants/${id}/branches${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const updateTenantBranchSettings = async (id, payload) => {
+  const result = await apiRequest(`/tenants/${id}/branch-settings`, {
+    ...withToken({ method: 'PATCH' }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return result?.data || null;
+};
+
+export const updateTenantBranchLimit = async (id, payload) => {
+  const result = await apiRequest(`/tenants/${id}/branch-limit`, {
+    ...withToken({ method: 'PATCH' }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return result?.data || null;
+};

@@ -169,7 +169,7 @@ export const CreateSubjects = () => {
                             isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white shadow-emerald-500/20'
                         }`}
                     >
-                        {isFormOpen ? 'بند کریں' : 'نیا مضمون شامل کریں'}
+                        {isFormOpen ? 'بند کریں' : "نیا مضمون"}
                         {isFormOpen ? <X size={20} /> : <Plus size={20} />}
                     </button>
                 </div>
@@ -218,7 +218,7 @@ export const CreateSubjects = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-10 py-4 text-sm font-black text-white shadow-xl shadow-green-900/20 transition-all disabled:opacity-70 hover:bg-[#1a6d2c]"
                         >
-                            {editMode ? 'تبدیل کریں' : 'اندراج کریں'}
+                            {editMode ? 'تبدیل کریں' : 'محفوظ کریں'}
                             {editMode ? <Save size={20} /> : <Plus size={20} />}
                         </button>
                     </div>
@@ -317,7 +317,7 @@ export const CreateSubjects = () => {
                                 disabled={isDeleting}
                                 className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                                منسوخ کریں
+                                منسوخ 
                             </button>
                             <button
                                 type="button"

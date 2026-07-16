@@ -33,6 +33,7 @@ const moduleDisplayNames = {
   role_management: 'کردار مینجمنٹ',
   roles: 'کردار',
   users: 'صارفین',
+  branches: 'برانچ مینجمنٹ',
   students: 'طلباء',
   parents: 'والدین',
   attendance: 'حاضری',
@@ -87,10 +88,16 @@ const permissionDisplayNames = {
   'roles.edit': 'کردار میں ترمیم کریں',
   'roles.delete': 'کردار حذف کریں',
   'roles.assign_permissions': 'کردار کو اجازتیں دیں',
+  'roles.manage': 'کردار مینج کریں',
   'users.view': 'صارفین دیکھیں',
+  'users.manage': 'صارفین مینج کریں',
   'users.create': 'صارف بنائیں',
   'users.edit': 'صارف میں ترمیم کریں',
   'users.delete': 'صارف حذف کریں',
+  'branches.view': 'برانچز دیکھیں',
+  'branches.create': 'برانچ محفوظ کریں',
+  'branches.update': 'برانچ تبدیل کریں',
+  'branches.delete': 'برانچ غیر فعال کریں',
   'students.view': 'طلباء دیکھیں',
   'students.create': 'طالب علم شامل کریں',
   'students.edit': 'طالب علم میں ترمیم کریں',
@@ -252,6 +259,8 @@ const actionDisplayNames = {
   assign_class: 'کلاس تفویض کریں',
   assign_permissions: 'اجازتیں دیں',
   approve: 'منظوری دیں',
+  export: 'ایکسپورٹ کریں',
+  manage: 'مینج کریں',
   change_password: 'پاس ورڈ تبدیل کریں',
 };
 
@@ -544,6 +553,7 @@ export const RoleManagement = () => {
 
   const saveRolePermissions = async () => {
     if (!roleId || !canManageRoles || isProtectedRole(currentRole)) return;
+    if (isSavingPermissions) return;
 
     setIsSavingPermissions(true);
     setError('');
@@ -676,7 +686,12 @@ export const RoleManagement = () => {
       <div className="mb-6 flex flex-col gap-4">
         {mode === 'edit' && isProtectedRole(currentRole) ? (
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-bold leading-7 text-[var(--color-text-main)]">
-            Super Admin role محفوظ ہے۔ اس کردار کی اجازتیں تبدیل نہیں کی جا سکتیں۔
+            سپر ایڈمن کردار محفوظ ہے۔ اس کردار کی اجازتیں تبدیل نہیں کی جا سکتیں۔
+          </div>
+        ) : null}
+        {!readOnly ? (
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-sm font-bold leading-7 text-[var(--color-text-main)]">
+            برانچ صارف کو یہی اجازتیں صرف اس کی مقررہ برانچ کے اندر لاگو ہوں گی۔
           </div>
         ) : null}
 
@@ -696,12 +711,14 @@ export const RoleManagement = () => {
                 className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] px-4 py-3 text-xs font-black text-[var(--color-text-main)] transition-all hover:bg-[var(--color-bg)]"
               >
                 <CheckSquare size={15} />
-                تمام View منتخب کریں
+                دیکھنے کی تمام اجازتیں منتخب کریں
               </button>
             ) : null}
             <div className="relative w-full md:w-80">
               <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
+                id="permission-search"
+                aria-label="اجازت تلاش کریں"
                 value={permissionSearch}
                 onChange={(event) => setPermissionSearch(event.target.value)}
                 placeholder="اجازت تلاش کریں"
@@ -790,16 +807,17 @@ export const RoleManagement = () => {
             disabled={isSavingPermissions || !hasPermissionChanges}
             className="rounded-2xl border border-[var(--color-border)] px-6 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Reset
+            واپس کریں
           </button>
           <button
             type="button"
             onClick={saveRolePermissions}
             disabled={isSavingPermissions || !hasPermissionChanges}
+            aria-busy={isSavingPermissions}
             style={{ backgroundColor: 'var(--color-primary)' }}
             className="flex items-center justify-center gap-3 rounded-2xl px-8 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSavingPermissions ? 'اجازتیں محفوظ ہو رہی ہیں...' : 'Save Permissions'}
+            {isSavingPermissions ? 'اجازتیں محفوظ ہو رہی ہیں...' : 'اجازتیں محفوظ کریں'}
             <Save size={18} />
           </button>
         </div>
@@ -815,7 +833,7 @@ export const RoleManagement = () => {
       >
         {mode === 'edit' && isProtectedRole(currentRole) ? (
           <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-bold leading-7 text-[var(--color-text-main)]">
-            Super Admin role محفوظ ہے۔ نام، تفصیل، اسٹیٹس اور اجازتیں تبدیل نہیں کی جا سکتیں۔
+            سپر ایڈمن کردار محفوظ ہے۔ نام، تفصیل، اسٹیٹس اور اجازتیں تبدیل نہیں کی جا سکتیں۔
           </div>
         ) : null}
 

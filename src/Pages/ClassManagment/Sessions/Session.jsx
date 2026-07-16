@@ -38,8 +38,6 @@ export const CreateSessions = () => {
         }, 0);
     };
 
-    const totalSessions = useMemo(() => sessions.length, [sessions]);
-
     const loadSessions = async () => {
         setIsLoading(true);
         setError('');
@@ -169,7 +167,7 @@ export const CreateSessions = () => {
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">تعلیمی سیشن</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {totalSessions}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSessions.length}</p>
                 </div>
 
                 <div className="flex w-full items-center flex-col gap-3 md:w-auto md:flex-row">

@@ -96,7 +96,7 @@ export const StudentProfile = () => {
                                 <h1 className="mt-2 py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {student.fullName}
                                 </h1>
-                                <p className="text-sm font-bold text-[var(--color-text-muted)] mt-4">ولدیت: {student.fatherName}</p>
+                                <p className="text-sm font-bold text-[var(--color-text-muted)] mt-4">سرپرست: {student.fatherName}</p>
                             </div>
 
                             <div className="flex flex-wrap items-center justify-center gap-3 md:justify-end">
@@ -124,7 +124,7 @@ export const StudentProfile = () => {
                 <InfoGrid
                     items={[
                         { label: 'نام طالب علم', value: student.fullName },
-                        { label: 'والد کا نام', value: student.fatherName },
+                        { label: 'سرپرست کا نام', value: student.fatherName },
                         { label: 'جنس', value: GENDER_LABELS[student.gender] || student.gender },
                         { label: 'قومیت/ذات', value: student.caste },
                         { label: 'تاریخ پیدائش', value: formatDate(student.dob) },
@@ -140,10 +140,10 @@ export const StudentProfile = () => {
                 />
             </SectionCard>
 
-            <SectionCard title="کلاس اور داخلہ" icon={GraduationCap}>
+            <SectionCard title="جماعت اور داخلہ" icon={GraduationCap}>
                 <InfoGrid
                     items={[
-                        { label: 'کلاس', value: activeAssignment?.class?.name || '---' },
+                        { label: 'جماعت', value: activeAssignment?.class?.name || '---' },
                         { label: 'سیکشن', value: activeAssignment?.section?.name || '---' },
                         { label: 'سیشن', value: activeAssignment?.session?.name || '---' },
                         { label: 'تاریخ داخلہ', value: formatDate(student.admissionDate) },
@@ -158,7 +158,7 @@ export const StudentProfile = () => {
                 />
             </SectionCard>
 
-            <SectionCard title="والدین" icon={Users}>
+            <SectionCard title="سرپرست" icon={Users}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(student.parents || []).map((parentItem) => (
                         <div key={parentItem.id} className="bg-[var(--color-bg)] rounded-[1.8rem] border border-[var(--color-border)] p-5">

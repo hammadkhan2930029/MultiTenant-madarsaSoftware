@@ -212,7 +212,7 @@ export const CreateClasses = () => {
                             disabled={isSaving}
                             className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white disabled:opacity-70"
                         >
-                            {editMode ? 'تبدیل کریں' : 'بنائیں'}
+                            {editMode ? 'تبدیل کریں' : 'محفوظ کریں'}
                             {editMode ? <Save size={18} /> : <Plus size={18} />}
                         </button>
                     </div>
@@ -225,7 +225,7 @@ export const CreateClasses = () => {
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشنز</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشن</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>

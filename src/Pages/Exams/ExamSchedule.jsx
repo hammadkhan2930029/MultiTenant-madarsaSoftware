@@ -138,9 +138,9 @@ export const ExamSchedule = () => {
             setError('');
             try {
                 const [classesResult, sessionsResult, subjectsResult, schedulesResult] = await Promise.all([
-                    getClasses('page=1&limit=100'),
-                    getSessions('page=1&limit=100'),
-                    getSubjects('page=1&limit=100'),
+                    getClasses('page=1&limit=100&status=active'),
+                    getSessions('page=1&limit=100&status=active'),
+                    getSubjects('page=1&limit=100&status=active'),
                     getExamSchedules('page=1&limit=100&status=active'),
                 ]);
 

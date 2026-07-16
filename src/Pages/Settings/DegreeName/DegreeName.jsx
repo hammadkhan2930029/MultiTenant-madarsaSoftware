@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { GraduationCap, Plus, Edit2, Trash2, FileCheck, Award, BookOpen, X } from 'lucide-react';
+import { GraduationCap, Plus, Edit2, Trash2, FileCheck, Award, BookOpen, X, Save } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createQualification, deleteQualification, getQualifications, updateQualification } from '../../../Constant/QualificationApi';
@@ -164,25 +164,26 @@ export const QualificationManagement = () => {
                     </div>
                 </div>
 
-                <div className="mt-8 flex flex-col gap-3 md:flex-row">
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSaving}
-                        style={{ backgroundColor: 'var(--color-primary)' }}
-                        className="w-full md:w-auto px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
-                    >
-                        <Plus size={20} />
-                        <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'سند تبدیل کریں' : 'نئی سند شامل کریں'}</span>
-                    </button>
+                <div className="mt-8 flex flex-wrap justify-end gap-3">
                     {editMode ? (
                         <button
+                            type="button"
                             onClick={resetForm}
                             disabled={isSaving}
-                            className="w-full md:w-auto px-8 py-4 rounded-2xl font-black bg-[var(--color-input)] text-[var(--color-text-muted)] disabled:opacity-70"
+                            className="rounded-2xl border border-[var(--color-border)] px-6 py-4 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:opacity-70"
                         >
                             منسوخ
                         </button>
                     ) : null}
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSaving}
+                        style={{ backgroundColor: 'var(--color-primary)' }}
+                        className="px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
+                    >
+                        {editMode ? <Save size={20} /> : <Plus size={20} />}
+                        <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'تبدیل کریں' : 'نئی سند شامل کریں'}</span>
+                    </button>
                 </div>
             </div>
 
