@@ -5,10 +5,12 @@ import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { ROLE_PERMISSION_MODULES, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { assignRolePermissions, createRole, deleteRole, getGroupedPermissions, getRoleAssignedPermissions, getRoleById, getRolePermissions, getRoles, updateRole } from '../../Constant/RoleManagementApi';
-import { refreshPermissions } from '../../Constant/AdminAuth';
+import { getAdminSession, getSessionBranchId, refreshPermissions } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
 
 const emptyForm = { roleName: '', description: '', status: 'active' };
+const BRANCH_RESTRICTED_PERMISSION_MODULES = new Set(['tenant_management', 'branches']);
+const BRANCH_RESTRICTED_PERMISSION_PREFIXES = ['tenant_management.', 'branches.'];
 
 const roleDisplayNames = {
   super_admin: 'سپر ایڈمن',
@@ -121,6 +123,10 @@ const permissionDisplayNames = {
   'teachers.details.view': 'استاد کی تفصیل دیکھیں',
   'teachers.attendance.view': 'اساتذہ حاضری دیکھیں',
   'teachers.schedule.view': 'اساتذہ شیڈول دیکھیں',
+  'teachers.assignments.view': 'مضامین اور ذمہ داریاں دیکھیں',
+  'teachers.assignments.create': 'مضامین اور ذمہ داریاں شامل کریں',
+  'teachers.assignments.edit': 'مضامین اور ذمہ داریاں تبدیل کریں',
+  'teachers.assignments.delete': 'مضامین اور ذمہ داریاں حذف کریں',
   'teachers.salary_increments.view': 'تنخواہ انکریمنٹ دیکھیں',
   'staff.view': 'عملہ دیکھیں',
   'staff.create': 'عملہ شامل کریں',
@@ -367,12 +373,39 @@ const getPermissionActionLabel = (permission) => {
   return actionDisplayNames[action] || actionDisplayNames[String(action).split('.').pop()] || permission.name || action;
 };
 
+const isPermissionRestrictedForBranch = (permission) => {
+  const key = String(permission?.key || permission?.permissionKey || permission?.permission_key || '').trim();
+  const moduleId = String(permission?.moduleName || permission?.module_name || '').trim();
+
+  return (
+    BRANCH_RESTRICTED_PERMISSION_MODULES.has(moduleId) ||
+    BRANCH_RESTRICTED_PERMISSION_PREFIXES.some((prefix) => key.startsWith(prefix))
+  );
+};
+
+const filterPermissionModulesForBranch = (modules = [], allowedPermissions = []) => {
+  const allowedSet = new Set(allowedPermissions);
+
+  return modules
+    .map((module) => ({
+      ...module,
+      permissions: (module.permissions || []).filter((permission) => {
+        const key = getPermissionKey(permission) || permission.key;
+        return key && allowedSet.has(key) && !isPermissionRestrictedForBranch({ ...permission, moduleName: module.id });
+      }),
+    }))
+    .filter((module) => module.permissions.length);
+};
+
 export const RoleManagement = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { roleId } = useParams();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, permissions } = usePermissions();
   const canManageRoles = hasPermission('roles.manage');
+  const adminSession = getAdminSession();
+  const sessionBranchId = getSessionBranchId(adminSession);
+  const branchScopedSession = Boolean(sessionBranchId);
 
   const [roles, setRoles] = useState([]);
   const [permissionModules, setPermissionModules] = useState(ROLE_PERMISSION_MODULES);
@@ -403,8 +436,15 @@ export const RoleManagement = () => {
 
   const selectedSet = useMemo(() => new Set(selectedPermissions), [selectedPermissions]);
   const savedSet = useMemo(() => new Set(savedPermissions), [savedPermissions]);
+  const allowedBranchPermissionSet = useMemo(() => (
+    branchScopedSession ? new Set(permissions) : null
+  ), [branchScopedSession, permissions]);
   const totalPermissions = useMemo(
     () => permissionModules.reduce((count, module) => count + module.permissions.length, 0),
+    [permissionModules],
+  );
+  const availablePermissionKeys = useMemo(
+    () => new Set(permissionModules.flatMap((module) => module.permissions.map((permission) => permission.key))),
     [permissionModules],
   );
   const filteredPermissionModules = useMemo(() => {
@@ -440,8 +480,18 @@ export const RoleManagement = () => {
     selectedPermissions.some((permission) => !savedSet.has(permission))
   ), [savedPermissions.length, savedSet, selectedPermissions]);
   const visibleRoles = useMemo(
-    () => roles.filter((role) => !statusFilter || getRoleStatus(role) === statusFilter),
-    [roles, statusFilter],
+    () => roles
+      .filter((role) => !statusFilter || getRoleStatus(role) === statusFilter)
+      .filter((role) => (
+        !branchScopedSession ||
+        (
+          role?.scope === 'branch' &&
+          Number(role?.branchId) === Number(sessionBranchId) &&
+          !isSystemRole(role) &&
+          !['admin', SUPER_ADMIN_ROLE].includes(getRoleName(role))
+        )
+      )),
+    [branchScopedSession, roles, sessionBranchId, statusFilter],
   );
 
   const loadRoles = useCallback(async () => {
@@ -467,34 +517,46 @@ export const RoleManagement = () => {
       const rolePermissions = await getRoleAssignedPermissions(roleId).catch(() => ({ permissions: role?.permissions || [] }));
       const permissionKeys = (rolePermissions?.permissions || role?.permissions || []).map(getPermissionKey).filter(Boolean);
       setCurrentRole(role);
-      setSelectedPermissions(permissionKeys);
-      setSavedPermissions(permissionKeys);
+      const scopedPermissionKeys = allowedBranchPermissionSet
+        ? permissionKeys.filter((permissionKey) => allowedBranchPermissionSet.has(permissionKey))
+        : permissionKeys;
+      setSelectedPermissions(scopedPermissionKeys);
+      setSavedPermissions(scopedPermissionKeys);
       setFormData({ roleName: getRoleName(role), description: role?.description || '', status: getRoleStatus(role) });
     } catch (loadError) {
       setError(loadError.message || 'کردار کی تفصیل لوڈ نہیں ہو سکی۔');
     } finally {
       setIsLoading(false);
     }
-  }, [mode, roleId]);
+  }, [allowedBranchPermissionSet, mode, roleId]);
 
   const loadPermissions = useCallback(async () => {
     try {
       const groupedPermissions = await getGroupedPermissions();
-      const modules = normalizeGroupedPermissions(groupedPermissions);
+      const normalizedModules = normalizeGroupedPermissions(groupedPermissions);
+      const modules = branchScopedSession
+        ? filterPermissionModulesForBranch(normalizedModules, permissions)
+        : normalizedModules;
       setPermissionModules(modules);
       setExpandedModules((current) => (current.length ? current : modules.map((module) => module.id)));
     } catch {
       try {
-        const permissions = await getRolePermissions();
-        const modules = groupPermissionsByModule(permissions);
+        const fallbackPermissions = await getRolePermissions();
+        const normalizedModules = groupPermissionsByModule(fallbackPermissions);
+        const modules = branchScopedSession
+          ? filterPermissionModulesForBranch(normalizedModules, permissions)
+          : normalizedModules;
         setPermissionModules(modules);
         setExpandedModules((current) => (current.length ? current : modules.map((module) => module.id)));
       } catch {
-        setPermissionModules(ROLE_PERMISSION_MODULES);
-        setExpandedModules((current) => (current.length ? current : ROLE_PERMISSION_MODULES.map((module) => module.id)));
+        const modules = branchScopedSession
+          ? filterPermissionModulesForBranch(ROLE_PERMISSION_MODULES, permissions)
+          : ROLE_PERMISSION_MODULES;
+        setPermissionModules(modules);
+        setExpandedModules((current) => (current.length ? current : modules.map((module) => module.id)));
       }
     }
-  }, []);
+  }, [branchScopedSession, permissions]);
 
   useEffect(() => { loadPermissions(); }, [loadPermissions]);
 
@@ -560,10 +622,13 @@ export const RoleManagement = () => {
     setSuccess('');
 
     try {
-      const result = await assignRolePermissions(roleId, { permissions: selectedPermissions });
+      const scopedPermissions = branchScopedSession
+        ? selectedPermissions.filter((permissionKey) => availablePermissionKeys.has(permissionKey))
+        : selectedPermissions;
+      const result = await assignRolePermissions(roleId, { permissions: scopedPermissions });
       const nextPermissions = (result?.permissions || []).map(getPermissionKey).filter(Boolean);
-      setSavedPermissions(nextPermissions.length ? nextPermissions : selectedPermissions);
-      setSelectedPermissions(nextPermissions.length ? nextPermissions : selectedPermissions);
+      setSavedPermissions(nextPermissions.length ? nextPermissions : scopedPermissions);
+      setSelectedPermissions(nextPermissions.length ? nextPermissions : scopedPermissions);
       refreshPermissions().catch(() => {});
       setSuccess('کردار کی اجازتیں کامیابی سے محفوظ ہو گئیں۔');
       if (result?.id && String(result.id) !== String(roleId)) {
@@ -591,7 +656,9 @@ export const RoleManagement = () => {
         roleName: formData.roleName.trim(),
         description: formData.description.trim(),
         status: formData.status || 'active',
-        permissionKeys: selectedPermissions,
+        permissionKeys: branchScopedSession
+          ? selectedPermissions.filter((permissionKey) => availablePermissionKeys.has(permissionKey))
+          : selectedPermissions,
       };
 
       if (mode === 'edit') {

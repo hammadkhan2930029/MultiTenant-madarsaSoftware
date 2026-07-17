@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'react-router-dom';
 import {
     ArrowDownCircle,
     ArrowUpCircle,
@@ -144,12 +145,13 @@ const exportColumns = [
 ];
 
 export const FinancialStatement = () => {
+    const [searchParams] = useSearchParams();
     const [filters, setFilters] = useState({
         fromDate: '',
         toDate: '',
-        type: 'all',
-        duration: 'all',
-        search: '',
+        type: searchParams.get('type') || 'all',
+        duration: searchParams.get('duration') || 'all',
+        search: searchParams.get('search') || '',
     });
     const [tableFilters, setTableFilters] = useState({
         date: '',

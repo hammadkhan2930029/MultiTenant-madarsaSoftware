@@ -140,6 +140,21 @@ textarea {
   font-size: inherit;
 }
 
+button:not(:disabled),
+a[href],
+select:not(:disabled),
+summary,
+label[for],
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 .text-xs {
   font-size: 14px !important;
 }
@@ -180,6 +195,30 @@ textarea {
 #root table th {
   font-size: 22px !important;
   line-height: 1.8 !important;
+}
+
+#root table td {
+  font-size: 18px !important;
+  line-height: 1.75 !important;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+#root table th span,
+#root table th div,
+#root table th p {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+#root table td .text-xs,
+#root table td [class*="text-[9px]"],
+#root table td [class*="text-[10px]"],
+#root table td [class*="text-[11px]"],
+#root table td [class*="text-[12px]"],
+#root table td [class*="text-[13px]"] {
+  font-size: 16px !important;
+  line-height: 1.65 !important;
 }
 
 /* Horizontal student ID card typography is scoped to preserve its print size. */

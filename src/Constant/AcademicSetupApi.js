@@ -72,6 +72,11 @@ export const createClass = async (payload) => {
   return result?.data;
 };
 
+export const createClassesBulk = async (payload) => {
+  const result = await apiRequest('/classes/bulk', withJson('POST', payload));
+  return result?.data;
+};
+
 export const updateClass = async (id, payload) => {
   const result = await apiRequest(`/classes/${id}`, withJson('PATCH', payload));
   return result?.data;
@@ -89,6 +94,11 @@ export const getSections = async (query = '') => {
 
 export const createSection = async (payload) => {
   const result = await apiRequest('/sections', withJson('POST', payload));
+  return result?.data;
+};
+
+export const createSectionsBulk = async (payload) => {
+  const result = await apiRequest('/sections/bulk', withJson('POST', payload));
   return result?.data;
 };
 
@@ -129,6 +139,11 @@ export const getSubjects = async (query = '') => {
 
 export const createSubject = async (payload) => {
   const result = await apiRequest('/subjects', withJson('POST', payload));
+  return result?.data;
+};
+
+export const createSubjectsBulk = async (payload) => {
+  const result = await apiRequest('/subjects/bulk', withJson('POST', payload));
   return result?.data;
 };
 

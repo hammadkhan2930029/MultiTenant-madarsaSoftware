@@ -64,7 +64,7 @@ export const RoutePermissionGuard = ({ children }) => {
   const requiredPermission = getPagePermission(location.pathname);
   const superAdminOnly = normalizedPath.startsWith('/tenant-management');
   const branchManagementRoute = normalizedPath.startsWith('/branch-management');
-  const branchScopedBlockedRoute = ['/role-management', '/tenant-management', '/branch-management']
+  const branchScopedBlockedRoute = ['/tenant-management', '/branch-management']
     .some((path) => normalizedPath.startsWith(path));
 
   if (superAdminOnly && !isSuperAdmin()) {

@@ -48,6 +48,7 @@ export const StorePurchases = () => {
     const [supplierFilter, setSupplierFilter] = useState(() => searchParams.get('supplierId') || '');
     const [fromDate, setFromDate] = useState(() => searchParams.get('fromDate') || '');
     const [toDate, setToDate] = useState(() => searchParams.get('toDate') || '');
+    const [outstandingOnly, setOutstandingOnly] = useState(() => searchParams.get('outstanding') === 'true');
     const [formData, setFormData] = useState(emptyForm);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -100,6 +101,7 @@ export const StorePurchases = () => {
                 supplierId: supplierFilter,
                 fromDate,
                 toDate,
+                outstanding: outstandingOnly ? 'true' : '',
             });
             setPurchases(result.items || []);
         } catch (loadError) {
@@ -119,17 +121,19 @@ export const StorePurchases = () => {
         if (supplierFilter) nextParams.set('supplierId', supplierFilter);
         if (fromDate) nextParams.set('fromDate', fromDate);
         if (toDate) nextParams.set('toDate', toDate);
+        if (outstandingOnly) nextParams.set('outstanding', 'true');
         setSearchParams(nextParams, { replace: true });
 
         const timer = setTimeout(loadPurchases, 250);
         return () => clearTimeout(timer);
-    }, [search, supplierFilter, fromDate, toDate]);
+    }, [search, supplierFilter, fromDate, toDate, outstandingOnly]);
 
     const resetFilters = () => {
         setSearch('');
         setSupplierFilter('');
         setFromDate('');
         setToDate('');
+        setOutstandingOnly(false);
     };
 
     const totalAmount = useMemo(() => formData.items.reduce((sum, item) => sum + Number(item.total || 0), 0), [formData.items]);
@@ -296,8 +300,8 @@ export const StorePurchases = () => {
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل خریداری ریکارڈ: {purchases.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:justify-end xl:w-auto xl:flex-nowrap xl:items-center">
-                    <div className="relative md:w-64 xl:w-60">
+                <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:justify-end xl:flex-1 xl:items-center">
+                    <div className="relative w-full md:w-64 xl:w-60">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
@@ -307,15 +311,25 @@ export const StorePurchases = () => {
                         />
                     </div>
 
-                    <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-48 xl:w-44">
+                    <select value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-48 xl:w-44">
                         <option value="">تمام سپلائرز</option>
                         {suppliers.map((supplier) => (
                             <option key={supplier.id} value={supplier.id}>{supplier.supplierName}</option>
                         ))}
                     </select>
 
-                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
-                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+
+                    <label className="flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
+                        <input
+                            type="checkbox"
+                            checked={outstandingOnly}
+                            onChange={(event) => setOutstandingOnly(event.target.checked)}
+                            className="h-4 w-4 accent-[#00d094]"
+                        />
+                        باقی ادائیگیاں
+                    </label>
 
                     <button type="button" onClick={resetFilters} className="h-12 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
                         فلٹر صاف کریں

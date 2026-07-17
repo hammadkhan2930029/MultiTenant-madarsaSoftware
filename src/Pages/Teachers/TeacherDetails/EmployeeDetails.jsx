@@ -36,10 +36,10 @@ const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
 const InfoField = ({ label, value, dir = 'rtl' }) => (
     <div className="min-h-[96px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-4 shadow-sm transition-all hover:border-[var(--color-primary)]/40 print:break-inside-avoid print:border-slate-200 print:bg-white print:shadow-none">
-        <p className="mb-3 inline-flex rounded-xl bg-[var(--color-surface)] px-3 py-1 text-[12px] font-black text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)] print:text-slate-500">
+        <p className="mb-3 inline-flex rounded-xl bg-[var(--color-surface)] px-3 py-1 text-[13px] font-black text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)] print:text-slate-500">
             {label}
         </p>
-        <p className={`min-h-7 break-words text-[18px] font-black leading-8 text-[var(--color-text-main)] print:text-slate-900 ${dir === 'ltr' ? 'text-left font-sans' : 'text-right'}`} dir={dir}>
+        <p className={`min-h-7 break-words text-[20px] font-black leading-9 text-[var(--color-text-main)] print:text-slate-900 ${dir === 'ltr' ? 'text-left font-sans' : 'text-right'}`} dir={dir}>
             {value || '---'}
         </p>
     </div>
@@ -52,7 +52,7 @@ const DetailSection = ({ id, title, icon, isOpen, onToggle, children }) => (
                 <div className={`p-3 rounded-2xl ${isOpen ? 'bg-[var(--color-primary)] text-[var(--color-text-main)]' : 'bg-[var(--color-bg)]/5 text-[var(--color-primary)]'}`}>
                     {React.createElement(icon, { size: 24 })}
                 </div>
-                <h3 className="text-xl font-bold text-[var(--color-text-main)]">{title}</h3>
+                <h3 className="text-[22px] font-bold text-[var(--color-text-main)]">{title}</h3>
             </div>
             {isOpen ? <ChevronUp /> : <ChevronDown />}
         </button>
@@ -66,8 +66,8 @@ const DetailSection = ({ id, title, icon, isOpen, onToggle, children }) => (
 
 const MiniFact = ({ label, value }) => (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 px-4 py-3 text-right">
-        <p className="text-[11px] font-black text-[var(--color-text-muted)]">{label}</p>
-        <p className="mt-1 truncate text-sm font-black text-[var(--color-text-main)]" title={String(value || '---')}>{value || '---'}</p>
+        <p className="text-[12px] font-black text-[var(--color-text-muted)]">{label}</p>
+        <p className="mt-1 truncate text-base font-black text-[var(--color-text-main)]" title={String(value || '---')}>{value || '---'}</p>
     </div>
 );
 

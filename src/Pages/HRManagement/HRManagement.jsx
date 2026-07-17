@@ -231,6 +231,24 @@ export const HRManagement = () => {
       return;
     }
 
+    if (!formData.subject.trim()) {
+      setActiveTab('education');
+      setError('براہ کرم مضمون / ذمہ داری لازمی درج کریں۔');
+      return;
+    }
+
+    if (!formData.appointmentDate) {
+      setActiveTab('service');
+      setError('براہ کرم تاریخ تقرری لازمی درج کریں۔');
+      return;
+    }
+
+    if (!formData.joiningDate) {
+      setActiveTab('service');
+      setError('براہ کرم تاریخ شمولیت لازمی درج کریں۔');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -485,6 +503,7 @@ const EducationStep = ({ formData, qualificationOptions, isLoadingQualifications
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <InputField
         label="مضمون / ذمہ داری"
+        required
         value={formData.subject}
         onChange={(event) => onChange('subject', event.target.value)}
         placeholder="مثلاً: حفظ استاد، اکاؤنٹنٹ، باورچی، چوکیدار"
@@ -546,8 +565,8 @@ const ServiceStep = ({ formData, departmentOptions, isLoadingDepartments, onChan
         onChange={(event) => onChange('employmentType', event.target.value)}
         options={['مستقل', 'عارضی', 'کنٹریکٹ', 'پارٹ ٹائم']}
       />
-      <InputField label="تاریخ تقرری" type="date" value={formData.appointmentDate} onChange={(event) => onChange('appointmentDate', event.target.value)} />
-      <InputField label="تاریخ شمولیت" type="date" value={formData.joiningDate} onChange={(event) => onChange('joiningDate', event.target.value)} />
+      <InputField label="تاریخ تقرری" required type="date" value={formData.appointmentDate} onChange={(event) => onChange('appointmentDate', event.target.value)} />
+      <InputField label="تاریخ شمولیت" required type="date" value={formData.joiningDate} onChange={(event) => onChange('joiningDate', event.target.value)} />
       <TextAreaField label="سابقہ تجربہ" value={formData.experienceSummary} onChange={(event) => onChange('experienceSummary', event.target.value)} />
       <TextAreaField label="نوٹس" value={formData.notes} onChange={(event) => onChange('notes', event.target.value)} className="md:col-span-2" />
     </div>

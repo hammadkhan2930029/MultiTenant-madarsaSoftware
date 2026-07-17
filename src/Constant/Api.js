@@ -84,13 +84,16 @@ const getSessionBranchId = (session) => {
   return value === null || value === undefined || value === '' ? null : Number(value);
 };
 
-const isTenantAdminSession = (session) => String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin';
+const isTenantAdminSession = (session) => (
+  String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin' &&
+  !getSessionBranchId(session)
+);
 
 const isSuperAdminSession = (session) => String(getRoleNameFromSession(session)).trim().toLowerCase() === 'super_admin';
 
 const isBranchScopedSession = (session) => {
   const branchId = getSessionBranchId(session);
-  return Boolean(branchId) && !isSuperAdminSession(session) && !isTenantAdminSession(session);
+  return Boolean(branchId) && !isSuperAdminSession(session);
 };
 
 const isBranchSystemEnabled = (session) => Boolean(

@@ -22,6 +22,7 @@ import {
 import { getBranches } from '../../Constant/AcademicSetupApi';
 import { canUseTenantBranchContext, getAdminSession, getSelectedBranchContext } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
+import { formatCurrencyAmount } from '../../Utils/amountFormat';
 
 //--------------------------------------------------------------------------
 
@@ -79,12 +80,7 @@ const formatCount = (value, fallback) => {
 };
 
 const formatCurrency = (value, fallback) => {
-    const number = Number(value);
-    if (Number.isNaN(number)) return fallback;
-
-    if (Math.abs(number) >= 1000000) return `PKR ${(number / 1000000).toFixed(1)}M`;
-    if (Math.abs(number) >= 1000) return `PKR ${(number / 1000).toFixed(0)}K`;
-    return `PKR ${number.toLocaleString('en-US')}`;
+    return formatCurrencyAmount(value, fallback);
 };
 
 const toDateKey = (date) => date.toISOString().split('T')[0];
@@ -170,12 +166,23 @@ const StatCard =
             icon: Icon, // eslint-disable-line no-unused-vars
             colorClass,
             borderClass,
-            isIncome
+            isIncome,
+            onClick,
         }) => (
 
         <motion.div initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-6 rounded-[2rem] flex-1 min-w-[240px] bg-[var(--color-surface)] border border-[var(--color-border)] hover:shadow-xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden group shadow-sm">
+            role={onClick ? 'button' : undefined}
+            tabIndex={onClick ? 0 : undefined}
+            onClick={onClick}
+            onKeyDown={(event) => {
+                if (!onClick) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onClick();
+                }
+            }}
+            className={`p-6 rounded-[2rem] flex-1 min-w-[240px] bg-[var(--color-surface)] border border-[var(--color-border)] hover:shadow-xl hover:-translate-y-1 transition-all duration-500 relative overflow-hidden group shadow-sm ${onClick ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/40' : ''}`}>
             {/* Background Decorative Icon */}
             <div className="absolute -right-4 -top-4 w-20 h-20 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity text-[var(--color-text)]">
                 <Icon size={80} />
@@ -234,7 +241,7 @@ export const Dashboard = () => {
         students: '350',
         teachers: '15',
         staff: '0',
-        fees: 'PKR 1.7M',
+        fees: 'PKR 1,700,000',
     });
     const [chartStats, setChartStats] = useState({
         pieData: fallbackPieData,
@@ -294,7 +301,7 @@ export const Dashboard = () => {
         const loadDashboardStats = async () => {
             try {
                 const [studentsResult, teachersResult, staffResult, financeResult] = await Promise.all([
-                    loadOptional(canViewStudents, () => getStudents('page=1&limit=1')),
+                    loadOptional(canViewStudents, () => getStudents('page=1&limit=1&status=active')),
                     loadOptional(canViewTeachers, () => getTeachers('page=1&limit=1&staffType=teacher')),
                     loadOptional(canViewStaff, () => getTeachers('page=1&limit=1&staffType=staff')),
                     loadOptional(canViewFinance, () => getFinancialRecords('page=1&limit=1')),
@@ -629,17 +636,17 @@ export const Dashboard = () => {
     ]);
 
     const topStatCards = [
-        canViewStudents ? { id: 'students', title: withStatusLabel('کل طلباء', dashboardStatus.stats), value: topStats.students, icon: Users, colorClass: 'bg-blue-500', borderClass: 'bg-blue-500', subValue: scopeSubValue } : null,
-        canViewTeachers ? { id: 'teachers', title: withStatusLabel('کل اساتذہ', dashboardStatus.stats), value: topStats.teachers, icon: UserCheck, colorClass: 'bg-teal-500', borderClass: 'bg-teal-500', subValue: scopeSubValue } : null,
-        canViewStaff ? { id: 'staff', title: withStatusLabel('کل عملہ', dashboardStatus.stats), value: topStats.staff, icon: Users, colorClass: 'bg-indigo-500', borderClass: 'bg-indigo-500', subValue: scopeSubValue } : null,
-        canViewFinance ? { id: 'fees', title: withStatusLabel('مجموعی فیس', dashboardStatus.stats), value: topStats.fees, icon: Wallet, colorClass: 'bg-rose-500', borderClass: 'bg-rose-500', subValue: scopeSubValue } : null,
+        canViewStudents ? { id: 'students', title: withStatusLabel('کل طلباء', dashboardStatus.stats), value: topStats.students, icon: Users, colorClass: 'bg-blue-500', borderClass: 'bg-blue-500', subValue: scopeSubValue, path: '/students/list' } : null,
+        canViewTeachers ? { id: 'teachers', title: withStatusLabel('کل اساتذہ', dashboardStatus.stats), value: topStats.teachers, icon: UserCheck, colorClass: 'bg-teal-500', borderClass: 'bg-teal-500', subValue: scopeSubValue, path: '/teachers/list' } : null,
+        canViewStaff ? { id: 'staff', title: withStatusLabel('کل عملہ', dashboardStatus.stats), value: topStats.staff, icon: Users, colorClass: 'bg-indigo-500', borderClass: 'bg-indigo-500', subValue: scopeSubValue, path: '/staff/list' } : null,
+        canViewFinance ? { id: 'fees', title: withStatusLabel('مجموعی فیس', dashboardStatus.stats), value: topStats.fees, icon: Wallet, colorClass: 'bg-rose-500', borderClass: 'bg-rose-500', subValue: scopeSubValue, path: hasPageAccess('/finance/reports/financial-statements') ? '/finance/reports/financial-statements' : null } : null,
     ].filter(Boolean);
 
     const branchStatCards = canViewBranchSummary ? [
-        { id: 'total-branches', title: withStatusLabel('کل برانچز', dashboardStatus.branches), value: formatCount(branchStats.total, '0'), icon: Landmark, colorClass: 'bg-blue-500', borderClass: 'bg-blue-500', subValue: 'آرکائیو برانچز شامل نہیں' },
-        { id: 'active-branches', title: withStatusLabel('فعال برانچز', dashboardStatus.branches), value: formatCount(branchStats.active, '0'), icon: Landmark, colorClass: 'bg-emerald-500', borderClass: 'bg-emerald-500' },
-        { id: 'inactive-branches', title: withStatusLabel('غیر فعال برانچز', dashboardStatus.branches), value: formatCount(branchStats.inactive, '0'), icon: Landmark, colorClass: 'bg-orange-500', borderClass: 'bg-orange-500' },
-        { id: 'branch-limit', title: withStatusLabel('برانچ حد', dashboardStatus.branches), value: branchStats.limit === null || branchStats.limit === undefined ? '—' : formatCount(branchStats.limit, '0'), icon: Landmark, colorClass: 'bg-cyan-600', borderClass: 'bg-cyan-600', subValue: `باقی گنجائش: ${formatCount(branchStats.remaining, '0')}` },
+        { id: 'total-branches', title: withStatusLabel('کل برانچز', dashboardStatus.branches), value: formatCount(branchStats.total, '0'), icon: Landmark, colorClass: 'bg-blue-500', borderClass: 'bg-blue-500', subValue: 'آرکائیو برانچز شامل نہیں', path: '/branch-management' },
+        { id: 'active-branches', title: withStatusLabel('فعال برانچز', dashboardStatus.branches), value: formatCount(branchStats.active, '0'), icon: Landmark, colorClass: 'bg-emerald-500', borderClass: 'bg-emerald-500', path: '/branch-management' },
+        { id: 'inactive-branches', title: withStatusLabel('غیر فعال برانچز', dashboardStatus.branches), value: formatCount(branchStats.inactive, '0'), icon: Landmark, colorClass: 'bg-orange-500', borderClass: 'bg-orange-500', path: '/branch-management' },
+        { id: 'branch-limit', title: withStatusLabel('برانچ حد', dashboardStatus.branches), value: branchStats.limit === null || branchStats.limit === undefined ? '—' : formatCount(branchStats.limit, '0'), icon: Landmark, colorClass: 'bg-cyan-600', borderClass: 'bg-cyan-600', subValue: `باقی گنجائش: ${formatCount(branchStats.remaining, '0')}`, path: '/branch-management' },
     ] : [];
 
     return (
@@ -647,10 +654,10 @@ export const Dashboard = () => {
             {/* 1. Top Core Stats */}
             <div className="flex flex-wrap gap-6 mb-8" dir="rtl">
                 {topStatCards.map((card) => (
-                    <StatCard key={card.id} {...card} />
+                    <StatCard key={card.id} {...card} onClick={card.path ? () => navigate(card.path) : undefined} />
                 ))}
                 {branchStatCards.map((card) => (
-                    <StatCard key={card.id} {...card} />
+                    <StatCard key={card.id} {...card} onClick={card.path ? () => navigate(card.path) : undefined} />
                 ))}
             </div>
 
@@ -825,10 +832,10 @@ export const Dashboard = () => {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" dir="rtl">
-                <StatCard title="قابل ادائیگی" value={formatCurrency(financeCards.payableAmount, 'PKR 0')} subValue="خریداری کی باقی ادائیگیاں" icon={BookOpen} colorClass="bg-blue-500" borderClass="bg-blue-500" />
-                <StatCard title="قابل وصولی" value={formatCurrency(financeCards.receivableAmount, 'PKR 0')} subValue="طلباء فیس کی باقی وصولی" icon={Users} colorClass="bg-emerald-500" borderClass="bg-emerald-500" />
-                <StatCard title="کل خرچ" value={formatCurrency(financeCards.totalKharch, 'PKR 0')} subValue="مالیاتی ریکارڈ کے مطابق" icon={TrendingUp} colorClass="bg-indigo-500" borderClass="bg-indigo-500" />
-                <StatCard title="کل" value={formatCurrency(financeCards.total, 'PKR 0')} subValue="کل آمدن منفی کل خرچ" icon={Wallet} colorClass="bg-orange-500" borderClass="bg-orange-500" isIncome={true} />
+                <StatCard title="قابل ادائیگی" value={formatCurrency(financeCards.payableAmount, 'PKR 0')} subValue="خریداری کی باقی ادائیگیاں" icon={BookOpen} colorClass="bg-blue-500" borderClass="bg-blue-500" onClick={() => navigate('/store/purchases?outstanding=true')} />
+                <StatCard title="قابل وصولی" value={formatCurrency(financeCards.receivableAmount, 'PKR 0')} subValue="طلباء فیس کی باقی وصولی" icon={Users} colorClass="bg-emerald-500" borderClass="bg-emerald-500" onClick={() => navigate('/students/fees?status=due&allMonths=true')} />
+                <StatCard title="کل خرچ" value={formatCurrency(financeCards.totalKharch, 'PKR 0')} subValue="مالیاتی ریکارڈ کے مطابق" icon={TrendingUp} colorClass="bg-indigo-500" borderClass="bg-indigo-500" onClick={() => navigate('/finance/reports/financial-statements?type=kharch')} />
+                <StatCard title="کل" value={formatCurrency(financeCards.total, 'PKR 0')} subValue="کل آمدن منفی کل خرچ" icon={Wallet} colorClass="bg-orange-500" borderClass="bg-orange-500" isIncome={true} onClick={() => navigate('/finance/reports/financial-statements')} />
             </motion.div>
             ) : null}
 

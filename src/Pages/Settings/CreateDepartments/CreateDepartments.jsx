@@ -1,14 +1,32 @@
-﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Building2, Plus, Edit2, Trash2, Users, Target, Shield, Save } from 'lucide-react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Building2, Plus, Edit2, Trash2, Users, Target, Shield, Save, ChevronDown, X } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createDepartment, deleteDepartment, getDepartments, updateDepartment } from '../../../Constant/DepartmentApi';
+import { getTeachers } from '../../../Constant/TeachersApi';
 
 const emptyForm = {
     name: '',
     code: '',
     head: '',
+    headTeacherId: '',
+    headSearch: '',
 };
+
+const formatHeadType = (staffType) => String(staffType || '').toLowerCase() === 'staff' ? 'عملہ' : 'استاد';
+
+const buildHeadOptions = (items = []) => items
+    .filter((item) => item?.status === 'active')
+    .map((item) => ({
+        id: String(item.id),
+        label: item.fullName || item.name || '',
+        meta: [
+            `#${item.id}`,
+            formatHeadType(item.staffType),
+            item.jobTitle,
+            item.branch?.name,
+        ].filter(Boolean).join(' • '),
+    }));
 
 export const DepartmentManagement = () => {
     const [departments, setDepartments] = useState([]);
@@ -18,6 +36,8 @@ export const DepartmentManagement = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [headOptions, setHeadOptions] = useState([]);
+    const [isHeadsLoading, setIsHeadsLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const formRef = useRef(null);
@@ -46,6 +66,28 @@ export const DepartmentManagement = () => {
         loadDepartments();
     }, [loadDepartments]);
 
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadHeadOptions = async () => {
+            try {
+                setIsHeadsLoading(true);
+                const result = await getTeachers('page=1&limit=100&status=active');
+                if (isMounted) setHeadOptions(buildHeadOptions(result.items || []));
+            } catch (loadError) {
+                if (isMounted) setError(loadError.message || 'شعبہ ہیڈ کی فہرست لوڈ نہیں ہو سکی۔');
+            } finally {
+                if (isMounted) setIsHeadsLoading(false);
+            }
+        };
+
+        loadHeadOptions();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     const resetForm = () => {
         setFormData(emptyForm);
         setEditMode(null);
@@ -65,7 +107,8 @@ export const DepartmentManagement = () => {
             const payload = {
                 name: formData.name.trim(),
                 code: formData.code.trim(),
-                head: formData.head.trim(),
+                head: formData.headTeacherId ? '' : formData.head.trim(),
+                headTeacherId: formData.headTeacherId ? Number(formData.headTeacherId) : null,
             };
 
             if (editMode) {
@@ -89,7 +132,9 @@ export const DepartmentManagement = () => {
         setFormData({
             name: department.name || '',
             code: department.code || '',
-            head: department.head || '',
+            head: department.legacyHead || (!department.headTeacherId ? department.head || '' : ''),
+            headTeacherId: department.headTeacherId ? String(department.headTeacherId) : '',
+            headSearch: department.headTeacher?.fullName || department.head || '',
         });
         setEditMode(department.id);
         setError('');
@@ -155,12 +200,30 @@ export const DepartmentManagement = () => {
                         />
                     </div>
                     <div className="space-y-2">
-                        <InputField
-                            type="text"
+                        <HeadSearchableSelect
                             label={'شعبہ ہیڈ'}
-                            placeholder="نام درج کریں"
-                            value={formData.head}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, head: e.target.value }))}
+                            value={formData.headSearch}
+                            options={headOptions}
+                            isLoading={isHeadsLoading}
+                            placeholder="ہیڈ منتخب کریں"
+                            onChange={(value) => setFormData((prev) => ({
+                                ...prev,
+                                headSearch: value,
+                                headTeacherId: '',
+                                head: value,
+                            }))}
+                            onSelectOption={(option) => setFormData((prev) => ({
+                                ...prev,
+                                headSearch: option.label,
+                                headTeacherId: option.id,
+                                head: '',
+                            }))}
+                            onClear={() => setFormData((prev) => ({
+                                ...prev,
+                                headSearch: '',
+                                headTeacherId: '',
+                                head: '',
+                            }))}
                         />
                     </div>
                 </div>
@@ -283,6 +346,78 @@ export const DepartmentManagement = () => {
                     </div>
                 </div>
             ) : null}
+        </div>
+    );
+};
+
+const HeadSearchableSelect = ({ label, value, options, isLoading, onChange, onSelectOption, onClear, placeholder }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const filteredOptions = useMemo(() => {
+        const query = String(value || '').trim().toLowerCase();
+        if (!query) return options;
+
+        return options.filter((option) =>
+            [option.label, option.meta]
+                .filter(Boolean)
+                .some((item) => String(item).toLowerCase().includes(query)),
+        );
+    }, [options, value]);
+
+    return (
+        <div className="relative space-y-2">
+            <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">{label}</label>
+            <div className="relative">
+                <input
+                    type="text"
+                    value={value}
+                    onChange={(event) => {
+                        onChange(event.target.value);
+                        setIsOpen(true);
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    onBlur={() => setTimeout(() => setIsOpen(false), 150)}
+                    placeholder={placeholder}
+                    className="w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 py-4 pl-20 text-sm font-bold text-[var(--color-text-main)] outline-none transition-all placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]"
+                />
+                {value ? (
+                    <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={onClear}
+                        className="absolute left-11 top-1/2 -translate-y-1/2 rounded-lg p-1 text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                    >
+                        <X size={16} />
+                    </button>
+                ) : null}
+                <ChevronDown size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+
+                {isOpen ? (
+                    <div className="absolute z-50 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl">
+                        {isLoading ? (
+                            <div className="px-4 py-3 text-right text-sm font-bold text-[var(--color-text-muted)]">فہرست لوڈ ہو رہی ہے...</div>
+                        ) : filteredOptions.length > 0 ? (
+                            filteredOptions.slice(0, 20).map((option) => (
+                                <button
+                                    key={`department-head-${option.id}`}
+                                    type="button"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                        onSelectOption(option);
+                                        setIsOpen(false);
+                                    }}
+                                    className="block w-full border-b border-[var(--color-border)] px-4 py-3 text-right transition-colors hover:bg-[var(--color-bg)] last:border-b-0"
+                                >
+                                    <div className="font-bold text-[var(--color-text-main)]">{option.label}</div>
+                                    {option.meta ? <div className="mt-1 text-xs font-semibold text-[var(--color-text-muted)]">{option.meta}</div> : null}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="px-4 py-3 text-right text-sm font-bold text-[var(--color-text-muted)]">کوئی ریکارڈ نہیں ملا۔</div>
+                        )}
+                    </div>
+                ) : null}
+            </div>
         </div>
     );
 };

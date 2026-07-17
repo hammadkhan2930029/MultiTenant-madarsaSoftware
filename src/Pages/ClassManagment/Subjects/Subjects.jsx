@@ -1,13 +1,21 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Book, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createSubject, deleteSubject, getSubjects, updateSubject } from '../../../Constant/AcademicSetupApi';
+import { createSubjectsBulk, deleteSubject, getSubjects, updateSubject } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 
 const emptyForm = {
     name: '',
     detail: '',
 };
+
+const createEmptySubjectRow = () => ({
+    id: `subject-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: '',
+    detail: '',
+    error: '',
+});
 
 export const CreateSubjects = () => {
     const [subjects, setSubjects] = useState([]);
@@ -15,6 +23,7 @@ export const CreateSubjects = () => {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editMode, setEditMode] = useState(null);
     const [formData, setFormData] = useState(emptyForm);
+    const [subjectRows, setSubjectRows] = useState(() => [createEmptySubjectRow()]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -52,6 +61,7 @@ export const CreateSubjects = () => {
         setIsFormOpen(false);
         setEditMode(null);
         setFormData(emptyForm);
+        setSubjectRows([createEmptySubjectRow()]);
     };
 
     const handleEdit = (subject) => {
@@ -60,21 +70,99 @@ export const CreateSubjects = () => {
             name: subject.name || '',
             detail: subject.detail || '',
         });
+        setSubjectRows([createEmptySubjectRow()]);
         setError('');
         setSuccess('');
         setIsFormOpen(true);
         scrollToForm();
     };
 
-    const handleSubmit = async () => {
-        if (formData.detail.trim() && !formData.name.trim()) {
-            setError('مضمون کا نام درج کرنا ضروری ہے۔ تفصیل / کوڈ کے ساتھ مضمون کا نام بھی لکھیں۔');
-            return;
+    const handleSubjectRowChange = (rowId, field, value) => {
+        setSubjectRows((prev) =>
+            prev.map((row) => (row.id === rowId ? { ...row, [field]: value, error: '' } : row)),
+        );
+    };
+
+    const addSubjectRow = () => {
+        setSubjectRows((prev) => [...prev, createEmptySubjectRow()]);
+    };
+
+    const removeSubjectRow = (rowId) => {
+        setSubjectRows((prev) => {
+            if (prev.length === 1) {
+                return prev.map((row) => ({ ...row, name: '', detail: '', error: '' }));
+            }
+
+            return prev.filter((row) => row.id !== rowId);
+        });
+    };
+
+    const validateSubjectRows = () => {
+        const existingNames = new Set(subjects.map((subject) => String(subject.name || '').trim().toLowerCase()).filter(Boolean));
+        const seenNames = new Set();
+        const validRows = [];
+        let hasError = false;
+
+        const nextRows = subjectRows.map((row) => {
+            const name = row.name.trim();
+            const detail = row.detail.trim();
+            const key = name.toLowerCase();
+            let rowError = '';
+
+            if (!name && !detail) {
+                return { ...row, error: '' };
+            }
+
+            if (!name) {
+                rowError = 'مضمون کا نام درج کرنا ضروری ہے۔';
+            } else if (seenNames.has(key)) {
+                rowError = 'یہ مضمون اسی فارم میں دوبارہ درج ہے۔';
+            } else if (existingNames.has(key)) {
+                rowError = 'یہ مضمون پہلے سے موجود ہے۔';
+            } else {
+                seenNames.add(key);
+                validRows.push({ name, detail });
+            }
+
+            if (rowError) hasError = true;
+            return { ...row, error: rowError };
+        });
+
+        if (!validRows.length && !hasError) {
+            hasError = true;
+            nextRows[0] = { ...nextRows[0], error: 'کم از کم ایک مضمون کا نام درج کریں۔' };
         }
 
-        if (!formData.name.trim()) {
-            setError('مضمون کا نام درج کرنا ضروری ہے۔');
-            return;
+        setSubjectRows(nextRows);
+        return hasError ? null : validRows;
+    };
+
+    const handleSubmit = async () => {
+        let payload;
+
+        if (editMode) {
+            if (formData.detail.trim() && !formData.name.trim()) {
+                setError('مضمون کا نام درج کرنا ضروری ہے۔ تفصیل / کوڈ کے ساتھ مضمون کا نام بھی لکھیں۔');
+                return;
+            }
+
+            if (!formData.name.trim()) {
+                setError('مضمون کا نام درج کرنا ضروری ہے۔');
+                return;
+            }
+
+            payload = {
+                name: formData.name.trim(),
+                detail: formData.detail.trim(),
+            };
+        } else {
+            const validRows = validateSubjectRows();
+            if (!validRows) {
+                setError('درج کردہ مضامین میں غلطی موجود ہے۔');
+                return;
+            }
+
+            payload = { subjects: validRows };
         }
 
         setIsSaving(true);
@@ -82,17 +170,13 @@ export const CreateSubjects = () => {
         setSuccess('');
 
         try {
-            const payload = {
-                name: formData.name.trim(),
-                detail: formData.detail.trim(),
-            };
-
             if (editMode) {
                 await updateSubject(editMode, payload);
                 setSuccess('مضمون کامیابی سے اپڈیٹ ہو گیا۔');
             } else {
-                await createSubject(payload);
-                setSuccess('مضمون کامیابی سے شامل ہو گیا۔');
+                const result = await createSubjectsBulk(payload);
+                const createdCount = result?.createdCount || payload.subjects.length;
+                setSuccess(`${createdCount} مضمون کامیابی سے شامل ہو گئے۔`);
             }
 
             resetForm();
@@ -182,30 +266,76 @@ export const CreateSubjects = () => {
                         <span className='text-3xl'>{editMode ? 'مضمون تبدیل کریں' : 'نیا مضمون'}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
-                        <div className="space-y-2 text-right">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مضمون کا نام<span className="text-red-500"> *</span></label>
-                            <input
-                                required
-                                type="text"
-                                value={formData.name}
-                                placeholder="نام درج کریں"
-                                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                                className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
-                            />
-                        </div>
+                    {editMode ? (
+                        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
+                            <div className="space-y-2 text-right">
+                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مضمون کا نام<span className="text-red-500"> *</span></label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={formData.name}
+                                    placeholder="نام درج کریں"
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                    className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
+                                />
+                            </div>
 
-                        <div className="space-y-2 text-right">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تفصیل / کوڈ</label>
-                            <input
-                                type="text"
-                                value={formData.detail}
-                                placeholder="مزید تفصیل"
-                                onChange={(e) => setFormData((prev) => ({ ...prev, detail: e.target.value }))}
-                                className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
+                            <div className="space-y-2 text-right">
+                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تفصیل / کوڈ</label>
+                                <input
+                                    type="text"
+                                    value={formData.detail}
+                                    placeholder="مزید تفصیل"
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, detail: e.target.value }))}
+                                    className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            <MultipleEntryRows
+                                rows={subjectRows}
+                                onAdd={addSubjectRow}
+                                onRemove={removeSubjectRow}
+                                disabled={isSaving}
+                                RemoveIcon={X}
+                                addLabel="نئی قطار شامل کریں"
+                                removeLabel="قطار ہٹائیں"
+                                helperText="مزید مضامین شامل کرنے کے لیے + دبائیں۔"
+                                rowClassName="rounded-2xl border border-[var(--color-border)]/70 bg-[var(--color-bg)]/40 p-4 grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_1fr_auto]"
+                                actionsClassName="flex items-end gap-2 pt-7"
+                                addButtonClassName="flex h-[54px] w-[54px] items-center justify-center rounded-2xl bg-[#00d094] text-white shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                                removeButtonClassName="flex h-[54px] w-[54px] items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                canRemoveRow={(row, _index, rows) => rows.length > 1 || row.name || row.detail}
+                                renderFields={(row) => (
+                                    <>
+                                        <div className="space-y-2 text-right">
+                                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مضمون کا نام<span className="text-red-500"> *</span></label>
+                                            <input
+                                                required
+                                                type="text"
+                                                value={row.name}
+                                                placeholder="نام درج کریں"
+                                                onChange={(e) => handleSubjectRowChange(row.id, 'name', e.target.value)}
+                                                className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2 text-right">
+                                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تفصیل / کوڈ</label>
+                                            <input
+                                                type="text"
+                                                value={row.detail}
+                                                placeholder="مزید تفصیل"
+                                                onChange={(e) => handleSubjectRowChange(row.id, 'detail', e.target.value)}
+                                                className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
+                                            />
+                                        </div>
+                                    </>
+                                )}
                             />
                         </div>
-                    </div>
+                    )}
 
                     <div className="mt-8 flex justify-end gap-3">
                         {editMode ? (

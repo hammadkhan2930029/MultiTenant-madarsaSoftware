@@ -1,14 +1,21 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createSection, deleteSection, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
+import { createSectionsBulk, deleteSection, getClasses, getSections, updateSection } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 
 const emptyForm = {
     classId: '',
     name: '',
 };
+
+const createEmptySectionRow = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: '',
+    error: '',
+});
 
 export const CreateSections = () => {
     const [classes, setClasses] = useState([]);
@@ -16,6 +23,7 @@ export const CreateSections = () => {
     const [search, setSearch] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
     const [formData, setFormData] = useState(emptyForm);
+    const [sectionRows, setSectionRows] = useState([createEmptySectionRow()]);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +72,7 @@ export const CreateSections = () => {
 
     const resetForm = () => {
         setFormData(emptyForm);
+        setSectionRows([createEmptySectionRow()]);
         setEditMode(null);
         setIsFormOpen(false);
     };
@@ -74,25 +83,108 @@ export const CreateSections = () => {
             classId: section.classId ? String(section.classId) : '',
             name: section.name || '',
         });
+        setSectionRows([{ ...createEmptySectionRow(), name: section.name || '' }]);
         setError('');
         setSuccess('');
         setIsFormOpen(true);
         scrollToForm();
     };
 
+    const updateSectionRow = (rowId, value) => {
+        setSectionRows((rows) =>
+            rows.map((row) => (row.id === rowId ? { ...row, name: value, error: '' } : row)),
+        );
+    };
+
+    const addSectionRow = () => {
+        setSectionRows((rows) => [...rows, createEmptySectionRow()]);
+    };
+
+    const removeSectionRow = (rowId) => {
+        setSectionRows((rows) => (rows.length > 1 ? rows.filter((row) => row.id !== rowId) : rows));
+    };
+
+    const validateSectionRows = (classId) => {
+        const existingNames = new Set(
+            sections
+                .filter((item) => String(item.classId || '') === String(classId || ''))
+                .map((item) => String(item.name || '').trim().toLowerCase())
+                .filter(Boolean),
+        );
+        const seenNames = new Set();
+        let hasError = false;
+        const trimmedRows = sectionRows.map((row) => ({ ...row, name: row.name.trim(), error: '' }));
+        const nonEmptyRows = trimmedRows.filter((row) => row.name);
+
+        if (!nonEmptyRows.length) {
+            hasError = true;
+            return {
+                hasError,
+                rows: trimmedRows.map((row, index) => ({
+                    ...row,
+                    error: index === 0 ? 'سیکشن نام درج کرنا ضروری ہے۔' : '',
+                })),
+                validRows: [],
+            };
+        }
+
+        const rows = trimmedRows.map((row) => {
+            if (!row.name) return row;
+
+            const key = row.name.toLowerCase();
+            if (seenNames.has(key)) {
+                hasError = true;
+                return { ...row, error: 'یہ سیکشن اسی فارم میں دوبارہ درج ہے۔' };
+            }
+
+            seenNames.add(key);
+
+            if (existingNames.has(key)) {
+                hasError = true;
+                return { ...row, error: 'یہ سیکشن اس جماعت میں پہلے سے موجود ہے۔' };
+            }
+
+            return row;
+        });
+
+        return {
+            hasError,
+            rows,
+            validRows: rows.filter((row) => row.name && !row.error),
+        };
+    };
+
     const handleSubmit = async () => {
-        if (formData.classId && !formData.name.trim()) {
+        if (editMode && formData.classId && !formData.name.trim()) {
             const message = 'سیکشن نام درج کرنا ضروری ہے۔ جماعت کے ساتھ سیکشن نام بھی لکھیں۔';
             setError('');
             notify.error(message, 'نامکمل معلومات');
             return;
         }
 
-        if (!formData.classId || !formData.name.trim()) {
+        if (editMode && (!formData.classId || !formData.name.trim())) {
             const message = 'جماعت اور سیکشن کا نام دونوں درج کرنا ضروری ہیں۔';
             setError('');
             notify.error(message, 'نامکمل معلومات');
             return;
+        }
+
+        if (!editMode) {
+            if (!formData.classId) {
+                const message = 'جماعت منتخب کرنا ضروری ہے۔';
+                setError('');
+                notify.error(message, 'نامکمل معلومات');
+                return;
+            }
+
+            const validation = validateSectionRows(formData.classId);
+            setSectionRows(validation.rows);
+
+            if (validation.hasError) {
+                setError('');
+                notify.error('درج کردہ سیکشنز کی معلومات درست کریں۔', 'نامکمل معلومات');
+                return;
+            }
         }
 
         setIsSaving(true);
@@ -109,13 +201,24 @@ export const CreateSections = () => {
                 await updateSection(editMode, payload);
                 setSuccess('سیکشن کامیابی سے اپڈیٹ ہو گیا۔');
             } else {
-                await createSection(payload);
-                setSuccess('سیکشن کامیابی سے شامل ہو گیا۔');
+                const validation = validateSectionRows(formData.classId);
+                const result = await createSectionsBulk({
+                    classId: Number(formData.classId),
+                    sections: validation.validRows.map((row) => ({ name: row.name })),
+                });
+                setSuccess(`${result?.createdCount || validation.validRows.length} سیکشنز کامیابی سے شامل ہو گئے۔`);
             }
 
             resetForm();
             await loadDependencies();
         } catch (saveError) {
+            const rowErrors = saveError?.response?.data?.rows || saveError?.data?.rows || saveError?.details?.rows || [];
+            if (rowErrors.length) {
+                setSectionRows((rows) => rows.map((row, index) => {
+                    const rowError = rowErrors.find((item) => Number(item.index) === index);
+                    return rowError ? { ...row, error: rowError.message || 'یہ سیکشن محفوظ نہیں ہو سکا۔' } : row;
+                }));
+            }
             setError(saveError.message || 'سیکشن محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
@@ -231,17 +334,48 @@ export const CreateSections = () => {
                                 ))}
                             </select>
                         </div>
+                    </div>
 
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سیکشن نام<span className="text-red-500"> *</span></label>
-                            <input
-                                required
-                                value={formData.name}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                                placeholder="مثلاً A"
-                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                    <div className="mt-6 space-y-4">
+                        {editMode ? (
+                            <div className="space-y-2">
+                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                    سیکشن نام<span className="text-red-500"> *</span>
+                                </label>
+                                <input
+                                    required
+                                    value={formData.name}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                    placeholder="مثلاً A"
+                                    className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                />
+                            </div>
+                        ) : (
+                            <MultipleEntryRows
+                                rows={sectionRows}
+                                onAdd={addSectionRow}
+                                onRemove={removeSectionRow}
+                                disabled={isSaving}
+                                addLabel="نیا سیکشن شامل کریں"
+                                removeLabel="سیکشن قطار حذف کریں"
+                                renderFields={(row, index) => (
+                                    <div className="space-y-2">
+                                        <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                            سیکشن نام<span className="text-red-500"> *</span>
+                                        </label>
+                                        <input
+                                            required={index === 0}
+                                            value={row.name}
+                                            onChange={(e) => updateSectionRow(row.id, e.target.value)}
+                                            placeholder="مثلاً A"
+                                            className={`h-14 w-full rounded-2xl border bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none ${
+                                                row.error ? 'border-rose-500' : 'border-[var(--color-border)]'
+                                            }`}
+                                        />
+                                    </div>
+                                )}
                             />
-                        </div>
+                        )}
                     </div>
 
                     <div className="mt-8 flex justify-end gap-3">

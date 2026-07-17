@@ -5,6 +5,7 @@ import { TeacherAttendance } from '../Pages/Teachers/TeacherAttendance/TeacherAt
 import {TeacherAttendanceHistory}from '../Pages/Teachers/AttendanceHistory/AttendanceHistory';
 import {TeachersScheduleManager}from '../Pages/Teachers/Schedule/Schedule'
 import { SalaryIncrements } from '../Pages/Teachers/SalaryIncrements/SalaryIncrements';
+import { TeacherAssignments } from '../Pages/Teachers/Assignments/TeacherAssignments';
 import { withPermission } from '../Components/Auth/permissionGuards';
 export const TeacherRoutes = (
         <Route path="teachers">
@@ -14,6 +15,7 @@ export const TeacherRoutes = (
         <Route path="attendance" element={withPermission(<TeacherAttendance />, 'teachers.attendance.view')} />
         <Route path="attendance-history/:id" element={withPermission(<TeacherAttendanceHistory />, 'teachers.attendance.view')} />
         <Route path="schedule" element={withPermission(<TeachersScheduleManager />, 'teachers.schedule.view')} />
+        <Route path="assignments" element={withPermission(<TeacherAssignments />, 'teachers.assignments.view')} />
 
 
 

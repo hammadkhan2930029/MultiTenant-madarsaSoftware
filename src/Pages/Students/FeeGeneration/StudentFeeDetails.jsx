@@ -101,11 +101,12 @@ export const StudentFeeDetail = () => {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:col-span-2">
-                        <p className="text-xs font-black text-[var(--color-text-muted)]">طالب علم</p>
+                        <p className="text-sm font-black text-[var(--color-text-muted)]">طالب علم</p>
                         <h3 className="mt-2 text-3xl font-black">{student?.fullName}</h3>
-                        <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">
-                            {student?.admissionNumber} - ولدیت: {student?.fatherName}
-                        </p>
+                        <div className="mt-2 flex flex-col gap-1 text-sm font-bold text-[var(--color-text-muted)]">
+                            <span>{student?.admissionNumber || '---'} :داخلہ نمبر</span>
+                            <span>{student?.fatherName || '---'} :سرپرست</span>
+                        </div>
                         <p className="mt-2 text-sm font-bold text-[var(--color-primary)]">
                             {assignment.class?.name || '---'} / {assignment.section?.name || '---'} / {assignment.session?.name || '---'}
                         </p>
@@ -114,7 +115,7 @@ export const StudentFeeDetail = () => {
                         <div className="flex items-center gap-3">
                             <div className="rounded-2xl bg-rose-500/10 p-3 text-rose-500"><Wallet size={28} /></div>
                             <div>
-                                <p className="text-xs font-black text-[var(--color-text-muted)]">کل بقایا</p>
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">کل بقایا</p>
                                 <h3 className="mt-1 text-3xl font-black text-rose-500">Rs {toMoney(totals.due)}</h3>
                             </div>
                         </div>
@@ -188,7 +189,7 @@ export const StudentFeeDetail = () => {
 
 const Info = ({ label, value }) => (
     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-        <p className="text-xs font-black text-[var(--color-text-muted)]">{label}</p>
+        <p className="text-sm font-black text-[var(--color-text-muted)]">{label}</p>
         <p className="mt-2 text-sm font-black">{value || '---'}</p>
     </div>
 );

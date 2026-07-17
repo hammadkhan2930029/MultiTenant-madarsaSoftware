@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Users, CheckCircle, XCircle, Clock, Phone, BookOpen, Save, Search, Eye } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Clock, Layers, BookOpen, Save, Search, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicker';
 import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
+import { getTeacherAssignments } from '../../../Constant/TeacherAssignmentApi';
 import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
@@ -25,12 +26,30 @@ const formatDateKey = (date) => {
 const getTeacherShiftLabel = (teacher) =>
     teacher?.shift?.name || teacher?.shiftName || teacher?.shiftTitle || (teacher?.shiftId ? `شفٹ #${teacher.shiftId}` : '---');
 
+const uniqueByKey = (items, keyGetter) => {
+    const map = new Map();
+    (items || []).forEach((item) => {
+        const key = keyGetter(item);
+        if (key && !map.has(String(key))) map.set(String(key), item);
+    });
+    return [...map.values()];
+};
+
+const joinLabels = (values) => {
+    const labels = [...new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))];
+    return labels.length ? labels.join('، ') : '---';
+};
+
 export const TeacherAttendance = () => {
     const navigate = useNavigate();
     const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
     const [selectedBranchId, setSelectedBranchId] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState('');
+    const [selectedClassId, setSelectedClassId] = useState('');
+    const [selectedSectionId, setSelectedSectionId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [teachers, setTeachers] = useState([]);
+    const [teacherAssignments, setTeacherAssignments] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
@@ -79,9 +98,10 @@ export const TeacherAttendance = () => {
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                const [defaultBranch, teacherResult] = await Promise.all([
+                const [defaultBranch, teacherResult, assignmentsResult] = await Promise.all([
                     getDefaultBranch(),
                     getTeachers('page=1&limit=100&status=active&staffType=teacher'),
+                    getTeacherAssignments('page=1&limit=500&status=active').catch(() => ({ items: [] })),
                 ]);
 
                 setSelectedBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
@@ -92,6 +112,7 @@ export const TeacherAttendance = () => {
                         remarks: '',
                     })),
                 );
+                setTeacherAssignments(assignmentsResult.items || []);
             } catch (loadError) {
                 setError(loadError.message || 'اساتذہ کی حاضری کا ڈیٹا لوڈ نہیں ہو سکا۔');
             }
@@ -140,14 +161,67 @@ export const TeacherAttendance = () => {
         }
     };
 
+    const assignmentsByTeacher = useMemo(() => {
+        const map = new Map();
+        teacherAssignments.forEach((assignment) => {
+            const teacherId = String(assignment.teacherId || assignment.teacher?.id || '');
+            if (!teacherId) return;
+            if (!map.has(teacherId)) map.set(teacherId, []);
+            map.get(teacherId).push(assignment);
+        });
+        return map;
+    }, [teacherAssignments]);
+
+    const getTeacherAssignmentsList = (teacher) => assignmentsByTeacher.get(String(teacher.id)) || [];
+    const getTeacherSubjectLabels = (teacher) => joinLabels([
+        teacher.subject,
+        ...getTeacherAssignmentsList(teacher).map((assignment) => assignment.subject?.name),
+    ]);
+    const getTeacherClassLabels = (teacher) => joinLabels(getTeacherAssignmentsList(teacher).map((assignment) => assignment.class?.name));
+    const getTeacherSectionLabels = (teacher) => joinLabels(getTeacherAssignmentsList(teacher).map((assignment) => assignment.section?.name));
+
+    const subjectOptions = useMemo(() => {
+        const assignmentSubjects = teacherAssignments.map((assignment) => assignment.subject?.name).filter(Boolean);
+        const directSubjects = teachers.map((teacher) => teacher.subject).filter(Boolean);
+        return [...new Set([...assignmentSubjects, ...directSubjects])];
+    }, [teacherAssignments, teachers]);
+
+    const classOptions = useMemo(
+        () => uniqueByKey(teacherAssignments.map((assignment) => assignment.class).filter(Boolean), (item) => item.id),
+        [teacherAssignments],
+    );
+
+    const sectionOptions = useMemo(
+        () => uniqueByKey(
+            teacherAssignments
+                .filter((assignment) => !selectedClassId || String(assignment.classId || assignment.class?.id) === String(selectedClassId))
+                .map((assignment) => assignment.section)
+                .filter(Boolean),
+            (item) => item.id,
+        ),
+        [teacherAssignments, selectedClassId],
+    );
+
     const filteredTeachers = useMemo(
         () =>
-            teachers.filter((teacher) =>
-                [teacher.fullName, teacher.phone, teacher.subject, getTeacherShiftLabel(teacher)]
+            teachers.filter((teacher) => {
+                const assignments = getTeacherAssignmentsList(teacher);
+                const subjectLabels = [teacher.subject, ...assignments.map((assignment) => assignment.subject?.name)].filter(Boolean);
+                const searchOk = [
+                    teacher.fullName,
+                    teacher.subject,
+                    getTeacherShiftLabel(teacher),
+                    ...assignments.map((assignment) => assignment.class?.name),
+                    ...assignments.map((assignment) => assignment.section?.name),
+                ]
                     .filter(Boolean)
-                    .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase())),
-            ),
-        [searchTerm, teachers],
+                    .some((value) => value.toLowerCase().includes(searchTerm.toLowerCase()));
+                const subjectOk = !selectedSubject || subjectLabels.includes(selectedSubject);
+                const classOk = !selectedClassId || assignments.some((assignment) => String(assignment.classId || assignment.class?.id) === String(selectedClassId));
+                const sectionOk = !selectedSectionId || assignments.some((assignment) => String(assignment.sectionId || assignment.section?.id) === String(selectedSectionId));
+                return searchOk && subjectOk && classOk && sectionOk;
+            }),
+        [assignmentsByTeacher, searchTerm, selectedClassId, selectedSectionId, selectedSubject, teachers],
     );
 
     const stats = useMemo(
@@ -156,6 +230,7 @@ export const TeacherAttendance = () => {
             hazir: filteredTeachers.filter((teacher) => teacher.status === 'Present').length,
             ghairHazir: filteredTeachers.filter((teacher) => teacher.status === 'Absent').length,
             leave: filteredTeachers.filter((teacher) => teacher.status === 'Leave').length,
+            late: filteredTeachers.filter((teacher) => teacher.status === 'Late').length,
         }),
         [filteredTeachers],
     );
@@ -163,55 +238,95 @@ export const TeacherAttendance = () => {
     const exportColumns = useMemo(() => [
         { header: 'ID', accessor: 'id' },
         { header: 'Name', accessor: 'fullName' },
-        { header: 'Subject', accessor: 'subject' },
+        { header: 'Subject', accessor: getTeacherSubjectLabels },
+        { header: 'Class', accessor: getTeacherClassLabels },
+        { header: 'Section', accessor: getTeacherSectionLabels },
         { header: 'Shift', accessor: getTeacherShiftLabel },
-        { header: 'Phone', accessor: 'phone' },
         { header: 'Date', accessor: () => selectedDate },
         { header: 'Status', accessor: (teacher) => STATUS_OPTIONS.find((status) => status.value === teacher.status)?.label || teacher.status },
-    ], [selectedDate]);
+    ], [assignmentsByTeacher, selectedDate]);
 
     return (
         <div className="p-6 space-y-6 bg-[var(--color-bg)] min-h-screen" dir="rtl">
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <SummaryCard title="کل اساتذہ" count={stats.total} icon={Users} color="border-blue-500" textColor="text-blue-500" />
                 <SummaryCard title="حاضر" count={stats.hazir} icon={CheckCircle} color="border-emerald-500" textColor="text-emerald-500" />
                 <SummaryCard title="غیر حاضر" count={stats.ghairHazir} icon={XCircle} color="border-red-500" textColor="text-red-500" />
                 <SummaryCard title="رخصت" count={stats.leave} icon={Clock} color="border-amber-500" textColor="text-amber-500" />
+                <SummaryCard title="تاخیر" count={stats.late} icon={Clock} color="border-sky-500" textColor="text-sky-500" />
             </div>
 
             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-xl border border-[var(--color-border)]/5 overflow-visible">
                 <div className="relative z-[90] p-6 border-b border-[var(--color-border)]/10 flex flex-col gap-4">
-                    <div className="flex flex-col xl:flex-row justify-between items-center gap-4">
-                        <div className="flex flex-col lg:flex-row items-center gap-4 w-full xl:w-auto">
-                            <h2 className="text-xl font-bold text-[var(--text-color)]">روزانہ حاضری شیٹ</h2>
-                            <div className="w-full lg:w-[240px]">
-                                <ThemedDatePicker
-                                    value={selectedDate}
-                                    onChange={(nextValue) => setSelectedDate(nextValue)}
-                                    placeholder="تاریخ منتخب کریں"
-                                    required
-                                />
+                    <div className="flex flex-col gap-5">
+                        <div className="flex w-full flex-col gap-3">
+                            <h2 className="text-xl font-bold text-[var(--text-color)]">حاضری شیٹ</h2>
+                            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-[var(--text-color)]">تاریخ</label>
+                                    <ThemedDatePicker
+                                        value={selectedDate}
+                                        onChange={(nextValue) => setSelectedDate(nextValue)}
+                                        placeholder="تاریخ منتخب کریں"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-[var(--text-color)]">مضمون</label>
+                                    <select
+                                        value={selectedSubject}
+                                        onChange={(event) => setSelectedSubject(event.target.value)}
+                                        className="h-12 w-full rounded-xl border border-[var(--color-border)]/10 bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--text-color)] outline-none"
+                                    >
+                                        <option value="">تمام مضامین</option>
+                                        {subjectOptions.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-[var(--text-color)]">جماعت</label>
+                                    <select
+                                        value={selectedClassId}
+                                        onChange={(event) => {
+                                            setSelectedClassId(event.target.value);
+                                            setSelectedSectionId('');
+                                        }}
+                                        className="h-12 w-full rounded-xl border border-[var(--color-border)]/10 bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--text-color)] outline-none"
+                                    >
+                                        <option value="">تمام جماعتیں</option>
+                                        {classOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-bold text-[var(--text-color)]">جماعت سیکشن</label>
+                                    <select
+                                        value={selectedSectionId}
+                                        onChange={(event) => setSelectedSectionId(event.target.value)}
+                                        className="h-12 w-full rounded-xl border border-[var(--color-border)]/10 bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--text-color)] outline-none"
+                                    >
+                                        <option value="">تمام سیکشن</option>
+                                        {sectionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-[var(--color-bg)] flex flex-row justify-center items-center rounded-xl w-full xl:w-[35%] overflow-hidden border border-[var(--color-border)]/10">
-                            <button onClick={loadAttendance} className="bg-[var(--color-primary)] text-white p-3">
-                                <Search size={20} />
-                            </button>
-                            <input
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="تلاش کریں (نام یا فون)..."
-                                className="bg-transparent outline-none p-2 w-full text-sm"
-                            />
-                        </div>
-
-                        <div className="flex w-full flex-col gap-2 xl:w-[22%]">
-                            <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`teacher-attendance-${selectedDate}`} className="w-full" />
+                        <div className="grid w-full grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_180px] lg:items-center">
+                            <div className="bg-[var(--color-bg)] flex h-12 flex-row justify-center items-center rounded-xl w-full overflow-hidden border border-[var(--color-border)]/10">
+                                <button onClick={loadAttendance} className="flex h-12 w-12 shrink-0 items-center justify-center bg-[var(--color-primary)] text-white">
+                                    <Search size={20} />
+                                </button>
+                                <input
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    placeholder="تلاش کریں (نام، مضمون، جماعت)..."
+                                    className="bg-transparent outline-none px-3 w-full text-sm"
+                                />
+                            </div>
+                            <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`teacher-attendance-${selectedDate}`} className="w-full h-12" />
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving || !selectedBranchId}
-                                className="w-full flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 py-2.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                                className="w-full h-12 flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
                             >
                                 <Save size={18} /> {isSaving ? 'محفوظ...' : 'محفوظ کریں'}
                             </button>
@@ -222,26 +337,28 @@ export const TeacherAttendance = () => {
                 </div>
 
                 <div className="overflow-x-auto hidden lg:block">
-                    <table className="w-full text-right border-collapse">
+                    <table className="w-full min-w-[980px] text-right border-collapse">
                         <thead>
                             <tr className="bg-black/5 text-[var(--text-color)] opacity-70 uppercase text-xs font-bold">
                                 <th className="p-4">نمبر</th>
                                 <th className="p-4">نام</th>
                                 <th className="p-4">مضمون</th>
+                                <th className="p-4">جماعت</th>
+                                <th className="p-4">جماعت سیکشن</th>
                                 <th className="p-4">شفٹ</th>
-                                <th className="p-4">موبائل نمبر</th>
                                 <th className="p-4 text-center">حاضری</th>
-                                <th className="p-4 text-center">کارروائی</th>
+                                <th className="p-4 text-center">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]/5">
-                            {filteredTeachers.map((teacher) => (
+                            {filteredTeachers.map((teacher, index) => (
                                 <tr key={teacher.id} className="hover:bg-black/5 transition-colors">
-                                    <td className="p-4 font-mono text-sm">{teacher.id}</td>
+                                    <td className="p-4 font-mono text-sm">{index + 1}</td>
                                     <td className="p-4 font-bold text-[var(--text-color)]">{teacher.fullName}</td>
-                                    <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{teacher.subject || '---'}</td>
+                                    <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{getTeacherSubjectLabels(teacher)}</td>
+                                    <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{getTeacherClassLabels(teacher)}</td>
+                                    <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{getTeacherSectionLabels(teacher)}</td>
                                     <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{getTeacherShiftLabel(teacher)}</td>
-                                    <td className="p-4 text-sm font-sans text-[var(--text-color)] opacity-80" dir="ltr">{teacher.phone || '---'}</td>
                                     <td className="p-4">
                                         <div className="flex justify-center">
                                             <StatusDropdown status={teacher.status} onChange={(value) => handleStatusChange(teacher.id, value)} />
@@ -264,7 +381,7 @@ export const TeacherAttendance = () => {
                 </div>
 
                 <div className="lg:hidden p-4 space-y-4">
-                    {filteredTeachers.map((teacher) => (
+                    {filteredTeachers.map((teacher, index) => (
                         <div
                             onClick={() => navigate(`/teachers/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
                             key={teacher.id}
@@ -272,7 +389,7 @@ export const TeacherAttendance = () => {
                         >
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{teacher.id}</span>
+                                    <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{index + 1}</span>
                                     <h3 className="text-lg font-black text-[var(--text-color)]">{teacher.fullName}</h3>
                                 </div>
                                 <div className={`w-3 h-3 rounded-full ${teacher.status === 'Present' ? 'bg-emerald-500' : teacher.status === 'Leave' ? 'bg-amber-500' : teacher.status === 'Late' ? 'bg-sky-500' : 'bg-red-500'}`}></div>
@@ -281,15 +398,19 @@ export const TeacherAttendance = () => {
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
                                     <BookOpen size={16} className="text-[var(--color-primary)]" />
-                                    <span>{teacher.subject || '---'}</span>
+                                    <span>{getTeacherSubjectLabels(teacher)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
+                                    <Layers size={16} className="text-[var(--color-primary)]" />
+                                    <span>{getTeacherClassLabels(teacher)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
+                                    <Layers size={16} className="text-[var(--color-primary)]" />
+                                    <span>{getTeacherSectionLabels(teacher)}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70">
                                     <Clock size={16} className="text-[var(--color-primary)]" />
                                     <span>{getTeacherShiftLabel(teacher)}</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-[var(--text-color)] opacity-70" dir="ltr">
-                                    <Phone size={16} className="text-[var(--color-primary)]" />
-                                    <span>{teacher.phone || '---'}</span>
                                 </div>
                             </div>
 

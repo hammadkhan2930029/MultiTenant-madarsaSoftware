@@ -165,7 +165,7 @@ export const SideBar = () => {
     const canAccessItem = (item) => {
         if (
             isBranchScopedSession &&
-            ['role_management', 'user_management', 'tenant_management', 'branch_management'].includes(item.id)
+            ['tenant_management', 'branch_management'].includes(item.id)
         ) {
             return false;
         }
@@ -311,8 +311,9 @@ export const SideBar = () => {
             subMenu: [
                 { id: 't_add', label: 'نیا استاد شامل کریں', path: '/HRManagement' },
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
-                { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
+                { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
+                { id: 't_assignments', label: 'مضامین اور ذمہ داریاں', path: '/teachers/assignments', permissions: ['teachers.assignments.view'] },
                 { id: 't_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
                 { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/finance/expenses/payroll' },
             ]
@@ -912,22 +913,11 @@ export const SideBar = () => {
                                 </div>
                             </div>
 
-                            <kbd
-                                style={{
-                                    backgroundColor: 'var(--color-bg)',
-                                    borderColor: 'var(--color-border)',
-                                    color: 'var(--color-text-muted)'
-                                }}
-                                className="hidden lg:inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase transition-opacity group-focus-within:opacity-0"
-                            >
-                                Ctrl K
-                            </kbd>
-
                             <input
                                 type="text"
                                 placeholder="کچھ بھی تلاش کریں..."
                                 style={{ color: 'var(--color-text-main)' }}
-                                className="bg-transparent outline-none text-[13px] text-right font-medium flex-grow placeholder:text-[var(--color-text-muted)] focus:placeholder-transparent transition-all duration-300"
+                                className="min-w-0 bg-transparent outline-none text-[13px] text-right font-medium flex-grow placeholder:text-[var(--color-text-muted)] focus:placeholder-transparent transition-all duration-300"
                             />
                         </div>
 

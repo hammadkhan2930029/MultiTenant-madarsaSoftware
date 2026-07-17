@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Boxes, PackageSearch, ReceiptText, ShoppingCart } from 'lucide-react';
 import { getStoreDashboard } from '../../../Constant/StoreApi';
+import { formatAmount } from '../../../Utils/amountFormat';
 
 const emptyDashboard = {
     totalItems: 0,
@@ -8,10 +9,7 @@ const emptyDashboard = {
     monthlyExpense: 0,
 };
 
-const formatCurrency = (value) =>
-    new Intl.NumberFormat('ur-PK', {
-        maximumFractionDigits: 0,
-    }).format(Number(value || 0));
+const formatCurrency = (value) => formatAmount(value, '0', { locale: 'ur-PK', maximumFractionDigits: 0 });
 
 export const StoreDashboard = () => {
     const [dashboard, setDashboard] = useState(emptyDashboard);

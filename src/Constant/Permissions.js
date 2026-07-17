@@ -37,6 +37,7 @@ export const PAGE_PERMISSIONS = {
   '/teachers/attendance': 'teachers.attendance.view',
   '/teachers/attendance-history/:id': 'teachers.attendance.view',
   '/teachers/schedule': 'teachers.schedule.view',
+  '/teachers/assignments': 'teachers.assignments.view',
 
   '/finance': 'fees.view',
   '/finance/setup/income-expence': 'fees.view',
@@ -174,6 +175,10 @@ export const ROLE_PERMISSION_MODULES = [
       { key: 'teachers.details.view', name: 'استاد تفصیل دیکھیں' },
       { key: 'teachers.attendance.view', name: 'اساتذہ حاضری دیکھیں' },
       { key: 'teachers.schedule.view', name: 'اساتذہ شیڈول دیکھیں' },
+      { key: 'teachers.assignments.view', name: 'مضامین اور ذمہ داریاں دیکھیں' },
+      { key: 'teachers.assignments.create', name: 'مضامین اور ذمہ داریاں شامل کریں' },
+      { key: 'teachers.assignments.edit', name: 'مضامین اور ذمہ داریاں تبدیل کریں' },
+      { key: 'teachers.assignments.delete', name: 'مضامین اور ذمہ داریاں حذف کریں' },
       { key: 'teachers.salary_increments.view', name: 'تنخواہ انکریمنٹ دیکھیں' },
       { key: 'staff.view', name: 'عملہ دیکھیں' },
       { key: 'staff.create', name: 'عملہ شامل کریں' },

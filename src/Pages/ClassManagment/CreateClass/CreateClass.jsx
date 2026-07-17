@@ -1,19 +1,27 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createClass, deleteClass, getDefaultBranch, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+import { createClassesBulk, deleteClass, getDefaultBranch, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 
 const emptyForm = {
     name: '',
     branchId: '',
 };
 
+const createEmptyClassRow = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: '',
+    error: '',
+});
+
 export const CreateClasses = () => {
     const [defaultBranch, setDefaultBranch] = useState(null);
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
     const [formData, setFormData] = useState(emptyForm);
+    const [classRows, setClassRows] = useState([createEmptyClassRow()]);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +65,7 @@ export const CreateClasses = () => {
     const resetForm = () => {
         setEditMode(null);
         setFormData(emptyForm);
+        setClassRows([createEmptyClassRow()]);
         setIsFormOpen(false);
     };
 
@@ -66,18 +75,93 @@ export const CreateClasses = () => {
             name: academicClass.name || '',
             branchId: academicClass.branchId ? String(academicClass.branchId) : '',
         });
+        setClassRows([{ ...createEmptyClassRow(), name: academicClass.name || '' }]);
         setError('');
         setSuccess('');
         setIsFormOpen(true);
         scrollToForm();
     };
 
+    const updateClassRow = (rowId, value) => {
+        setClassRows((rows) =>
+            rows.map((row) => (row.id === rowId ? { ...row, name: value, error: '' } : row)),
+        );
+    };
+
+    const addClassRow = () => {
+        setClassRows((rows) => [...rows, createEmptyClassRow()]);
+    };
+
+    const removeClassRow = (rowId) => {
+        setClassRows((rows) => (rows.length > 1 ? rows.filter((row) => row.id !== rowId) : rows));
+    };
+
+    const validateClassRows = (branchId) => {
+        const existingNames = new Set(
+            classes
+                .filter((item) => !branchId || String(item.branchId || '') === String(branchId))
+                .map((item) => String(item.name || '').trim().toLowerCase())
+                .filter(Boolean),
+        );
+        const seenNames = new Set();
+        let hasError = false;
+        const trimmedRows = classRows.map((row) => ({ ...row, name: row.name.trim(), error: '' }));
+        const nonEmptyRows = trimmedRows.filter((row) => row.name);
+
+        if (!nonEmptyRows.length) {
+            hasError = true;
+            return {
+                hasError,
+                rows: trimmedRows.map((row, index) => ({
+                    ...row,
+                    error: index === 0 ? 'جماعت کا نام درج کریں۔' : '',
+                })),
+                validRows: [],
+            };
+        }
+
+        const rows = trimmedRows.map((row) => {
+            if (!row.name) return row;
+
+            const key = row.name.toLowerCase();
+            if (seenNames.has(key)) {
+                hasError = true;
+                return { ...row, error: 'یہ جماعت اسی فارم میں دوبارہ درج ہے۔' };
+            }
+
+            seenNames.add(key);
+
+            if (existingNames.has(key)) {
+                hasError = true;
+                return { ...row, error: 'یہ جماعت پہلے سے موجود ہے۔' };
+            }
+
+            return row;
+        });
+
+        return {
+            hasError,
+            rows,
+            validRows: rows.filter((row) => row.name && !row.error),
+        };
+    };
+
     const handleSubmit = async () => {
         const branchId = formData.branchId || defaultBranch?.id;
 
-        if (!formData.name.trim() || !branchId) {
+        if (editMode && (!formData.name.trim() || !branchId)) {
             setError('جماعت کا نام درج کریں۔');
             return;
+        }
+
+        if (!editMode) {
+            const validation = validateClassRows(branchId);
+            setClassRows(validation.rows);
+
+            if (validation.hasError || !branchId) {
+                setError(!branchId ? 'برانچ منتخب نہیں ہو سکی۔' : 'درج کردہ جماعتوں کی معلومات درست کریں۔');
+                return;
+            }
         }
 
         setIsSaving(true);
@@ -94,13 +178,24 @@ export const CreateClasses = () => {
                 await updateClass(editMode, payload);
                 setSuccess('جماعت کامیابی سے اپڈیٹ ہو گئی۔');
             } else {
-                await createClass(payload);
-                setSuccess('جماعت کامیابی سے شامل ہو گئی۔');
+                const validation = validateClassRows(branchId);
+                const result = await createClassesBulk({
+                    branchId: Number(branchId),
+                    classes: validation.validRows.map((row) => ({ name: row.name })),
+                });
+                setSuccess(`${result?.createdCount || validation.validRows.length} جماعتیں کامیابی سے شامل ہو گئیں۔`);
             }
 
             resetForm();
             await loadDependencies();
         } catch (saveError) {
+            const rowErrors = saveError?.response?.data?.rows || saveError?.data?.rows || saveError?.details?.rows || [];
+            if (rowErrors.length) {
+                setClassRows((rows) => rows.map((row, index) => {
+                    const rowError = rowErrors.find((item) => Number(item.index) === index);
+                    return rowError ? { ...row, error: rowError.message || 'یہ جماعت محفوظ نہیں ہو سکی۔' } : row;
+                }));
+            }
             setError(saveError.message || 'جماعت محفوظ نہیں ہو سکی۔');
         } finally {
             setIsSaving(false);
@@ -185,20 +280,52 @@ export const CreateClasses = () => {
                         <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نئی جماعت کا اندراج'}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">جماعت نام<span className="text-red-500"> *</span></label>
-                            <div className="relative">
-                                <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                                <input
-                                    required
-                                    value={formData.name}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                                    placeholder="مثلاً حفظ اول"
-                                    className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                                />
+                    <div className="space-y-4">
+                        {editMode ? (
+                            <div className="space-y-2">
+                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                    جماعت نام<span className="text-red-500"> *</span>
+                                </label>
+                                <div className="relative">
+                                    <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                    <input
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                        placeholder="مثلاً حفظ اول"
+                                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <MultipleEntryRows
+                                rows={classRows}
+                                onAdd={addClassRow}
+                                onRemove={removeClassRow}
+                                disabled={isSaving}
+                                addLabel="نئی جماعت کی قطار شامل کریں"
+                                removeLabel="جماعت کی قطار حذف کریں"
+                                renderFields={(row, index) => (
+                                    <div className="space-y-2">
+                                        <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                            جماعت نام<span className="text-red-500"> *</span>
+                                        </label>
+                                        <div className="relative">
+                                            <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                            <input
+                                                required={index === 0}
+                                                value={row.name}
+                                                onChange={(e) => updateClassRow(row.id, e.target.value)}
+                                                placeholder="مثلاً حفظ اول"
+                                                className={`h-14 w-full rounded-2xl border bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none ${
+                                                    row.error ? 'border-rose-500' : 'border-[var(--color-border)]'
+                                                }`}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            />
+                        )}
                     </div>
 
                     <div className="mt-8 flex justify-end gap-3">

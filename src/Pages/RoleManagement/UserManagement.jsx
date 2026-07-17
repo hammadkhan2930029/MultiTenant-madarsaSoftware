@@ -6,7 +6,7 @@ import { useNotificationBridge } from '../../Components/Notifications/useNotific
 import { SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { getRoles } from '../../Constant/RoleManagementApi';
 import { assignUserRole, createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
-import { refreshPermissions } from '../../Constant/AdminAuth';
+import { getAdminSession, getSessionBranchId, isBranchScopedSession, refreshPermissions } from '../../Constant/AdminAuth';
 import { getBranches } from '../../Constant/AcademicSetupApi';
 import { usePermissions } from '../../Hooks/usePermissions';
 
@@ -158,6 +158,10 @@ export const UserManagement = () => {
   const { userId } = useParams();
   const { hasPermission } = usePermissions();
   const canManageUsers = hasPermission('users.manage');
+  const adminSession = getAdminSession();
+  const branchScopedSession = isBranchScopedSession(adminSession);
+  const sessionBranchId = getSessionBranchId(adminSession);
+  const sessionBranchName = adminSession?.admin?.branch?.name || adminSession?.user?.branch?.name || adminSession?.admin?.branch?.code || adminSession?.user?.branch?.code || '';
 
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -189,6 +193,13 @@ export const UserManagement = () => {
       const roleName = getRoleRecordName(role);
       const isCurrentRole = currentUser?.roleId && Number(currentUser.roleId) === Number(role.id);
       const active = getRoleStatus(role) === 'active';
+      if (branchScopedSession) {
+        const roleBranchId = role.branchId ?? role.branch_id;
+        const roleScopeKey = role.roleScopeKey ?? role.role_scope_key;
+        if (Number(roleBranchId) !== Number(sessionBranchId) || Number(roleScopeKey) !== Number(sessionBranchId)) {
+          return false;
+        }
+      }
       return (active || (lockSuperAdminRole && isCurrentRole)) && (roleName !== SUPER_ADMIN_ROLE || lockSuperAdminRole);
     });
 
@@ -196,12 +207,19 @@ export const UserManagement = () => {
       { value: '', label: 'کردار منتخب کریں' },
       ...visibleRoles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
     ];
-  }, [currentUser, mode, roles]);
+  }, [branchScopedSession, currentUser, mode, roles, sessionBranchId]);
 
   const roleFilterOptions = useMemo(() => [
     { value: '', label: 'تمام کردار' },
-    ...roles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
-  ], [roles]);
+    ...roles
+      .filter((role) => {
+        if (!branchScopedSession) return true;
+        const roleBranchId = role.branchId ?? role.branch_id;
+        const roleScopeKey = role.roleScopeKey ?? role.role_scope_key;
+        return Number(roleBranchId) === Number(sessionBranchId) && Number(roleScopeKey) === Number(sessionBranchId);
+      })
+      .map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
+  ], [branchScopedSession, roles, sessionBranchId]);
 
   const branchOptions = useMemo(() => [
     { value: '', label: 'برانچ منتخب کریں' },
@@ -216,13 +234,18 @@ export const UserManagement = () => {
   }, []);
 
   const loadBranches = useCallback(async () => {
+    if (branchScopedSession) {
+      setBranches([]);
+      return;
+    }
+
     try {
       const result = await getBranches('page=1&limit=100&status=active');
       setBranches(result.items || []);
     } catch {
       setBranches([]);
     }
-  }, []);
+  }, [branchScopedSession]);
 
   const loadUsers = useCallback(async () => {
     setIsLoading(true);
@@ -253,7 +276,7 @@ export const UserManagement = () => {
         password: '',
         confirmPassword: '',
         roleId: user?.roleId ? String(user.roleId) : '',
-        branchId: user?.branchId ? String(user.branchId) : '',
+        branchId: branchScopedSession ? String(sessionBranchId || '') : user?.branchId ? String(user.branchId) : '',
         status: user?.status || 'active',
       });
     } catch (loadError) {
@@ -261,7 +284,7 @@ export const UserManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [mode, userId]);
+  }, [branchScopedSession, sessionBranchId, mode, userId]);
 
   useEffect(() => {
     loadRoles().catch((roleError) => setError(roleError.message || 'کردار لوڈ نہیں ہو سکے۔'));
@@ -276,14 +299,17 @@ export const UserManagement = () => {
 
     if (mode === 'create') {
       setCurrentUser(null);
-      setFormData(emptyForm);
+      setFormData({
+        ...emptyForm,
+        branchId: branchScopedSession && sessionBranchId ? String(sessionBranchId) : '',
+      });
       setIsLoading(false);
       return undefined;
     }
 
     loadUser();
     return undefined;
-  }, [loadUser, loadUsers, mode]);
+  }, [branchScopedSession, loadUser, loadUsers, mode, sessionBranchId]);
 
   const handleSubmit = async () => {
     if (isSaving) return undefined;
@@ -308,9 +334,12 @@ export const UserManagement = () => {
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         username: formData.username.trim(),
-        branchId: formData.branchId ? Number(formData.branchId) : null,
         status: formData.status,
       };
+
+      if (!branchScopedSession) {
+        payload.branchId = formData.branchId ? Number(formData.branchId) : null;
+      }
 
       if (mode === 'create' && !isSuperAdminUser(currentUser)) {
         payload.roleId = Number(formData.roleId);
@@ -406,7 +435,17 @@ export const UserManagement = () => {
           <InputField id="user-password" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type="password" placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
           <InputField id="user-confirm-password" label="تصدیقی پاس ورڈ" required={mode === 'create'} type="password" placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
           <SelectField id="user-role" label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => setFormData((prev) => ({ ...prev, roleId: event.target.value }))} />
-          <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))} />
+          {branchScopedSession ? (
+            <InputField
+              id="user-branch-readonly"
+              label="برانچ"
+              value={sessionBranchName || 'موجودہ برانچ'}
+              disabled
+              readOnly
+            />
+          ) : (
+            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))} />
+          )}
           <SelectField id="user-status" label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
         </div>
 

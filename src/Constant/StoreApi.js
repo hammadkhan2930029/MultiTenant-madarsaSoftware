@@ -174,7 +174,7 @@ export const createStoreSupplierPayment = async (id, payload) => {
 };
 
 export const getStorePurchases = async (filters = {}) => {
-  const query = buildQuery(filters, ['search', 'supplierId', 'fromDate', 'toDate']);
+  const query = buildQuery(filters, ['search', 'supplierId', 'fromDate', 'toDate', 'outstanding']);
   const result = await apiRequest(`/store/purchases${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
   return result?.data || { items: [], meta: null };
 };

@@ -29,9 +29,24 @@ const readSession = () => {
   }
 };
 
+const hasFixedBranchContext = (session) => {
+  const value = session?.admin?.branchId ?? session?.user?.branchId ?? null;
+  const branchId = value === null || value === undefined || value === '' ? null : Number(value);
+  return Number.isFinite(branchId) && branchId > 0;
+};
+
+const clearBranchContextForFixedBranchSession = (session) => {
+  if (!hasFixedBranchContext(session)) return;
+  window.localStorage.removeItem(BRANCH_CONTEXT_KEY);
+  window.dispatchEvent(new CustomEvent(BRANCH_CONTEXT_UPDATED_EVENT, {
+    detail: { branchId: session?.admin?.branchId ?? session?.user?.branchId ?? null, mode: 'fixed' },
+  }));
+};
+
 const writeSession = (session) => {
   if (!canUseStorage) return;
   window.localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  clearBranchContextForFixedBranchSession(session);
   window.dispatchEvent(new CustomEvent(ADMIN_SESSION_UPDATED_EVENT, { detail: session }));
 };
 
@@ -190,9 +205,12 @@ export const isSuperAdmin = () => {
 };
 
 export const isTenantAdmin = () => {
+  const session = readSession();
+  if (getSessionBranchId(session)) return false;
+
   const role = getAdminRole();
   const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
-  const legacyRoleName = readSession()?.admin?.role;
+  const legacyRoleName = session?.admin?.role;
 
   return roleName === 'admin' || legacyRoleName === 'admin';
 };
@@ -217,7 +235,7 @@ export const isBranchScopedSession = (session = readSession()) => {
 
   const role = normalizeRole(session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || null);
   const roleName = String(role?.roleName || session?.admin?.role || session?.user?.role || '').trim().toLowerCase();
-  return roleName !== 'admin';
+  return roleName !== 'super_admin';
 };
 
 export const canAccessBranchManagement = (session = readSession()) => (

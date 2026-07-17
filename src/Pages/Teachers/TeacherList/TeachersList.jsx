@@ -123,7 +123,10 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     const config = listConfig[staffType] || listConfig.teacher;
     const permissionPrefix = staffType === 'staff' ? 'staff' : 'teachers';
     const [searchTerm, setSearchTerm] = useState('');
+    const [subjectFilter, setSubjectFilter] = useState('');
+    const [shiftFilter, setShiftFilter] = useState('');
     const [teachers, setTeachers] = useState([]);
+    const [teacherMeta, setTeacherMeta] = useState({ totalItems: 0 });
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
@@ -134,6 +137,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
         try {
             const result = await getTeachers(`page=1&limit=100&staffType=${staffType}`);
             setTeachers(result.items || []);
+            setTeacherMeta(result.meta || { totalItems: result.items?.length || 0 });
         } catch (loadError) {
             setError(loadError.message || config.loadError);
         }
@@ -143,17 +147,31 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
         loadTeachers();
     }, [loadTeachers]);
 
+    const subjectOptions = useMemo(
+        () => [...new Set(teachers.map((teacher) => teacher.subject).filter(Boolean))],
+        [teachers],
+    );
+    const shiftOptions = useMemo(
+        () => [...new Set(teachers.map(getTeacherShiftLabel).filter((shift) => shift && shift !== '---'))],
+        [teachers],
+    );
+
     const filteredTeachers = useMemo(
         () =>
-            teachers.filter((teacher) =>
-                [teacher.fullName, teacher.subject, teacher.phone, teacher.cnic, teacher.email, teacher.jobTitle, teacher.department, getTeacherShiftLabel(teacher)]
+            teachers.filter((teacher) => {
+                const shiftLabel = getTeacherShiftLabel(teacher);
+                const searchOk = [teacher.fullName, teacher.subject, teacher.phone, teacher.cnic, teacher.email, teacher.jobTitle, teacher.department, shiftLabel]
                     .filter(Boolean)
-                    .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
-            ),
-        [teachers, searchTerm],
+                    .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase()));
+                const subjectOk = !subjectFilter || teacher.subject === subjectFilter;
+                const shiftOk = !shiftFilter || shiftLabel === shiftFilter;
+                return searchOk && subjectOk && shiftOk;
+            }),
+        [teachers, searchTerm, shiftFilter, subjectFilter],
     );
 
     const exportRows = useMemo(() => filteredTeachers.map(mapTeacherForExport), [filteredTeachers]);
+    const visibleTotal = searchTerm.trim() || subjectFilter || shiftFilter ? filteredTeachers.length : Number(teacherMeta.totalItems ?? filteredTeachers.length);
 
     const exportColumns = useMemo(() => [
         { header: 'Teacher / Staff ID', accessor: 'id' },
@@ -217,7 +235,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         <h2 className="text-2xl md:text-3xl font-black text-[var(--text-color)]">{config.title}</h2>
                         <div className="flex items-center gap-3 mt-5">
                             <span className="bg-[var(--color-bg)]/20 text-[var(--color-primary)] text-[10px] font-bold px-3 py-1 rounded-full border border-[#00d094]/30 uppercase tracking-wider">
-                                {config.totalLabel}: {filteredTeachers.length}
+                                {config.totalLabel}: {visibleTotal}
                             </span>
                         </div>
                     </div>
@@ -237,6 +255,22 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 className="h-[72px] pr-5 pl-14 text-right leading-[1.8]"
                             />
                         </div>
+                        <select
+                            value={subjectFilter}
+                            onChange={(event) => setSubjectFilter(event.target.value)}
+                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] sm:w-48"
+                        >
+                            <option value="">{config.subjectLabel}</option>
+                            {subjectOptions.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
+                        </select>
+                        <select
+                            value={shiftFilter}
+                            onChange={(event) => setShiftFilter(event.target.value)}
+                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] sm:w-44"
+                        >
+                            <option value="">شفٹ</option>
+                            {shiftOptions.map((shift) => <option key={shift} value={shift}>{shift}</option>)}
+                        </select>
                         <Can permission={`${permissionPrefix}.create`}>
                             <button
                                 onClick={() => navigate(config.addPath)}
@@ -252,7 +286,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
 
             <div className="grid grid-cols-1 gap-4 lg:hidden">
                 {filteredTeachers.length > 0 ? (
-                    filteredTeachers.map((teacher) => (
+                    filteredTeachers.map((teacher, index) => (
                         <div key={teacher.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] p-5 rounded-[2rem] shadow-sm space-y-4">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
@@ -262,7 +296,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                     <div>
                                         <h3 className="text-[16px] font-black text-[var(--color-text-main)]">{teacher.fullName}</h3>
                                         <span className="text-[11px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-0.5 rounded-md">
-                                            نمبر: {teacher.id}
+                                            نمبر: {index + 1}
                                         </span>
                                     </div>
                                 </div>
@@ -321,13 +355,13 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">شفٹ</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)]">رابطہ</th>
                                 <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">حالت</th>
-                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">کارروائی</th>
+                                <th className="p-5 text-[11px] font-black uppercase text-[var(--color-text-muted)] text-center">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
-                            {filteredTeachers.map((teacher) => (
+                            {filteredTeachers.map((teacher, index) => (
                                 <tr key={teacher.id} className="hover:bg-[var(--color-bg)]/50 transition-colors group">
-                                    <td className="p-5"><span className="text-[12px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-lg">{teacher.id}</span></td>
+                                    <td className="p-5"><span className="text-[12px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-lg">{index + 1}</span></td>
                                     <td className="p-5">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00d094] to-[#008a63] flex items-center justify-center text-white font-bold text-sm shadow-md">

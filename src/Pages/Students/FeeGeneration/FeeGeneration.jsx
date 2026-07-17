@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, Clock, CreditCard, Eye, Filter, Printer, ReceiptText, Search, Wallet } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { generateStudentFees, getStudentFees, saveStudentFeePayment } from '../../../Constant/StudentFeesApi';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
@@ -406,14 +406,16 @@ const buildFeeReceiptHtml = ({ voucher, madrassaProfile }) => {
 
 export const FeesCollection = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const showAllMonths = searchParams.get('allMonths') === 'true';
     const [filters, setFilters] = useState({
-        feeMonth: String(currentDate.getMonth() + 1),
-        feeYear: String(currentDate.getFullYear()),
+        feeMonth: showAllMonths ? '' : String(currentDate.getMonth() + 1),
+        feeYear: showAllMonths ? '' : String(currentDate.getFullYear()),
         sessionId: '',
         classId: '',
         sectionId: '',
-        status: '',
-        search: '',
+        status: searchParams.get('status') || '',
+        search: searchParams.get('search') || '',
         dueDate: toInputDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 10)),
     });
     const [sessions, setSessions] = useState([]);
@@ -477,11 +479,9 @@ export const FeesCollection = () => {
             const params = new URLSearchParams({
                 page: '1',
                 limit: '200',
-                feeMonth: filters.feeMonth,
-                feeYear: filters.feeYear,
             });
 
-            ['sessionId', 'classId', 'sectionId', 'status', 'search'].forEach((key) => {
+            ['feeMonth', 'feeYear', 'sessionId', 'classId', 'sectionId', 'status', 'search'].forEach((key) => {
                 if (filters[key]) params.set(key, filters[key]);
             });
 
@@ -652,6 +652,7 @@ export const FeesCollection = () => {
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
                         <Select label="مہینہ" value={filters.feeMonth} onChange={(value) => handleFilterChange('feeMonth', value)} required>
+                            <option value="">تمام</option>
                             {monthNames.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
                         </Select>
                         <Field label="سال" type="number" value={filters.feeYear} onChange={(value) => handleFilterChange('feeYear', value)} required />
@@ -694,6 +695,7 @@ export const FeesCollection = () => {
                         </div>
                         <Select compact value={filters.status} onChange={(value) => handleFilterChange('status', value)}>
                             <option value="">تمام اسٹیٹس</option>
+                            <option value="due">تمام بقایاجات</option>
                             <option value="unpaid">بقایاجات</option>
                             <option value="partial">جزوی ادا</option>
                             <option value="paid">ادا شدہ</option>
@@ -730,8 +732,11 @@ export const FeesCollection = () => {
                                         <tr key={voucher.id} className="transition-colors hover:bg-[var(--color-primary)]/5">
                                             <td className="px-5 py-4 font-mono text-xs font-black text-[var(--color-primary)]">{voucher.voucherNo}</td>
                                             <td className="px-5 py-4">
-                                                <div className="font-black">{voucher.student?.fullName}</div>
-                                                <div className="text-xs font-bold text-[var(--color-text-muted)]">{voucher.student?.admissionNumber} - {voucher.student?.fatherName}</div>
+                                                <div className="text-base font-black text-[var(--color-text)]">{voucher.student?.fullName || '---'}</div>
+                                                <div className="mt-1 flex flex-col gap-0.5 text-[11px] font-bold leading-5 text-[var(--color-text-muted)]">
+                                                    <span>{voucher.student?.admissionNumber || '---'} :داخلہ نمبر</span>
+                                                    <span>{voucher.student?.fatherName || '---'} :سرپرست کا نام</span>
+                                                </div>
                                             </td>
                                             <td className="px-5 py-4 text-sm font-bold text-[var(--color-text-muted)]">{assignment.class?.name || '---'} / {assignment.section?.name || '---'}</td>
                                             <td className="px-5 py-4 text-sm font-bold">{monthNames[voucher.feeMonth - 1]} {voucher.feeYear}</td>

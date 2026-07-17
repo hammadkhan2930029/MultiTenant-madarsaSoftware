@@ -252,8 +252,8 @@ export const ShiftManagement = () => {
                                 <div>
                                     <h3 style={{ color: 'var(--color-text-main)' }} className="font-bold text-lg">{shift.name}</h3>
                                     <div className="flex items-center gap-3 mt-1">
-                                        <span style={{ color: 'var(--color-text-muted)', unicodeBidi: 'isolate' }} dir="ltr" className="text-xs flex items-center gap-1 font-medium">
-                                            <Clock size={12} /> {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+                                        <span style={{ color: 'var(--color-text-muted)', unicodeBidi: 'isolate' }} dir="ltr" className="text-sm flex items-center gap-1.5 font-semibold">
+                                            <Clock size={15} /> {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
                                         </span>
                                     </div>
                                     <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">{shift.type}</p>

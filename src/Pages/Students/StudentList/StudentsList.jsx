@@ -125,6 +125,7 @@ export const StudentList = () => {
     const navigate = useNavigate();
     const [students, setStudents] = useState([]);
     const [studentRecords, setStudentRecords] = useState([]);
+    const [studentMeta, setStudentMeta] = useState({ totalItems: 0 });
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -146,6 +147,7 @@ export const StudentList = () => {
                 const items = result.items || [];
                 setStudentRecords(items);
                 setStudents(mapStudentsForList(items));
+                setStudentMeta(result.meta || { totalItems: items.length });
             } catch (loadError) {
                 setError(loadError.message || 'طلبہ کی فہرست لوڈ نہیں ہو سکی۔');
             } finally {
@@ -170,6 +172,7 @@ export const StudentList = () => {
                 const items = result.items || [];
                 setStudentRecords(items);
                 setStudents(mapStudentsForList(items));
+                setStudentMeta(result.meta || { totalItems: items.length });
             } catch (loadError) {
                 if (!isCurrentSearch) return;
                 setError(loadError.message || 'طلبہ کی فہرست لوڈ نہیں ہو سکی۔');
@@ -198,6 +201,7 @@ export const StudentList = () => {
             await deleteStudent(deleteTarget.id);
             setStudents((current) => current.filter((student) => student.id !== deleteTarget.id));
             setStudentRecords((current) => current.filter((student) => student.id !== deleteTarget.id));
+            setStudentMeta((current) => ({ ...current, totalItems: Math.max(0, Number(current.totalItems || 0) - 1) }));
             setSuccess('طالب علم کا ریکارڈ حذف کر دیا گیا۔');
             setDeleteTarget(null);
         } catch (deleteError) {
@@ -302,6 +306,8 @@ export const StudentList = () => {
         { header: 'Updated At', accessor: 'updatedAt' },
     ], []);
 
+    const visibleTotal = selectedClass ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
+
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
             <div className="flex flex-col gap-6 rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 md:p-10 shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)]">
@@ -313,7 +319,7 @@ export const StudentList = () => {
                             </div>
                             طلباء کی فہرست
                         </h2>
-                        <p className="text-[var(--color-text-muted)] text-sm font-bold mt-2 mr-14">کل رجسٹرڈ طلباء: {filteredStudents.length}</p>
+                        <p className="text-[var(--color-text-muted)] text-sm font-bold mt-2 mr-14">کل رجسٹرڈ طلباء: {visibleTotal}</p>
                     </div>
                     <Can permission="students.create">
                         <button
@@ -360,8 +366,7 @@ export const StudentList = () => {
                 {filteredStudents.map((student) => (
                     <div
                         key={student.id}
-                        onClick={() => navigate(`/students/profile/${student.id}`)}
-                        className="bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] space-y-5 cursor-pointer hover:border-[var(--color-primary)]/40 transition-all"
+                        className="bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] space-y-5 transition-all"
                     >
                         <div className="flex justify-between items-start">
                             <div className="flex gap-4">
@@ -424,8 +429,7 @@ export const StudentList = () => {
                         {filteredStudents.map((student) => (
                             <tr
                                 key={student.id}
-                                onClick={() => navigate(`/students/profile/${student.id}`)}
-                                className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                                className="hover:bg-white/[0.02] transition-colors group"
                             >
                                 <td className="p-6">
                                     <span className="bg-[var(--color-input)] text-[var(--color-text)]/70 px-4 py-2 rounded-2xl font-black text-[12px] border border-[var(--color-border)]">

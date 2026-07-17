@@ -37,6 +37,20 @@ const getPresetRange = (preset) => {
         };
     }
 
+    if (preset === 'six-months') {
+        return {
+            startDate: formatDate(new Date(today.getFullYear(), today.getMonth() - 5, 1)),
+            endDate: formatDate(today),
+        };
+    }
+
+    if (preset === 'one-year') {
+        return {
+            startDate: formatDate(new Date(today.getFullYear(), today.getMonth() - 11, 1)),
+            endDate: formatDate(today),
+        };
+    }
+
     return {
         startDate: formatDate(new Date(today.getFullYear(), today.getMonth(), 1)),
         endDate: formatDate(today),
@@ -143,11 +157,13 @@ export const StudentAttendanceHistory = () => {
             </div>
 
             <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                     {[
                         ['current-month', 'موجودہ مہینہ'],
                         ['last-month', 'پچھلا مہینہ'],
                         ['three-months', 'گزشتہ 3 ماہ'],
+                        ['six-months', 'گزشتہ 6 ماہ'],
+                        ['one-year', 'گزشتہ ایک سال'],
                     ].map(([value, label]) => (
                         <button
                             key={value}
