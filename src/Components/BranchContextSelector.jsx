@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, ChevronDown } from 'lucide-react';
 import { getBranches } from '../Constant/AcademicSetupApi';
 import {
+  ADMIN_SESSION_UPDATED_EVENT,
   canUseTenantBranchContext,
   getAdminSession,
   getSelectedBranchContext,
@@ -15,12 +16,20 @@ const isMainBranch = (branch) => {
 };
 
 export const BranchContextSelector = () => {
-  const session = getAdminSession();
-  const canUseBranchFilter = canUseTenantBranchContext(session);
+  const [session, setSession] = useState(() => getAdminSession());
+  const hasFixedBranch = Boolean(session?.admin?.branchId || session?.user?.branchId);
+  const accountScope = String(session?.admin?.accountScope || session?.admin?.userType || session?.user?.accountScope || session?.user?.userType || '').toLowerCase();
+  const canUseBranchFilter = canUseTenantBranchContext(session) && !hasFixedBranch && !accountScope.startsWith('branch');
   const selectedContext = getSelectedBranchContext(session);
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState(selectedContext.branchId || '');
   const [loading, setLoading] = useState(canUseBranchFilter);
+
+  useEffect(() => {
+    const syncSession = () => setSession(getAdminSession());
+    window.addEventListener(ADMIN_SESSION_UPDATED_EVENT, syncSession);
+    return () => window.removeEventListener(ADMIN_SESSION_UPDATED_EVENT, syncSession);
+  }, []);
 
   useEffect(() => {
     if (!canUseBranchFilter) return undefined;

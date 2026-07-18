@@ -94,7 +94,8 @@ export const StudentScheduleManager = () => {
 
     const daysList = ["پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہفتہ", "اتوار"];
     const subjectsList = subjectOptions.map((subject) => subject.name).filter(Boolean);
-    const formatScheduleDays = (days) => daysList.filter((day) => days.includes(day)).join(' - ');
+    const sortScheduleDays = (days) => daysList.filter((day) => days.includes(day));
+    const formatScheduleDays = (days) => sortScheduleDays(days).join(' - ');
 
     const availableSections = useMemo(
         () => sectionOptions.filter((section) => !formData.classId || String(section.classId) === String(formData.classId)),
@@ -175,7 +176,7 @@ export const StudentScheduleManager = () => {
                 classId: Number(formData.classId),
                 sectionId: Number(formData.sectionId),
                 subjects: formData.subjects,
-                days: formData.days,
+                days: sortScheduleDays(formData.days),
                 startTime: formData.startTime,
                 endTime: formData.endTime,
             };
@@ -241,8 +242,24 @@ export const StudentScheduleManager = () => {
         setScheduleMessage('');
 
         try {
-            await deleteSchedule(deleteTarget.id);
-            setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            if (deleteTarget.deleteDay && deleteTarget.days.length > 1) {
+                const remainingDays = sortScheduleDays(deleteTarget.days.filter((day) => day !== deleteTarget.deleteDay));
+                const updatedSchedule = await updateSchedule(deleteTarget.id, {
+                    sessionId: Number(deleteTarget.sessionId),
+                    classId: Number(deleteTarget.classId),
+                    sectionId: Number(deleteTarget.sectionId),
+                    subjects: deleteTarget.subjects,
+                    days: remainingDays,
+                    startTime: deleteTarget.startTime,
+                    endTime: deleteTarget.endTime,
+                });
+                setSchedules((current) =>
+                    current.map((schedule) => (schedule.id === deleteTarget.id ? mapScheduleFromApi(updatedSchedule) : schedule))
+                );
+            } else {
+                await deleteSchedule(deleteTarget.id);
+                setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            }
             setDeleteTarget(null);
             setScheduleMessage('شیڈول ختم کر دیا گیا۔');
         } catch (error) {
@@ -609,7 +626,7 @@ export const StudentScheduleManager = () => {
                                                                         <Pencil size={16} />
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => setDeleteTarget(period)}
+                                                                        onClick={() => setDeleteTarget({ ...period, deleteDay: dayName })}
                                                                         disabled={removingScheduleId === period.id}
                                                                         className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all shadow-lg shadow-rose-500/5 hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                                                         title="حذف کریں"

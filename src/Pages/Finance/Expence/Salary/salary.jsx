@@ -44,7 +44,7 @@ const toUrduSalaryError = (message, fallback) => {
     return message;
 };
 
-export const SalaryEntry = () => {
+export const SalaryEntry = ({ staffType = '' }) => {
     const [teachers, setTeachers] = useState([]);
     const [expenseHeads, setExpenseHeads] = useState([]);
     const [entries, setEntries] = useState([]);
@@ -81,7 +81,9 @@ export const SalaryEntry = () => {
     );
 
     const refreshEntries = async () => {
-        const salaryResult = await getSalaryEntries('page=1&limit=100&status=active');
+        const params = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
+        if (staffType) params.set('staffType', staffType);
+        const salaryResult = await getSalaryEntries(params.toString());
         setEntries(salaryResult.items || []);
     };
 
@@ -91,9 +93,9 @@ export const SalaryEntry = () => {
 
         try {
             const [teacherResult, headsResult, salaryResult] = await Promise.all([
-                getTeachers('page=1&limit=100&status=active'),
+                getTeachers(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
                 getFinanceHeads('page=1&limit=100&type=expense&status=active'),
-                getSalaryEntries('page=1&limit=100&status=active'),
+                getSalaryEntries(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
             ]);
 
             const heads = headsResult.items || [];
@@ -115,7 +117,7 @@ export const SalaryEntry = () => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [staffType]);
 
     const handleSelectTeacher = (teacher) => {
         setFormData((prev) => ({

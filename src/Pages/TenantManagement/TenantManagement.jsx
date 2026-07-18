@@ -594,9 +594,9 @@ export const TenantManagement = () => {
 
   const renderList = () => (
     <>
-      <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="grid grid-cols-1 gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm lg:grid-cols-[auto_1fr] lg:items-center">
         <div className="text-sm font-bold text-[var(--color-text-muted)]">کل مدارس: {tenants.length}</div>
-        <div className="grid w-full grid-cols-1 gap-3 md:w-auto md:grid-cols-[20rem_12rem]">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[minmax(240px,400px)_minmax(150px,220px)] lg:justify-end">
           <div className="relative">
             <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input id="tenant-search" aria-label="مدرسہ تلاش کریں" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="مدرسہ تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
@@ -611,7 +611,18 @@ export const TenantManagement = () => {
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] text-right">
+          <table className="w-full min-w-[1080px] table-fixed text-right">
+            <colgroup>
+              <col className="w-[17%]" />
+              <col className="w-[25%]" />
+              <col className="w-[13%]" />
+              <col className="w-[9%]" />
+              <col className="w-[10%]" />
+              <col className="w-[12%]" />
+              <col className="w-[6%]" />
+              <col className="w-[6%]" />
+              <col className="w-[12%]" />
+            </colgroup>
             <thead>
               <tr className="text-[var(--color-text-muted)]">
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">مدرسہ</th>
@@ -622,7 +633,7 @@ export const TenantManagement = () => {
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حد</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">بن چکی</th>
                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">باقی</th>
-                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
               </tr>
             </thead>
             <tbody>
@@ -640,9 +651,9 @@ export const TenantManagement = () => {
                         <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{tenant.tenantCode}</div>
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">
-                        <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                          <Globe2 size={15} className="text-[var(--color-text-muted)]" />
-                          {tenant.link || tenant.customDomain || tenant.subdomain || '-'}
+                        <span className="flex min-w-0 items-start gap-2 break-words leading-7">
+                          <Globe2 size={15} className="mt-1 shrink-0 text-[var(--color-text-muted)]" />
+                          <span className="min-w-0 break-all">{tenant.link || tenant.customDomain || tenant.subdomain || '-'}</span>
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{owner ? getOwnerLabel(owner) : '-'}</td>
@@ -657,7 +668,7 @@ export const TenantManagement = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex min-w-40 items-center gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
                           <input
                             aria-label={`${tenant.tenantName || tenant.name || 'مدرسہ'} کی برانچ حد`}
                             type="number"

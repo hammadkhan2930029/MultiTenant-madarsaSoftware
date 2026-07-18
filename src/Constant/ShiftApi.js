@@ -25,6 +25,11 @@ export const createShift = async (payload) => {
   return result?.data || null;
 };
 
+export const createShifts = async (payload) => {
+  const result = await apiRequest('/shifts/bulk', withJson('POST', payload));
+  return result?.data || null;
+};
+
 export const updateShift = async (id, payload) => {
   const result = await apiRequest(`/shifts/${id}`, withJson('PATCH', payload));
   return result?.data || null;

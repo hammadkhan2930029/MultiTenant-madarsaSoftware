@@ -64,6 +64,12 @@ const statusStyle = {
     Late: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
 };
 
+const getActiveAssignment = (student) =>
+    student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || null;
+
+const getPrimaryParent = (student) =>
+    student?.parents?.find((parentItem) => parentItem.isPrimary)?.parent || student?.parents?.[0]?.parent || null;
+
 export const StudentAttendanceHistory = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -131,6 +137,9 @@ export const StudentAttendanceHistory = () => {
         late: entries.filter((entry) => entry.status === 'Late').length,
     }), [entries]);
 
+    const activeAssignment = useMemo(() => getActiveAssignment(student), [student]);
+    const primaryParent = useMemo(() => getPrimaryParent(student), [student]);
+
     const applyPreset = (preset) => {
         const nextRange = getPresetRange(preset);
         setActivePreset(preset);
@@ -141,13 +150,18 @@ export const StudentAttendanceHistory = () => {
     return (
         <div className="min-h-screen space-y-6 bg-[var(--color-bg)] p-4 text-[var(--color-text-main)] md:p-6" dir="rtl">
             <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
+                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                    <div className="flex-1">
                         <p className="text-sm font-bold text-[var(--color-primary)]">طالب علم کی حاضری</p>
                         <h1 className="mt-2 text-3xl font-black">{student?.fullName || 'طالب علم'}</h1>
-                        <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">
-                            داخلہ نمبر: {student?.admissionNumber || '---'}
-                        </p>
+                        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <StudentInfo label="داخلہ نمبر" value={student?.admissionNumber} dir="ltr" />
+                            <StudentInfo label="سیشن" value={activeAssignment?.session?.name} />
+                            <StudentInfo label="جماعت" value={activeAssignment?.class?.name} />
+                            <StudentInfo label="جماعت سیکشن" value={activeAssignment?.section?.name} />
+                            <StudentInfo label="سرپرست کا نام" value={primaryParent?.fullName} />
+                            <StudentInfo label="سرپرست فون نمبر" value={primaryParent?.phone} dir="ltr" />
+                        </div>
                     </div>
                     <button type="button" onClick={() => navigate(-1)} className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black">
                         <ArrowRight size={18} />
@@ -226,5 +240,12 @@ const StatCard = ({ label, value, color }) => (
     <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center shadow-sm">
         <p className="text-sm font-black text-[var(--color-text-muted)]">{label}</p>
         <p className={`mt-2 text-3xl font-black ${color}`}>{value}</p>
+    </div>
+);
+
+const StudentInfo = ({ label, value, dir = 'rtl' }) => (
+    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 px-4 py-3">
+        <p className="text-xs font-black text-[var(--color-text-muted)]">{label}</p>
+        <p className="mt-1 text-sm font-black text-[var(--color-text-main)]" dir={dir}>{value || '---'}</p>
     </div>
 );

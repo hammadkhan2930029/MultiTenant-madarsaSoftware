@@ -8,6 +8,10 @@ import { DepartmentRoutes } from './DepartmentRoutes';
 import { ProfileRoutes } from './ProfileRoutes';
 import { HRManagement } from '../Pages/HRManagement/HRManagement';
 import { TeachersList } from '../Pages/Teachers/TeacherList/TeachersList';
+import { TeacherAttendance } from '../Pages/Teachers/TeacherAttendance/TeacherAttendance';
+import { TeacherAttendanceHistory } from '../Pages/Teachers/AttendanceHistory/AttendanceHistory';
+import { SalaryIncrements } from '../Pages/Teachers/SalaryIncrements/SalaryIncrements';
+import { SalaryEntry } from '../Pages/Finance/Expence/Salary/salary';
 import { SettingRoutes } from './SettingRoutes';
 import { FinanceRoutes } from './FinanceRoutes';
 import { HifzRoutes } from './HifzRoutes';
@@ -104,6 +108,10 @@ export const AppRoutes = () => {
         <Route path="branch-management/:branchId" element={withPermission(<CreateBranch />, 'branches.view')} />
         <Route path="HRManagement" element={<RequirePermission anyPermissions={['teachers.create', 'staff.create']}><HRManagement /></RequirePermission>} />
         <Route path="staff/list" element={withPermission(<TeachersList staffType="staff" />, 'staff.view')} />
+        <Route path="staff/attendance" element={withPermission(<TeacherAttendance staffType="staff" />, 'attendance.view')} />
+        <Route path="staff/attendance-history/:id" element={withPermission(<TeacherAttendanceHistory />, 'attendance.view')} />
+        <Route path="staff/salary-increments" element={withPermission(<SalaryIncrements staffType="staff" />, 'teachers.salary_increments.view')} />
+        <Route path="staff/salary" element={withPermission(<SalaryEntry staffType="staff" />, 'salary.view')} />
         <Route path="students/attendance-history/:id" element={withPermission(<StudentAttendanceHistory />, 'attendance.history.view')} />
         <Route path="role-management" element={<RequirePermission anyPermissions={['roles.view', 'roles.manage']}><RoleManagement /></RequirePermission>} />
         <Route path="role-management/create" element={withPermission(<RoleManagement />, 'roles.manage')} />

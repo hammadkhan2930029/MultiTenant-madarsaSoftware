@@ -5,6 +5,7 @@ import {
     BookOpen,
     Plus,
     Trash2,
+    Edit2,
     X,
     Layers,
     Search,
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 import { getClasses, getSections, getSessions, getSubjects } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
-import { createTeacherSchedule, deleteTeacherSchedule, getTeacherSchedules } from '../../../Constant/TeacherScheduleApi';
+import { createTeacherSchedule, deleteTeacherSchedule, getTeacherSchedules, updateTeacherSchedule } from '../../../Constant/TeacherScheduleApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
 const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
@@ -34,6 +35,21 @@ const mapScheduleFromApi = (schedule) => ({
     startTime: schedule.startTime || '',
     endTime: schedule.endTime || '',
 });
+
+const formatScheduleTime = (value) => {
+    if (!value) return '';
+
+    const [hoursValue, minutesValue = '00'] = String(value).split(':');
+    const hours = Number(hoursValue);
+    const minutes = String(minutesValue).padStart(2, '0').slice(0, 2);
+
+    if (Number.isNaN(hours)) return value;
+
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+
+    return `${displayHours}:${minutes} ${period}`;
+};
 
 const emptyForm = {
     teacherId: '',
@@ -64,6 +80,7 @@ export const TeachersScheduleManager = () => {
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
+    const [editingScheduleId, setEditingScheduleId] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -71,6 +88,8 @@ export const TeachersScheduleManager = () => {
     useNotificationBridge({ error, success });
 
     const daysList = ['پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ', 'اتوار'];
+    const sortScheduleDays = (days) => daysList.filter((day) => days.includes(day));
+    const formatScheduleDays = (days) => sortScheduleDays(days).join(' - ');
     const subjectsList = subjectOptions.map((subject) => subject.name).filter(Boolean);
     const availableSections = useMemo(
         () => sectionOptions.filter((section) => !formData.classId || String(section.classId) === String(formData.classId)),
@@ -146,25 +165,59 @@ export const TeachersScheduleManager = () => {
         setIsSaving(true);
 
         try {
-            const savedSchedule = await createTeacherSchedule({
+            const payload = {
                 teacherId: Number(formData.teacherId),
                 sessionId: Number(formData.sessionId),
                 classId: Number(formData.classId),
                 sectionId: Number(formData.sectionId),
                 subjects: formData.subjects,
-                days: formData.days,
+                days: sortScheduleDays(formData.days),
                 startTime: formData.startTime,
                 endTime: formData.endTime,
-            });
+            };
+            const savedSchedule = editingScheduleId
+                ? await updateTeacherSchedule(editingScheduleId, payload)
+                : await createTeacherSchedule(payload);
 
-            setSchedules((current) => [mapScheduleFromApi(savedSchedule), ...current]);
+            setSchedules((current) =>
+                editingScheduleId
+                    ? current.map((schedule) => (schedule.id === editingScheduleId ? mapScheduleFromApi(savedSchedule) : schedule))
+                    : [mapScheduleFromApi(savedSchedule), ...current]
+            );
             setFormData((prev) => ({ ...prev, subjects: [], days: [], startTime: '', endTime: '' }));
-            setSuccess('استاد کا شیڈول کامیابی سے محفوظ ہو گیا۔');
+            setEditingScheduleId(null);
+            setSuccess(editingScheduleId ? 'استاد کا شیڈول کامیابی سے اپڈیٹ ہو گیا۔' : 'استاد کا شیڈول کامیابی سے محفوظ ہو گیا۔');
         } catch (saveError) {
             setError(saveError.message || 'استاد کا شیڈول محفوظ نہیں ہو سکا۔');
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEditSchedule = (schedule) => {
+        setEditingScheduleId(schedule.id);
+        setFormData({
+            teacherId: schedule.teacherId,
+            teacher: schedule.teacher,
+            sessionId: schedule.sessionId,
+            session: schedule.session,
+            classId: schedule.classId,
+            className: schedule.className,
+            sectionId: schedule.sectionId,
+            section: schedule.section,
+            subjects: [...schedule.subjects],
+            days: [...schedule.days],
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+        });
+        setError('');
+        setSuccess('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEditSchedule = () => {
+        setEditingScheduleId(null);
+        setFormData(emptyForm);
     };
 
     const handleDeleteSchedule = async () => {
@@ -175,8 +228,25 @@ export const TeachersScheduleManager = () => {
         setSuccess('');
 
         try {
-            await deleteTeacherSchedule(deleteTarget.id);
-            setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            if (deleteTarget.deleteDay && deleteTarget.days.length > 1) {
+                const remainingDays = sortScheduleDays(deleteTarget.days.filter((day) => day !== deleteTarget.deleteDay));
+                const updatedSchedule = await updateTeacherSchedule(deleteTarget.id, {
+                    teacherId: Number(deleteTarget.teacherId),
+                    sessionId: Number(deleteTarget.sessionId),
+                    classId: Number(deleteTarget.classId),
+                    sectionId: Number(deleteTarget.sectionId),
+                    subjects: deleteTarget.subjects,
+                    days: remainingDays,
+                    startTime: deleteTarget.startTime,
+                    endTime: deleteTarget.endTime,
+                });
+                setSchedules((current) =>
+                    current.map((schedule) => (schedule.id === deleteTarget.id ? mapScheduleFromApi(updatedSchedule) : schedule))
+                );
+            } else {
+                await deleteTeacherSchedule(deleteTarget.id);
+                setSchedules((current) => current.filter((schedule) => schedule.id !== deleteTarget.id));
+            }
             setDeleteTarget(null);
             setSuccess('استاد کا شیڈول ختم کر دیا گیا۔');
         } catch (deleteError) {
@@ -201,8 +271,8 @@ export const TeachersScheduleManager = () => {
         <div className="p-4 md:p-6 space-y-8 bg-[var(--color-bg)] min-h-screen pb-24 text-[var(--color-text)] font-urdu" dir="rtl">
             <div className="bg-[var(--color-surface)] flex justify-between items-center border border-[var(--color-border)] pr-4 py-4 rounded-[2.5rem] shadow-xl">
                 <div>
-                    <h1 className="text-3xl font-black text-[var(--color-text)]">اساتذہ شیڈول مینیجر</h1>
-                    <p className="text-md opacity-60 mt-5">اساتذہ کا تعلیمی ٹائم ٹیبل ترتیب دیں</p>
+                    <h1 className="text-3xl font-black text-[var(--color-text)]">نظام الاوقات</h1>
+                    <p className="text-md opacity-60 mt-5">مخصوص جماعت کے لئے مضامین، دن اور ان کے اوقات کا تعین کریں</p>
                 </div>
                 <div className="hidden md:block bg-[var(--color-surface)] p-3 rounded-2xl border border-[var(--color-border)]/10">
                     <Calendar className="text-[var(--color-primary)]" size={24} />
@@ -212,13 +282,13 @@ export const TeachersScheduleManager = () => {
             <div className="bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)] shadow-xl">
                 <form onSubmit={handleAddSchedule} className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="space-y-5">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">بنیادی معلومات</h4>
+                        <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">بنیادی معلومات</h4>
 
                         <div>
-                            <label className="text-[11px] font-bold opacity-60 block mb-2">تعلیمی سیشن<span className="text-red-500"> *</span></label>
+                            <label className="text-base font-bold opacity-60 block mb-2">تعلیمی سیشن<span className="text-red-500"> *</span></label>
                             <select
                                 required
-                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none appearance-none cursor-pointer"
+                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none appearance-none cursor-pointer"
                                 value={formData.sessionId}
                                 disabled={isLoadingOptions}
                                 onChange={(event) => {
@@ -233,10 +303,10 @@ export const TeachersScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-[11px] font-bold opacity-60 block mb-2">کلاس منتخب کریں<span className="text-red-500"> *</span></label>
+                                <label className="text-base font-bold opacity-60 block mb-2">کلاس منتخب کریں<span className="text-red-500"> *</span></label>
                                 <select
                                     required
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                     value={formData.classId}
                                     disabled={isLoadingOptions}
                                     onChange={(event) => {
@@ -249,10 +319,10 @@ export const TeachersScheduleManager = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-[11px] font-bold opacity-60 block mb-2">سیکشن<span className="text-red-500"> *</span></label>
+                                <label className="text-base font-bold opacity-60 block mb-2">سیکشن<span className="text-red-500"> *</span></label>
                                 <select
                                     required
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                     value={formData.sectionId}
                                     disabled={isLoadingOptions || !formData.classId}
                                     onChange={(event) => {
@@ -267,10 +337,10 @@ export const TeachersScheduleManager = () => {
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold opacity-60 block mb-2">استاد منتخب کریں<span className="text-red-500"> *</span></label>
+                            <label className="text-base font-bold opacity-60 block mb-2">استاد منتخب کریں<span className="text-red-500"> *</span></label>
                             <select
                                 required
-                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                 value={formData.teacherId}
                                 disabled={isLoadingOptions}
                                 onChange={(event) => {
@@ -285,18 +355,18 @@ export const TeachersScheduleManager = () => {
                     </div>
 
                     <div className="flex flex-col space-y-4">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">مضامین کی فہرست<span className="text-red-500"> *</span></h4>
+                        <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">مضامین کی فہرست<span className="text-red-500"> *</span></h4>
 
                         <div className="bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-2xl p-4 flex-1 flex flex-col min-h-[200px]">
                             <div className="relative mb-3">
                                 <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-30" />
-                                <input className="w-full bg-[var(--color-surface)] border border-[var(--color-border)]/5 rounded-lg py-2 pr-9 pl-3 text-[11px] outline-none" placeholder="مضمون تلاش کریں..." value={subjSearch} onChange={(event) => setSubjSearch(event.target.value)} />
+                                <input className="w-full bg-[var(--color-surface)] border border-[var(--color-border)]/5 rounded-lg py-2 pr-9 pl-3 text-base outline-none" placeholder="مضمون تلاش کریں..." value={subjSearch} onChange={(event) => setSubjSearch(event.target.value)} />
                             </div>
 
                             <div className="grid grid-cols-2 gap-1.5 overflow-y-auto max-h-50 pr-1 py-2 custom-scroll">
                                 {filteredSubjects.map((subject) => (
                                     <button key={subject} type="button" onClick={() => toggleSelection('subjects', subject)}
-                                        className={`text-right text-[10px] p-2.5 rounded-lg border transition-all ${formData.subjects.includes(subject) ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)]/5 opacity-70 hover:opacity-100'}`}>
+                                        className={`text-right text-base p-2.5 rounded-lg border transition-all ${formData.subjects.includes(subject) ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' : 'bg-[var(--color-surface)] border-[var(--color-border)]/5 opacity-70 hover:opacity-100'}`}>
                                         {subject}
                                     </button>
                                 ))}
@@ -305,7 +375,7 @@ export const TeachersScheduleManager = () => {
                             {formData.subjects.length > 0 && (
                                 <div className="mt-1 pt-1 border-t border-[var(--color-border)]/5 flex flex-wrap gap-1">
                                     {formData.subjects.map((subject) => (
-                                        <span key={subject} className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[9px] font-bold px-2 py-1 rounded flex items-center gap-1">
+                                        <span key={subject} className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-base font-bold px-2 py-1 rounded flex items-center gap-1">
                                             {subject} <X size={10} className="cursor-pointer" onClick={() => toggleSelection('subjects', subject)} />
                                         </span>
                                     ))}
@@ -315,41 +385,53 @@ export const TeachersScheduleManager = () => {
                     </div>
 
                     <div className="space-y-5">
-                        <h4 className="text-[16px] font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">وقت اور دن<span className="text-red-500"> *</span></h4>
+                        <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">وقت اور دن<span className="text-red-500"> *</span></h4>
+
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div>
+                                <label className="text-base opacity-50 block mb-1">کلاس شروع<span className="text-red-500"> *</span></label>
+                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.startTime} onChange={(event) => setFormData({ ...formData, startTime: event.target.value })} />
+                            </div>
+                            <div>
+                                <label className="text-base opacity-50 block mb-1">کلاس ختم<span className="text-red-500"> *</span></label>
+                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.endTime} onChange={(event) => setFormData({ ...formData, endTime: event.target.value })} />
+                            </div>
+                        </div>
 
                         <div className="flex flex-wrap gap-1.5">
                             {daysList.map((day) => (
                                 <button key={day} type="button" onClick={() => toggleSelection('days', day)}
-                                    className={`px-3 py-2 rounded-xl text-[10px] font-bold border transition-all ${formData.days.includes(day) ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-[var(--color-bg)] border-[var(--color-border)]/10 opacity-50'}`}>
+                                    className={`px-3 py-2 rounded-xl text-base font-bold border transition-all ${formData.days.includes(day) ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' : 'bg-[var(--color-bg)] border-[var(--color-border)]/10 opacity-50'}`}>
                                     {day}
                                 </button>
                             ))}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pt-2">
-                            <div>
-                                <label className="text-[10px] opacity-50 block mb-1">کلاس شروع<span className="text-red-500"> *</span></label>
-                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.startTime} onChange={(event) => setFormData({ ...formData, startTime: event.target.value })} />
-                            </div>
-                            <div>
-                                <label className="text-[10px] opacity-50 block mb-1">کلاس ختم<span className="text-red-500"> *</span></label>
-                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs outline-none" value={formData.endTime} onChange={(event) => setFormData({ ...formData, endTime: event.target.value })} />
-                            </div>
+                        <div className="mt-4 flex gap-3">
+                            {editingScheduleId ? (
+                                <button
+                                    type="button"
+                                    onClick={cancelEditSchedule}
+                                    className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-4 font-black text-[var(--color-text)]"
+                                >
+                                    منسوخ‌ کریں
+                                </button>
+                            ) : null}
+                            <button type="submit" disabled={isSaving} className="flex-1 bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                                {editingScheduleId ? <Edit2 size={20} /> : <Plus size={20} />}
+                                {isSaving ? 'محفوظ ہو رہا ہے...' : editingScheduleId ? 'تبدیل کریں' : 'محفوظ کریں'}
+                            </button>
                         </div>
-
-                        <button type="submit" disabled={isSaving} className="w-full bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all mt-4 disabled:opacity-60">
-                            <Plus size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'شیڈول محفوظ کریں'}
-                        </button>
                     </div>
                 </form>
             </div>
 
             {schedules.length > 0 && (
                 <div className="flex flex-row justify-start items-center">
-                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[10px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
                         <LayoutDashboard size={20} /> دنوں کے حساب سے
                     </button>
-                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[10px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
                         <LayoutPanelTop size={20} /> استاد کے حساب سے
                     </button>
                 </div>
@@ -380,7 +462,7 @@ export const TeachersScheduleManager = () => {
 
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                                     {groupedSchedules[groupName].map((item) => (
-                                        <ScheduleRow key={item.id} item={item} removingScheduleId={removingScheduleId} onDelete={setDeleteTarget} />
+                                        <ScheduleRow key={item.id} item={item} removingScheduleId={removingScheduleId} onEdit={handleEditSchedule} onDelete={setDeleteTarget} formatScheduleDays={formatScheduleDays} />
                                     ))}
                                 </div>
                             </div>
@@ -406,17 +488,33 @@ export const TeachersScheduleManager = () => {
                                         <div key={period.id} className="bg-[var(--color-bg)] border border-[var(--color-border)]/5 p-4 rounded-2xl flex flex-col justify-between hover:border-[var(--color-primary)]/30 transition-all group shadow-sm">
                                             <div className="flex justify-between items-start mb-2">
                                                 <div className="space-y-1">
-                                                    <p className="text-[14px] font-black text-[var(--color-primary)]">{period.teacher}</p>
-                                                    <p className="text-[12px] font-bold opacity-60">{period.className} - {period.section}</p>
+                                                    <p className="text-lg font-black text-[var(--color-primary)]">{period.teacher}</p>
+                                                    <p className="text-base font-bold opacity-60">{period.className} - {period.section}</p>
                                                     {period.subjects.map((subject) => (
                                                         <span key={subject} className="block text-md font-bold text-[var(--color-text)]">
                                                             {subject}
                                                         </span>
                                                     ))}
                                                 </div>
-                                                <button onClick={() => setDeleteTarget(period)} disabled={removingScheduleId === period.id} className="opacity-0 group-hover:opacity-100 text-red-500 transition-all p-1 disabled:cursor-not-allowed disabled:opacity-50">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                <div className="flex items-center gap-1 opacity-0 transition-all group-hover:opacity-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleEditSchedule(period)}
+                                                        className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                                                        title="تبدیل کریں"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeleteTarget({ ...period, deleteDay: dayName })}
+                                                        disabled={removingScheduleId === period.id}
+                                                        className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                                        title="حذف کریں"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                             <TimeBadge startTime={period.startTime} endTime={period.endTime} />
                                         </div>
@@ -451,13 +549,13 @@ export const TeachersScheduleManager = () => {
 const TimeBadge = ({ startTime, endTime }) => (
     <div className="flex items-center gap-1.5 text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
         <Clock size={12} className="md:w-3.5 md:h-3.5" />
-        <span className="text-[13px] md:text-[16px] font-black tracking-tighter" dir="ltr">
-            {startTime} - {endTime}
+        <span className="text-base md:text-lg font-black tracking-tighter" dir="ltr">
+            {formatScheduleTime(startTime)} - {formatScheduleTime(endTime)}
         </span>
     </div>
 );
 
-const ScheduleRow = ({ item, removingScheduleId, onDelete }) => (
+const ScheduleRow = ({ item, removingScheduleId, onEdit, onDelete, formatScheduleDays }) => (
     <div className="bg-[var(--color-bg)]/50 p-4 rounded-[2.5rem] md:rounded-[2.8rem] border border-[var(--color-border)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group relative shadow-md hover:shadow-xl transition-all duration-300 scale-100 hover:scale-101 m-2 px-5">
         <div className="flex gap-4 md:gap-5 items-center w-full sm:w-auto">
             <div className="text-center min-w-[70px] md:min-w-[90px] border-l-2 border-[var(--color-primary)]/20 pl-4">
@@ -475,20 +573,34 @@ const ScheduleRow = ({ item, removingScheduleId, onDelete }) => (
                     ))}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    {item.days.map((day) => (
-                        <span key={day} className="text-base font-bold text-[var(--color-primary)] opacity-80">
-                            {day}
-                        </span>
-                    ))}
+                    <span className="text-base font-bold text-[var(--color-primary)] opacity-80">
+                        {formatScheduleDays(item.days)}
+                    </span>
                 </div>
             </div>
         </div>
 
         <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto border-t sm:border-t-0 border-[var(--color-border)]/5 pt-3 sm:pt-0 gap-2">
             <TimeBadge startTime={item.startTime} endTime={item.endTime} />
-            <button onClick={() => onDelete(item)} disabled={removingScheduleId === item.id} className="text-red-500/40 hover:text-red-500 p-1.5 transition-all hover:bg-red-50 rounded-lg disabled:cursor-not-allowed disabled:opacity-50">
-                <Trash2 size={20} className="md:w-6 md:h-6" />
-            </button>
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => onEdit(item)}
+                    className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                    title="تبدیل کریں"
+                >
+                    <Edit2 size={16} />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onDelete(item)}
+                    disabled={removingScheduleId === item.id}
+                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    title="حذف کریں"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
         </div>
     </div>
 );

@@ -1,8 +1,9 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, Plus, Edit2, Trash2, Users, Target, Shield, Save, ChevronDown, X } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
+import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
-import { createDepartment, deleteDepartment, getDepartments, updateDepartment } from '../../../Constant/DepartmentApi';
+import { createDepartments, deleteDepartment, getDepartments, updateDepartment } from '../../../Constant/DepartmentApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 
 const emptyForm = {
@@ -12,6 +13,15 @@ const emptyForm = {
     headTeacherId: '',
     headSearch: '',
 };
+
+const createEmptyDepartmentRow = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: '',
+    code: '',
+    head: '',
+    headTeacherId: '',
+    headSearch: '',
+});
 
 const formatHeadType = (staffType) => String(staffType || '').toLowerCase() === 'staff' ? 'عملہ' : 'استاد';
 
@@ -31,6 +41,8 @@ const buildHeadOptions = (items = []) => items
 export const DepartmentManagement = () => {
     const [departments, setDepartments] = useState([]);
     const [formData, setFormData] = useState(emptyForm);
+    const [departmentRows, setDepartmentRows] = useState([createEmptyDepartmentRow()]);
+    const [rowErrors, setRowErrors] = useState({});
     const [editMode, setEditMode] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -90,13 +102,96 @@ export const DepartmentManagement = () => {
 
     const resetForm = () => {
         setFormData(emptyForm);
+        setDepartmentRows([createEmptyDepartmentRow()]);
+        setRowErrors({});
         setEditMode(null);
     };
 
+    const updateDepartmentRow = (rowId, field, value) => {
+        setDepartmentRows((currentRows) =>
+            currentRows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
+        );
+        setRowErrors((currentErrors) => {
+            if (!currentErrors[rowId]) return currentErrors;
+            const nextErrors = { ...currentErrors };
+            delete nextErrors[rowId];
+            return nextErrors;
+        });
+    };
+
+    const addDepartmentRow = () => {
+        setDepartmentRows((currentRows) => [...currentRows, createEmptyDepartmentRow()]);
+    };
+
+    const removeDepartmentRow = (rowId) => {
+        setDepartmentRows((currentRows) => (currentRows.length > 1 ? currentRows.filter((row) => row.id !== rowId) : currentRows));
+        setRowErrors((currentErrors) => {
+            const nextErrors = { ...currentErrors };
+            delete nextErrors[rowId];
+            return nextErrors;
+        });
+    };
+
+    const validateDepartmentRows = () => {
+        const normalizedRows = departmentRows
+            .map((row) => ({
+                ...row,
+                name: row.name.trim(),
+                code: row.code.trim(),
+                head: row.head.trim(),
+            }))
+            .filter((row) => row.name || row.code || row.head || row.headTeacherId);
+        const nextErrors = {};
+        const seenNames = new Map();
+        const seenCodes = new Map();
+
+        if (!normalizedRows.length) {
+            nextErrors[departmentRows[0].id] = 'کم از کم ایک شعبہ کی معلومات درج کریں۔';
+        }
+
+        normalizedRows.forEach((row) => {
+            if (!row.name) {
+                nextErrors[row.id] = 'شعبہ کا نام ضروری ہے۔';
+                return;
+            }
+
+            const nameKey = row.name.toLowerCase();
+            if (seenNames.has(nameKey)) {
+                nextErrors[row.id] = 'یہ شعبہ اسی فارم میں دوبارہ درج ہے۔';
+            } else {
+                seenNames.set(nameKey, row.id);
+            }
+
+            const codeKey = row.code.toLowerCase();
+            if (row.code && seenCodes.has(codeKey)) {
+                nextErrors[row.id] = 'یہ شعبہ کوڈ اسی فارم میں دوبارہ درج ہے۔';
+            } else if (row.code) {
+                seenCodes.set(codeKey, row.id);
+            }
+        });
+
+        setRowErrors(nextErrors);
+        return {
+            isValid: Object.keys(nextErrors).length === 0,
+            rows: normalizedRows,
+        };
+    };
+
     const handleSubmit = async () => {
-        if (!formData.name.trim()) {
-            setError('شعبہ کا نام ضروری ہے۔');
-            return;
+        let validRows = [];
+
+        if (editMode) {
+            if (!formData.name.trim()) {
+                setError('شعبہ کا نام ضروری ہے۔');
+                return;
+            }
+        } else {
+            const validation = validateDepartmentRows();
+            if (!validation.isValid) {
+                setError('درج کردہ شعبہ جات میں غلطی موجود ہے۔');
+                return;
+            }
+            validRows = validation.rows;
         }
 
         setIsSaving(true);
@@ -104,19 +199,25 @@ export const DepartmentManagement = () => {
         setSuccess('');
 
         try {
-            const payload = {
-                name: formData.name.trim(),
-                code: formData.code.trim(),
-                head: formData.headTeacherId ? '' : formData.head.trim(),
-                headTeacherId: formData.headTeacherId ? Number(formData.headTeacherId) : null,
-            };
-
             if (editMode) {
+                const payload = {
+                    name: formData.name.trim(),
+                    code: formData.code.trim(),
+                    head: formData.headTeacherId ? '' : formData.head.trim(),
+                    headTeacherId: formData.headTeacherId ? Number(formData.headTeacherId) : null,
+                };
                 await updateDepartment(editMode, payload);
                 setSuccess('شعبہ کامیابی سے تبدیل ہو گیا۔');
             } else {
-                await createDepartment(payload);
-                setSuccess('نیا شعبہ کامیابی سے شامل ہو گیا۔');
+                await createDepartments({
+                    departments: validRows.map((row) => ({
+                        name: row.name,
+                        code: row.code,
+                        head: row.headTeacherId ? '' : row.head,
+                        headTeacherId: row.headTeacherId ? Number(row.headTeacherId) : null,
+                    })),
+                });
+                setSuccess(validRows.length > 1 ? 'شعبہ جات کامیابی سے شامل ہو گئے۔' : 'نیا شعبہ کامیابی سے شامل ہو گیا۔');
             }
 
             resetForm();
@@ -179,75 +280,146 @@ export const DepartmentManagement = () => {
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                 className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
             >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                        <InputField
-                            type="text"
-                            label={'شعبہ کا نام'}
-                            required
-                            placeholder="مثلاً: مارکیٹنگ"
-                            value={formData.name}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                        />
+                {editMode ? (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] xl:items-end">
+                        <div className="min-w-0 space-y-2">
+                            <InputField
+                                type="text"
+                                label={'شعبہ کا نام'}
+                                required
+                                placeholder="مثلاً: مارکیٹنگ"
+                                value={formData.name}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                className="h-[74px] px-5 py-0 text-base font-bold"
+                            />
+                        </div>
+                        <div className="min-w-0 space-y-2">
+                            <InputField
+                                type="text"
+                                label={'شعبہ کوڈ'}
+                                placeholder="مثلاً: MKT"
+                                value={formData.code}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
+                                className="h-[74px] px-5 py-0 text-base font-bold"
+                            />
+                        </div>
+                        <div className="min-w-0 space-y-2">
+                            <HeadSearchableSelect
+                                label={'شعبہ ہیڈ'}
+                                value={formData.headSearch}
+                                options={headOptions}
+                                isLoading={isHeadsLoading}
+                                placeholder="ہیڈ منتخب کریں"
+                                onChange={(value) => setFormData((prev) => ({
+                                    ...prev,
+                                    headSearch: value,
+                                    headTeacherId: '',
+                                    head: value,
+                                }))}
+                                onSelectOption={(option) => setFormData((prev) => ({
+                                    ...prev,
+                                    headSearch: option.label,
+                                    headTeacherId: option.id,
+                                    head: '',
+                                }))}
+                                onClear={() => setFormData((prev) => ({
+                                    ...prev,
+                                    headSearch: '',
+                                    headTeacherId: '',
+                                    head: '',
+                                }))}
+                            />
+                        </div>
+                        <div className="flex min-w-0 flex-col gap-3 md:col-span-2 md:flex-row xl:col-span-1">
+                            <button
+                                type="button"
+                                onClick={resetForm}
+                                className="h-[74px] rounded-2xl border border-[var(--color-border)] px-6 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] md:min-w-[120px]"
+                            >
+                                منسوخ
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isSaving}
+                                style={{ backgroundColor: 'var(--color-primary)' }}
+                                className="flex h-[74px] min-w-[180px] items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-8 text-base font-black text-white shadow-lg shadow-[#00d094]/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70"
+                            >
+                                <Save size={20} />
+                                <span>{isSaving ? 'محفوظ ہو رہا ہے...' : 'تبدیل کریں'}</span>
+                            </button>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <InputField
-                            type="text"
-                            label={'شعبہ کوڈ'}
-                            placeholder="مثلاً: MKT"
-                            value={formData.code}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
+                ) : (
+                    <>
+                        <MultipleEntryRows
+                            rows={departmentRows}
+                            onAdd={addDepartmentRow}
+                            onRemove={removeDepartmentRow}
+                            disabled={isSaving}
+                            addLabel="نیا شعبہ شامل کریں"
+                            removeLabel="شعبہ حذف کریں"
+                            rowClassName="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_220px_1fr_auto] xl:items-start"
+                            actionsClassName="flex items-center justify-end gap-2 pt-0 xl:pt-8"
+                            addButtonClassName="grid h-[74px] w-[74px] place-items-center rounded-2xl bg-[#00d094] text-white shadow-lg shadow-[#00d094]/20 transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                            removeButtonClassName="grid h-[74px] w-[74px] place-items-center rounded-2xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            getRowError={(row) => rowErrors[row.id]}
+                            renderFields={(row) => (
+                                <>
+                                    <InputField
+                                        type="text"
+                                        label={'شعبہ کا نام'}
+                                        required
+                                        placeholder="مثلاً: مارکیٹنگ"
+                                        value={row.name}
+                                        onChange={(e) => updateDepartmentRow(row.id, 'name', e.target.value)}
+                                        className="h-[74px] px-5 py-0 text-base font-bold"
+                                    />
+                                    <InputField
+                                        type="text"
+                                        label={'شعبہ کوڈ'}
+                                        placeholder="مثلاً: MKT"
+                                        value={row.code}
+                                        onChange={(e) => updateDepartmentRow(row.id, 'code', e.target.value)}
+                                        className="h-[74px] px-5 py-0 text-base font-bold"
+                                    />
+                                    <HeadSearchableSelect
+                                        label={'شعبہ ہیڈ'}
+                                        value={row.headSearch}
+                                        options={headOptions}
+                                        isLoading={isHeadsLoading}
+                                        placeholder="ہیڈ منتخب کریں"
+                                        onChange={(value) => {
+                                            updateDepartmentRow(row.id, 'headSearch', value);
+                                            updateDepartmentRow(row.id, 'headTeacherId', '');
+                                            updateDepartmentRow(row.id, 'head', value);
+                                        }}
+                                        onSelectOption={(option) => {
+                                            updateDepartmentRow(row.id, 'headSearch', option.label);
+                                            updateDepartmentRow(row.id, 'headTeacherId', option.id);
+                                            updateDepartmentRow(row.id, 'head', '');
+                                        }}
+                                        onClear={() => {
+                                            updateDepartmentRow(row.id, 'headSearch', '');
+                                            updateDepartmentRow(row.id, 'headTeacherId', '');
+                                            updateDepartmentRow(row.id, 'head', '');
+                                        }}
+                                    />
+                                </>
+                            )}
                         />
-                    </div>
-                    <div className="space-y-2">
-                        <HeadSearchableSelect
-                            label={'شعبہ ہیڈ'}
-                            value={formData.headSearch}
-                            options={headOptions}
-                            isLoading={isHeadsLoading}
-                            placeholder="ہیڈ منتخب کریں"
-                            onChange={(value) => setFormData((prev) => ({
-                                ...prev,
-                                headSearch: value,
-                                headTeacherId: '',
-                                head: value,
-                            }))}
-                            onSelectOption={(option) => setFormData((prev) => ({
-                                ...prev,
-                                headSearch: option.label,
-                                headTeacherId: option.id,
-                                head: '',
-                            }))}
-                            onClear={() => setFormData((prev) => ({
-                                ...prev,
-                                headSearch: '',
-                                headTeacherId: '',
-                                head: '',
-                            }))}
-                        />
-                    </div>
-                </div>
-
-                <div className="mt-8 flex flex-wrap justify-end gap-3">
-                    {editMode ? (
-                        <button
-                            type="button"
-                            onClick={resetForm}
-                            className="rounded-2xl border border-[var(--color-border)] px-6 py-4 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]"
-                        >
-                            منسوخ
-                        </button>
-                    ) : null}
-                    <button
-                        onClick={handleSubmit}
-                        disabled={isSaving}
-                        style={{ backgroundColor: 'var(--color-primary)' }}
-                        className="px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
-                    >
-                        {editMode ? <Save size={20} /> : <Plus size={20} />}
-                        <span>{isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'تبدیل کریں' : 'نیا شعبہ شامل کریں'}</span>
-                    </button>
-                </div>
+                        <div className="mt-8 flex justify-end">
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isSaving}
+                                style={{ backgroundColor: 'var(--color-primary)' }}
+                                className="flex h-[74px] min-w-[220px] items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-8 text-base font-black text-white shadow-lg shadow-[#00d094]/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70"
+                            >
+                                <Plus size={20} />
+                                <span>{isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</span>
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -270,15 +442,15 @@ export const DepartmentManagement = () => {
                                     <Target size={26} />
                                 </div>
                                 <div>
-                                    <h3 style={{ color: 'var(--color-text-main)' }} className="font-bold text-lg">
-                                        {dept.name} <span className="text-[10px] opacity-50 px-2">#{dept.code || '-'}</span>
+                                    <h3 style={{ color: 'var(--color-text-main)' }} className="text-xl font-black">
+                                        {dept.name} <span className="px-2 text-sm font-bold opacity-60">#{dept.code || '-'}</span>
                                     </h3>
-                                    <div className="flex flex-wrap items-center gap-4 mt-1">
-                                        <span style={{ color: 'var(--color-text-muted)' }} className="text-xs flex items-center gap-1 font-medium">
-                                            <Shield size={12} /> ہیڈ: {dept.head || '-'}
+                                    <div className="flex flex-wrap items-center gap-4 mt-2">
+                                        <span style={{ color: 'var(--color-text-muted)' }} className="flex items-center gap-1.5 text-sm font-bold md:text-base">
+                                            <Shield size={15} /> ہیڈ: {dept.head || '-'}
                                         </span>
-                                        <span style={{ color: 'var(--color-text-muted)' }} className="text-xs flex items-center gap-1 font-medium">
-                                            <Users size={12} /> {dept.members || 0} ممبرز
+                                        <span style={{ color: 'var(--color-text-muted)' }} className="flex items-center gap-1.5 text-sm font-bold md:text-base">
+                                            <Users size={15} /> {dept.members || 0} ممبرز
                                         </span>
                                     </div>
                                 </div>
@@ -378,7 +550,7 @@ const HeadSearchableSelect = ({ label, value, options, isLoading, onChange, onSe
                     onFocus={() => setIsOpen(true)}
                     onBlur={() => setTimeout(() => setIsOpen(false), 150)}
                     placeholder={placeholder}
-                    className="w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 py-4 pl-20 text-sm font-bold text-[var(--color-text-main)] outline-none transition-all placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]"
+                    className="h-[74px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 py-0 pl-20 text-base font-bold text-[var(--color-text-main)] outline-none transition-all placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]"
                 />
                 {value ? (
                     <button

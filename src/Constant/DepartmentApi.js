@@ -25,6 +25,11 @@ export const createDepartment = async (payload) => {
   return result?.data || null;
 };
 
+export const createDepartments = async (payload) => {
+  const result = await apiRequest('/departments/bulk', withJson('POST', payload));
+  return result?.data || null;
+};
+
 export const updateDepartment = async (id, payload) => {
   const result = await apiRequest(`/departments/${id}`, withJson('PATCH', payload));
   return result?.data || null;

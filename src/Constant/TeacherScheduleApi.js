@@ -25,6 +25,11 @@ export const createTeacherSchedule = async (payload) => {
   return result?.data;
 };
 
+export const updateTeacherSchedule = async (id, payload) => {
+  const result = await apiRequest(`/teacher-schedules/${id}`, withJson('PUT', payload));
+  return result?.data;
+};
+
 export const deleteTeacherSchedule = async (id) => {
   const result = await apiRequest(`/teacher-schedules/${id}`, withToken({ method: 'DELETE' }));
   return result?.data;

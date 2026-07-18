@@ -40,6 +40,16 @@ export const createTeacherIncrement = async (id, payload) => {
   return result?.data || null;
 };
 
+export const updateTeacherIncrement = async (id, payload) => {
+  const result = await apiRequest(`/teachers/increments/${id}`, withJson('PUT', payload));
+  return result?.data || null;
+};
+
+export const deleteTeacherIncrement = async (id) => {
+  const result = await apiRequest(`/teachers/increments/${id}`, withToken({ method: 'DELETE' }));
+  return result?.data || null;
+};
+
 export const createTeacher = async (payload) => {
   const formData = new FormData();
 

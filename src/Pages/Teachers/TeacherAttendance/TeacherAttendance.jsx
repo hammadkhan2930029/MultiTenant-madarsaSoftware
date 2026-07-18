@@ -40,8 +40,10 @@ const joinLabels = (values) => {
     return labels.length ? labels.join('، ') : '---';
 };
 
-export const TeacherAttendance = () => {
+export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     const navigate = useNavigate();
+    const isStaffAttendance = staffType === 'staff';
+    const entityPluralLabel = isStaffAttendance ? 'عملہ' : 'اساتذہ';
     const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
     const [selectedBranchId, setSelectedBranchId] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
@@ -69,7 +71,7 @@ export const TeacherAttendance = () => {
 
         try {
             const [teacherResult, attendanceResult] = await Promise.all([
-                getTeachers('page=1&limit=100&status=active&staffType=teacher'),
+                getTeachers(`page=1&limit=100&status=active&staffType=${staffType}`),
                 getTeacherAttendance(`page=1&limit=100&branchId=${selectedBranchId}&date=${selectedDate}`),
             ]);
 
@@ -89,19 +91,19 @@ export const TeacherAttendance = () => {
                 }),
             );
         } catch (loadError) {
-            setError(loadError.message || 'اساتذہ کی حاضری لوڈ نہیں ہو سکی۔');
+            setError(loadError.message || `${entityPluralLabel} کی حاضری لوڈ نہیں ہو سکی۔`);
         } finally {
             setIsLoading(false);
         }
-    }, [selectedBranchId, selectedDate]);
+    }, [entityPluralLabel, selectedBranchId, selectedDate, staffType]);
 
     useEffect(() => {
         const loadInitialData = async () => {
             try {
                 const [defaultBranch, teacherResult, assignmentsResult] = await Promise.all([
                     getDefaultBranch(),
-                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
-                    getTeacherAssignments('page=1&limit=500&status=active').catch(() => ({ items: [] })),
+                    getTeachers(`page=1&limit=100&status=active&staffType=${staffType}`),
+                    isStaffAttendance ? Promise.resolve({ items: [] }) : getTeacherAssignments('page=1&limit=500&status=active').catch(() => ({ items: [] })),
                 ]);
 
                 setSelectedBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
@@ -114,12 +116,12 @@ export const TeacherAttendance = () => {
                 );
                 setTeacherAssignments(assignmentsResult.items || []);
             } catch (loadError) {
-                setError(loadError.message || 'اساتذہ کی حاضری کا ڈیٹا لوڈ نہیں ہو سکا۔');
+                setError(loadError.message || `${entityPluralLabel} کی حاضری کا ڈیٹا لوڈ نہیں ہو سکا۔`);
             }
         };
 
         loadInitialData();
-    }, []);
+    }, [entityPluralLabel, isStaffAttendance, staffType]);
 
     useEffect(() => {
         if (!selectedBranchId) return;
@@ -153,9 +155,9 @@ export const TeacherAttendance = () => {
                 ),
             );
 
-            setSuccessMessage('اساتذہ کی حاضری کامیابی سے محفوظ ہو گئی۔');
+            setSuccessMessage(`${entityPluralLabel} کی حاضری کامیابی سے محفوظ ہو گئی۔`);
         } catch (saveError) {
-            setError(saveError.message || 'اساتذہ کی حاضری محفوظ نہیں ہو سکی۔');
+            setError(saveError.message || `${entityPluralLabel} کی حاضری محفوظ نہیں ہو سکی۔`);
         } finally {
             setIsSaving(false);
         }
@@ -249,7 +251,7 @@ export const TeacherAttendance = () => {
     return (
         <div className="p-6 space-y-6 bg-[var(--color-bg)] min-h-screen" dir="rtl">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <SummaryCard title="کل اساتذہ" count={stats.total} icon={Users} color="border-blue-500" textColor="text-blue-500" />
+                <SummaryCard title={isStaffAttendance ? 'کل عملہ' : 'کل اساتذہ'} count={stats.total} icon={Users} color="border-blue-500" textColor="text-blue-500" />
                 <SummaryCard title="حاضر" count={stats.hazir} icon={CheckCircle} color="border-emerald-500" textColor="text-emerald-500" />
                 <SummaryCard title="غیر حاضر" count={stats.ghairHazir} icon={XCircle} color="border-red-500" textColor="text-red-500" />
                 <SummaryCard title="رخصت" count={stats.leave} icon={Clock} color="border-amber-500" textColor="text-amber-500" />
@@ -322,7 +324,7 @@ export const TeacherAttendance = () => {
                                     className="bg-transparent outline-none px-3 w-full text-sm"
                                 />
                             </div>
-                            <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`teacher-attendance-${selectedDate}`} className="w-full h-12" />
+                            <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`${staffType}-attendance-${selectedDate}`} className="w-full h-12" />
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving || !selectedBranchId}
@@ -367,7 +369,7 @@ export const TeacherAttendance = () => {
                                     <td>
                                         <div className="flex items-center justify-center gap-2">
                                             <button
-                                                onClick={() => navigate(`/teachers/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
+                                                onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
                                                 className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
                                             >
                                                 <Eye size={16} />
@@ -383,7 +385,7 @@ export const TeacherAttendance = () => {
                 <div className="lg:hidden p-4 space-y-4">
                     {filteredTeachers.map((teacher, index) => (
                         <div
-                            onClick={() => navigate(`/teachers/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
+                            onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
                             key={teacher.id}
                             className="bg-[var(--color-bg)] p-5 rounded-3xl border border-[var(--color-border)]/10 shadow-sm space-y-4"
                         >

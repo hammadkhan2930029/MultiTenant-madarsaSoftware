@@ -3,6 +3,7 @@ import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Save, ChevronRight,
 import { useParams, useSearchParams } from 'react-router-dom';
 import { deleteTeacherAttendance, getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { getTeacherById } from '../../../Constant/TeachersApi';
+import { getTeacherAssignments } from '../../../Constant/TeacherAssignmentApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
 
@@ -21,14 +22,61 @@ const formatDateKey = (date) => {
 };
 
 const getDateKey = (value) => String(value || '').slice(0, 10);
+const getPresetRange = (preset) => {
+    const today = new Date();
 
-const buildAttendanceHistory = (year, month, existingEntries) => {
+    if (preset === 'last-month') {
+        return {
+            startDate: formatDateKey(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+            endDate: formatDateKey(new Date(today.getFullYear(), today.getMonth(), 0)),
+        };
+    }
+
+    if (preset === 'three-months') {
+        return {
+            startDate: formatDateKey(new Date(today.getFullYear(), today.getMonth() - 2, 1)),
+            endDate: formatDateKey(today),
+        };
+    }
+
+    if (preset === 'six-months') {
+        return {
+            startDate: formatDateKey(new Date(today.getFullYear(), today.getMonth() - 5, 1)),
+            endDate: formatDateKey(today),
+        };
+    }
+
+    if (preset === 'one-year') {
+        return {
+            startDate: formatDateKey(new Date(today.getFullYear(), today.getMonth() - 11, 1)),
+            endDate: formatDateKey(today),
+        };
+    }
+
+    return {
+        startDate: formatDateKey(new Date(today.getFullYear(), today.getMonth(), 1)),
+        endDate: formatDateKey(today),
+    };
+};
+
+const joinLabels = (values) => {
+    const labels = [...new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))];
+    return labels.length ? labels.join('، ') : '---';
+};
+
+const formatShiftTime = (shift) => {
+    if (!shift) return '---';
+    const time = [shift.startTime, shift.endTime].filter(Boolean).join(' - ');
+    return [shift.name, time].filter(Boolean).join(' | ') || '---';
+};
+
+const buildAttendanceHistory = (range, existingEntries) => {
     const data = [];
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startDate = new Date(range.startDate);
+    const endDate = new Date(range.endDate);
     const entryMap = new Map(existingEntries.map((entry) => [getDateKey(entry.date), entry]));
 
-    for (let day = daysInMonth; day >= 1; day -= 1) {
-        const currentDate = new Date(year, month, day);
+    for (let currentDate = startDate; currentDate <= endDate; currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1)) {
         const date = formatDateKey(currentDate);
         const entry = entryMap.get(date);
 
@@ -36,7 +84,7 @@ const buildAttendanceHistory = (year, month, existingEntries) => {
             id: entry?.id || null,
             date,
             dayName: currentDate.toLocaleDateString('ur-PK', { weekday: 'long' }),
-            dayNum: day,
+            dayNum: currentDate.getDate(),
             status: entry?.status || 'Not Marked',
             note: entry?.remarks || '',
             branchId: entry?.branchId || entry?.branch?.id || null,
@@ -55,8 +103,11 @@ export const TeacherAttendanceHistory = () => {
     const [isEditMode, setIsEditMode] = useState(false);
     const [selectedYear, setSelectedYear] = useState(today.getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+    const [range, setRange] = useState(() => getPresetRange('current-month'));
+    const [activePreset, setActivePreset] = useState('current-month');
     const [attendanceEntries, setAttendanceEntries] = useState([]);
     const [attendanceHistory, setAttendanceHistory] = useState([]);
+    const [teacherAssignments, setTeacherAssignments] = useState([]);
     const [defaultBranchId, setDefaultBranchId] = useState('');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
@@ -66,15 +117,17 @@ export const TeacherAttendanceHistory = () => {
     useEffect(() => {
         const loadTeacherAndAttendance = async () => {
             try {
-                const [teacherResult, attendanceResult, defaultBranch] = await Promise.all([
+                const [teacherResult, attendanceResult, defaultBranch, assignmentsResult] = await Promise.all([
                     getTeacherById(teacherId),
                     getTeacherAttendance(`page=1&limit=366&teacherId=${teacherId}`),
                     getDefaultBranch().catch(() => null),
+                    getTeacherAssignments(`page=1&limit=100&status=active&teacherId=${teacherId}`).catch(() => ({ items: [] })),
                 ]);
 
                 const items = attendanceResult.items || [];
                 setTeacher(teacherResult);
                 setAttendanceEntries(items);
+                setTeacherAssignments(assignmentsResult.items || []);
                 setDefaultBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
             } catch (loadError) {
                 setError(loadError.message || 'اساتذہ کی حاضری کی تفصیل لوڈ نہیں ہو سکی۔');
@@ -85,33 +138,57 @@ export const TeacherAttendanceHistory = () => {
     }, [teacherId]);
 
     useEffect(() => {
-        const monthEntries = attendanceEntries.filter((entry) => {
-            const [, entryMonth] = getDateKey(entry.date).split('-').map(Number);
-            const [entryYear] = getDateKey(entry.date).split('-').map(Number);
-            return entryYear === selectedYear && entryMonth === selectedMonth + 1;
+        const rangeEntries = attendanceEntries.filter((entry) => {
+            const entryDate = getDateKey(entry.date);
+            return entryDate >= range.startDate && entryDate <= range.endDate;
         });
 
-        setAttendanceHistory(buildAttendanceHistory(selectedYear, selectedMonth, monthEntries));
-    }, [attendanceEntries, selectedMonth, selectedYear]);
+        setAttendanceHistory(buildAttendanceHistory(range, rangeEntries));
+    }, [attendanceEntries, range]);
 
     const stats = useMemo(
         () => ({
             present: attendanceHistory.filter((item) => item.status === 'Present').length,
             absent: attendanceHistory.filter((item) => item.status === 'Absent').length,
             leave: attendanceHistory.filter((item) => item.status === 'Leave').length,
+            late: attendanceHistory.filter((item) => item.status === 'Late').length,
         }),
         [attendanceHistory],
     );
 
+    const teacherInfo = useMemo(() => ({
+        subjects: joinLabels([teacher?.subject, ...teacherAssignments.map((assignment) => assignment.subject?.name)]),
+        classes: joinLabels(teacherAssignments.map((assignment) => assignment.class?.name)),
+        sections: joinLabels(teacherAssignments.map((assignment) => assignment.section?.name)),
+        phone: teacher?.phone || '---',
+        shift: formatShiftTime(teacher?.shift),
+    }), [teacher, teacherAssignments]);
+
     const updateCalendar = (year, month) => {
         setSelectedYear(year);
         setSelectedMonth(month);
+        setRange({
+            startDate: formatDateKey(new Date(year, month, 1)),
+            endDate: formatDateKey(new Date(year, month + 1, 0)),
+        });
+        setActivePreset('custom');
         setSuccessMessage('');
         setError('');
     };
 
-    const scrollToDate = (dayNum) => {
-        const element = document.getElementById(`date-${dayNum}`);
+    const applyPreset = (preset) => {
+        const nextRange = getPresetRange(preset);
+        const [year, month] = nextRange.startDate.split('-').map(Number);
+        setActivePreset(preset);
+        setSelectedYear(year);
+        setSelectedMonth(month - 1);
+        setRange(nextRange);
+        setSuccessMessage('');
+        setError('');
+    };
+
+    const scrollToDate = (dateKey) => {
+        const element = document.getElementById(`date-${dateKey}`);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             element.classList.add('ring-4', 'ring-[#00d094]');
@@ -223,6 +300,27 @@ export const TeacherAttendanceHistory = () => {
                 </div>
             </div>
 
+            <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                    {[
+                        ['current-month', 'موجودہ مہینہ'],
+                        ['last-month', 'پچھلا مہینہ'],
+                        ['three-months', 'گزشتہ 3 ماہ'],
+                        ['six-months', 'گزشتہ 6 ماہ'],
+                        ['one-year', 'گزشتہ ایک سال'],
+                    ].map(([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            onClick={() => applyPreset(value)}
+                            className={`h-12 rounded-2xl border px-4 font-black transition-colors ${activePreset === value ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white' : 'border-[var(--color-border)] bg-[var(--color-bg)]'}`}
+                        >
+                            <span className="inline-block -translate-y-0.5 leading-none">{label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="xl:col-span-1 bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-xl flex flex-col items-center text-center">
                     <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[#00d094] to-[#008a63] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-[#00d094]/20 mb-4">
@@ -230,12 +328,19 @@ export const TeacherAttendanceHistory = () => {
                     </div>
                     <h1 className="text-2xl font-black text-[var(--color-text)]">{teacher?.fullName || 'استاد'}</h1>
                     <span className="bg-[#00d094]/10 text-[#00d094] text-xs px-3 py-1 rounded-full font-bold mt-2 border border-[#00d094]/20">{teacherId}</span>
-                    <p className="text-sm opacity-60 mt-4 font-medium text-[var(--color-text)]">{teacher?.subject || '---'}</p>
+                    <div className="mt-5 grid w-full grid-cols-1 gap-3 text-right sm:grid-cols-2">
+                        <ProfileInfo label="مضمون" value={teacherInfo.subjects} />
+                        <ProfileInfo label="جماعت" value={teacherInfo.classes} />
+                        <ProfileInfo label="جماعت سیکشن" value={teacherInfo.sections} />
+                        <ProfileInfo label="فون نمبر" value={teacherInfo.phone} dir="ltr" />
+                        <ProfileInfo label="شفٹ کا وقت" value={teacherInfo.shift} className="sm:col-span-2" />
+                    </div>
 
-                    <div className="flex gap-3 w-full mt-6 border-t border-[var(--color-border)]/10 pt-6">
-                        <StatBox label="حاضر" value={String(stats.present).padStart(2, '0')} color="text-emerald-500" bg="bg-emerald-500/10" />
-                        <StatBox label="غائب" value={String(stats.absent).padStart(2, '0')} color="text-red-500" bg="bg-red-500/10" />
-                        <StatBox label="چھٹی" value={String(stats.leave).padStart(2, '0')} color="text-amber-500" bg="bg-amber-500/10" />
+                    <div className="grid grid-cols-2 gap-3 w-full mt-6 border-t border-[var(--color-border)]/10 pt-6">
+                        <StatBox label="حاضری" value={String(stats.present).padStart(2, '0')} color="text-emerald-500" bg="bg-emerald-500/10" />
+                        <StatBox label="غیر حاضری" value={String(stats.absent).padStart(2, '0')} color="text-red-500" bg="bg-red-500/10" />
+                        <StatBox label="رخصت" value={String(stats.leave).padStart(2, '0')} color="text-amber-500" bg="bg-amber-500/10" />
+                        <StatBox label="تاخیر" value={String(stats.late).padStart(2, '0')} color="text-sky-500" bg="bg-sky-500/10" />
                     </div>
                 </div>
 
@@ -249,10 +354,10 @@ export const TeacherAttendanceHistory = () => {
                     </div>
 
                     <div className="grid grid-cols-6 sm:grid-cols-10 gap-2 font-mono" dir="ltr">
-                        {[...attendanceHistory].reverse().map((item) => (
+                        {attendanceHistory.map((item) => (
                             <button
-                                key={`map-${item.dayNum}`}
-                                onClick={() => scrollToDate(item.dayNum)}
+                                key={`map-${item.date}`}
+                                onClick={() => scrollToDate(item.date)}
                                 title={`${item.date} (${item.status})`}
                                 className={`h-12 rounded-xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-95
                                     ${item.status === 'Present' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : ''}
@@ -263,9 +368,6 @@ export const TeacherAttendanceHistory = () => {
                                 `}
                             >
                                 <span className="text-lg font-black">{item.dayNum}</span>
-                                <span className="text-[7px] uppercase opacity-70">
-                                    {item.status === 'Present' ? 'حاضر' : item.status === 'Absent' ? 'غائب' : item.status === 'Leave' ? 'رخصت' : item.status === 'Late' ? 'تاخیر' : 'خالی'}
-                                </span>
                             </button>
                         ))}
                     </div>
@@ -275,20 +377,20 @@ export const TeacherAttendanceHistory = () => {
             <div className="pt-4">
                 <h2 className="text-xl font-black text-[var(--color-text)] mb-6 flex items-center gap-3">
                     <AlertCircle className="text-amber-400" />
-                    تفصیلی روزنامچہ
+                    تفصیلی حاضری
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {attendanceHistory.map((item) => (
                         <div
-                            key={item.dayNum}
-                            id={`date-${item.dayNum}`}
+                            key={item.date}
+                            id={`date-${item.date}`}
                             className={`relative group p-5 rounded-[2rem] border-2 transition-all duration-300 bg-[var(--color-surface)] ${item.status === 'Not Marked' ? 'border-dashed border-amber-500/40 bg-amber-500/5' : 'border-[var(--color-border)]/10 shadow-md hover:border-[var(--color-primary)]/30'}`}
                         >
                             <div className="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]/5">
                                 <div>
-                                    <span className="text-xs font-black text-[var(--color-text)] opacity-40 block" dir="ltr">{item.date}</span>
-                                    <span className="text-sm font-bold text-[var(--color-primary)]">{item.dayName}</span>
+                                    <span className="text-sm font-black text-[var(--color-text)] opacity-50 block" dir="ltr">{item.date}</span>
+                                    <span className="text-base font-bold text-[var(--color-primary)]">{item.dayName}</span>
                                 </div>
                                 <StatusBadge status={item.status} />
                             </div>
@@ -296,7 +398,7 @@ export const TeacherAttendanceHistory = () => {
                             {isEditMode ? (
                                 <div className="space-y-3">
                                     <select
-                                        className="w-full bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 ring-[#00d094]"
+                                        className="w-full bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 ring-[#00d094]"
                                         value={item.status}
                                         onChange={(e) => {
                                             setAttendanceHistory((prev) =>
@@ -322,11 +424,11 @@ export const TeacherAttendanceHistory = () => {
                                             );
                                         }}
                                         placeholder="نوٹ"
-                                        className="w-full bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)]/10 rounded-xl p-3 text-xs font-bold outline-none"
+                                        className="w-full bg-[var(--color-bg)] text-[var(--color-text)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm font-bold outline-none"
                                     />
                                 </div>
                             ) : (
-                                <p className="text-[11px] text-[var(--color-text)] opacity-60 italic leading-relaxed">
+                                <p className="text-sm text-[var(--color-text)] opacity-70 italic leading-7">
                                     {item.note || (item.status === 'Not Marked' ? 'اس دن کی حاضری درج نہیں کی گئی۔' : 'کوئی اضافی تفصیل موجود نہیں ہے۔')}
                                 </p>
                             )}
@@ -342,6 +444,13 @@ const StatBox = ({ label, value, color, bg }) => (
     <div className={`text-center flex-1 ${bg} p-4 rounded-2xl border border-[var(--color-border)]/5`}>
         <p className="text-[10px] font-bold opacity-60 uppercase text-[var(--color-text)]">{label}</p>
         <p className={`text-2xl font-black ${color}`}>{value}</p>
+    </div>
+);
+
+const ProfileInfo = ({ label, value, className = '', dir = 'rtl' }) => (
+    <div className={`rounded-2xl border border-[var(--color-border)]/10 bg-[var(--color-bg)]/50 p-3 ${className}`}>
+        <p className="text-[10px] font-black text-[var(--color-text)] opacity-50">{label}</p>
+        <p className="mt-1 text-sm font-black text-[var(--color-text)]" dir={dir}>{value || '---'}</p>
     </div>
 );
 

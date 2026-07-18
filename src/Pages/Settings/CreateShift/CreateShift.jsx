@@ -1,22 +1,24 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Plus, Edit2, Trash2, X, Save, Sun, Moon, Coffee } from 'lucide-react';
-import { InputField, SelectField } from '../../../Components/HR/FormElements';
+import { InputField } from '../../../Components/HR/FormElements';
+import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
-import { createShift, deleteShift, getShifts, updateShift } from '../../../Constant/ShiftApi';
+import { createShifts, deleteShift, getShifts, updateShift } from '../../../Constant/ShiftApi';
 
 const emptyForm = {
     name: '',
     startTime: '',
     endTime: '',
-    type: 'Morning',
+    type: 'Custom',
 };
 
-const shiftTypeOptions = [
-    { label: 'مارننگ', value: 'Morning' },
-    { label: 'آفٹرنون', value: 'Afternoon' },
-    { label: 'ایوننگ', value: 'Evening' },
-    { label: 'کسٹم', value: 'Custom' },
-];
+const createEmptyShiftRow = () => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: '',
+    startTime: '',
+    endTime: '',
+    type: 'Custom',
+});
 
 const formatTime = (value) => {
     if (!value) return '--';
@@ -38,6 +40,8 @@ const getShiftIcon = (type) => {
 export const ShiftManagement = () => {
     const [shifts, setShifts] = useState([]);
     const [formData, setFormData] = useState(emptyForm);
+    const [shiftRows, setShiftRows] = useState([createEmptyShiftRow()]);
+    const [rowErrors, setRowErrors] = useState({});
     const [editMode, setEditMode] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -73,7 +77,70 @@ export const ShiftManagement = () => {
 
     const resetForm = () => {
         setFormData(emptyForm);
+        setShiftRows([createEmptyShiftRow()]);
+        setRowErrors({});
         setEditMode(null);
+    };
+
+    const updateShiftRow = (rowId, field, value) => {
+        setShiftRows((currentRows) =>
+            currentRows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
+        );
+        setRowErrors((currentErrors) => {
+            if (!currentErrors[rowId]) return currentErrors;
+            const nextErrors = { ...currentErrors };
+            delete nextErrors[rowId];
+            return nextErrors;
+        });
+    };
+
+    const addShiftRow = () => {
+        setShiftRows((currentRows) => [...currentRows, createEmptyShiftRow()]);
+    };
+
+    const removeShiftRow = (rowId) => {
+        setShiftRows((currentRows) => (currentRows.length > 1 ? currentRows.filter((row) => row.id !== rowId) : currentRows));
+        setRowErrors((currentErrors) => {
+            const nextErrors = { ...currentErrors };
+            delete nextErrors[rowId];
+            return nextErrors;
+        });
+    };
+
+    const validateShiftRows = () => {
+        const normalizedRows = shiftRows
+            .map((row) => ({ ...row, name: row.name.trim() }))
+            .filter((row) => row.name || row.startTime || row.endTime);
+        const nextErrors = {};
+        const seenNames = new Map();
+
+        if (!normalizedRows.length) {
+            nextErrors[shiftRows[0].id] = 'کم از کم ایک شفٹ کی معلومات درج کریں۔';
+        }
+
+        normalizedRows.forEach((row) => {
+            if (!row.name) {
+                nextErrors[row.id] = 'شفٹ کا نام ضروری ہے۔';
+                return;
+            }
+            if (!row.startTime || !row.endTime) {
+                nextErrors[row.id] = 'شفٹ کے اوقات درج کریں۔';
+                return;
+            }
+
+            const key = row.name.toLowerCase();
+            if (seenNames.has(key)) {
+                nextErrors[row.id] = 'یہ شفٹ اسی فارم میں دوبارہ درج ہے۔';
+            } else {
+                seenNames.set(key, row.id);
+            }
+        });
+
+        setRowErrors(nextErrors);
+        return {
+            isValid: Object.keys(nextErrors).length === 0,
+            rows: normalizedRows,
+        };
     };
 
     const handleEdit = (shift) => {
@@ -81,7 +148,7 @@ export const ShiftManagement = () => {
             name: shift.name || '',
             startTime: shift.startTime || '',
             endTime: shift.endTime || '',
-            type: shift.type || 'Morning',
+            type: shift.type || 'Custom',
         });
         setEditMode(shift.id);
         setError('');
@@ -90,24 +157,35 @@ export const ShiftManagement = () => {
     };
 
     const handleSubmit = async () => {
-        if (formData.startTime && !formData.endTime) {
-            setError('اختتامی وقت منتخب کرنا ضروری ہے۔ شروع وقت کے ساتھ اختتامی وقت بھی منتخب کریں۔');
-            return;
-        }
+        let validRows = [];
 
-        if (!formData.startTime && formData.endTime) {
-            setError('شروع وقت منتخب کرنا ضروری ہے۔ اختتامی وقت کے ساتھ شروع وقت بھی منتخب کریں۔');
-            return;
-        }
+        if (editMode) {
+            if (formData.startTime && !formData.endTime) {
+                setError('اختتامی وقت منتخب کرنا ضروری ہے۔ شروع وقت کے ساتھ اختتامی وقت بھی منتخب کریں۔');
+                return;
+            }
 
-        if (!formData.name.trim()) {
-            setError('شفٹ کا نام ضروری ہے۔');
-            return;
-        }
+            if (!formData.startTime && formData.endTime) {
+                setError('شروع وقت منتخب کرنا ضروری ہے۔ اختتامی وقت کے ساتھ شروع وقت بھی منتخب کریں۔');
+                return;
+            }
 
-        if (!formData.startTime || !formData.endTime) {
-            setError('شفٹ کے اوقات درج کریں۔');
-            return;
+            if (!formData.name.trim()) {
+                setError('شفٹ کا نام ضروری ہے۔');
+                return;
+            }
+
+            if (!formData.startTime || !formData.endTime) {
+                setError('شفٹ کے اوقات درج کریں۔');
+                return;
+            }
+        } else {
+            const validation = validateShiftRows();
+            if (!validation.isValid) {
+                setError('درج کردہ شفٹس میں غلطی موجود ہے۔');
+                return;
+            }
+            validRows = validation.rows;
         }
 
         setIsSaving(true);
@@ -115,19 +193,25 @@ export const ShiftManagement = () => {
         setSuccess('');
 
         try {
-            const payload = {
-                name: formData.name.trim(),
-                startTime: formData.startTime,
-                endTime: formData.endTime,
-                type: formData.type,
-            };
-
             if (editMode) {
+                const payload = {
+                    name: formData.name.trim(),
+                    startTime: formData.startTime,
+                    endTime: formData.endTime,
+                    type: formData.type,
+                };
                 await updateShift(editMode, payload);
                 setSuccess('شفٹ کامیابی سے اپڈیٹ ہو گئی۔');
             } else {
-                await createShift(payload);
-                setSuccess('نئی شفٹ کامیابی سے شامل ہو گئی۔');
+                await createShifts({
+                    shifts: validRows.map((row) => ({
+                        name: row.name,
+                        startTime: row.startTime,
+                        endTime: row.endTime,
+                        type: row.type,
+                    })),
+                });
+                setSuccess(validRows.length > 1 ? 'شفٹس کامیابی سے شامل ہو گئیں۔' : 'نئی شفٹ کامیابی سے شامل ہو گئی۔');
             }
 
             resetForm();
@@ -180,37 +264,74 @@ export const ShiftManagement = () => {
                     <span>{editMode ? 'شفٹ اپڈیٹ کریں' : 'نئی شفٹ شامل کریں'}</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField
-                        type="text"
-                        label="شفٹ کا نام"
-                        required
-                        placeholder="مثلاً: مارننگ شفٹ"
-                        value={formData.name}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                    />
-                    <SelectField
-                        label="شفٹ کی قسم"
-                        required
-                        options={shiftTypeOptions}
-                        value={formData.type}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
-                    />
-                    <InputField
-                        type="time"
-                        label="شروع ہونے کا وقت"
-                        required
-                        value={formData.startTime}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))}
-                    />
-                    <InputField
-                        type="time"
-                        label="ختم ہونے کا وقت"
-                        required
-                        value={formData.endTime}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))}
-                    />
-                </div>
+                {editMode ? (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                        <InputField
+                            type="text"
+                            label="شفٹ کا نام"
+                            required
+                            placeholder="مثلاً: مارننگ شفٹ"
+                            value={formData.name}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                        />
+                        <InputField
+                            type="time"
+                            label="شروع ہونے کا وقت"
+                            required
+                            value={formData.startTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, startTime: e.target.value }))}
+                        />
+                        <InputField
+                            type="time"
+                            label="ختم ہونے کا وقت"
+                            required
+                            value={formData.endTime}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))}
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        <MultipleEntryRows
+                            rows={shiftRows}
+                            onAdd={addShiftRow}
+                            onRemove={removeShiftRow}
+                            disabled={isSaving}
+                            addLabel="نئی شفٹ کی قطار شامل کریں"
+                            removeLabel="شفٹ کی قطار حذف کریں"
+                            rowClassName="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_220px_220px_auto] xl:items-start"
+                            actionsClassName="flex items-center justify-end gap-2 pt-0 xl:pt-8"
+                            addButtonClassName="grid h-[58px] w-[58px] place-items-center rounded-2xl bg-[#00d094] text-white shadow-lg shadow-[#00d094]/20 transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                            removeButtonClassName="grid h-[58px] w-[58px] place-items-center rounded-2xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            getRowError={(row) => rowErrors[row.id]}
+                            renderFields={(row) => (
+                                <>
+                                    <InputField
+                                        type="text"
+                                        label="شفٹ کا نام"
+                                        required
+                                        placeholder="مثلاً: مارننگ شفٹ"
+                                        value={row.name}
+                                        onChange={(e) => updateShiftRow(row.id, 'name', e.target.value)}
+                                    />
+                                    <InputField
+                                        type="time"
+                                        label="شروع ہونے کا وقت"
+                                        required
+                                        value={row.startTime}
+                                        onChange={(e) => updateShiftRow(row.id, 'startTime', e.target.value)}
+                                    />
+                                    <InputField
+                                        type="time"
+                                        label="ختم ہونے کا وقت"
+                                        required
+                                        value={row.endTime}
+                                        onChange={(e) => updateShiftRow(row.id, 'endTime', e.target.value)}
+                                    />
+                                </>
+                            )}
+                        />
+                    </div>
+                )}
 
                 <div className="mt-8 flex flex-wrap justify-end gap-3">
                     {editMode ? (
@@ -228,7 +349,7 @@ export const ShiftManagement = () => {
                         className="px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
                     >
                         {editMode ? <Save size={20} /> : <Plus size={20} />}
-                        <span>{isSaving ? 'محفوظ ہو رہی ہے...' : editMode ? 'تبدیل کریں' : 'نئی شفٹ شامل کریں'}</span>
+                        <span>{isSaving ? 'محفوظ ہو رہی ہے...' : editMode ? 'تبدیل کریں' : 'محفوظ کریں'}</span>
                     </button>
                 </div>
             </div>
@@ -252,11 +373,10 @@ export const ShiftManagement = () => {
                                 <div>
                                     <h3 style={{ color: 'var(--color-text-main)' }} className="font-bold text-lg">{shift.name}</h3>
                                     <div className="flex items-center gap-3 mt-1">
-                                        <span style={{ color: 'var(--color-text-muted)', unicodeBidi: 'isolate' }} dir="ltr" className="text-sm flex items-center gap-1.5 font-semibold">
-                                            <Clock size={15} /> {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+                                        <span style={{ color: 'var(--color-text-muted)', unicodeBidi: 'isolate' }} dir="ltr" className="flex items-center gap-2 text-base font-bold md:text-lg">
+                                            <Clock size={17} /> {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
                                         </span>
                                     </div>
-                                    <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">{shift.type}</p>
                                 </div>
                             </div>
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Edit2, Eye, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { CalendarRange, Edit2, Eye, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { useNavigate } from 'react-router-dom';
 import { deleteTeacher, getTeachers } from '../../../Constant/TeachersApi';
@@ -230,7 +230,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     return (
         <div className="space-y-6" dir="rtl">
             <div className="bg-[var(--color-surface)] rounded-[2.5rem] mt-6 md:mt-0 lg:mt-0 p-6 md:p-8 shadow-xl border border-white/5">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(220px,auto)_1fr] xl:items-center">
                     <div className="space-y-2">
                         <h2 className="text-2xl md:text-3xl font-black text-[var(--text-color)]">{config.title}</h2>
                         <div className="flex items-center gap-3 mt-5">
@@ -240,11 +240,11 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                    <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,150px)_minmax(240px,1fr)_minmax(140px,160px)_minmax(140px,160px)_minmax(130px,150px)]">
                         <Can permission={`${permissionPrefix}.export`}>
-                            <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="w-full sm:w-auto" />
+                            <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="h-[72px] w-full" />
                         </Can>
-                        <div className="relative w-full sm:w-80 group">
+                        <div className="relative w-full min-w-0 group">
                             <Search size={18} className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                             <InputField
                                 type="text"
@@ -258,7 +258,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         <select
                             value={subjectFilter}
                             onChange={(event) => setSubjectFilter(event.target.value)}
-                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] sm:w-48"
+                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
                         >
                             <option value="">{config.subjectLabel}</option>
                             {subjectOptions.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
@@ -266,7 +266,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         <select
                             value={shiftFilter}
                             onChange={(event) => setShiftFilter(event.target.value)}
-                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] sm:w-44"
+                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
                         >
                             <option value="">شفٹ</option>
                             {shiftOptions.map((shift) => <option key={shift} value={shift}>{shift}</option>)}
@@ -274,7 +274,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         <Can permission={`${permissionPrefix}.create`}>
                             <button
                                 onClick={() => navigate(config.addPath)}
-                                className="flex items-center justify-center gap-2 bg-[#00d094] text-[#002a33] px-6 py-3 rounded-2xl font-bold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 w-full sm:w-auto"
+                                className="flex h-[72px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#00d094] px-5 font-bold text-[#002a33] shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95"
                             >
                                 <UserPlus size={18} />
                                 <span>نیا اندراج</span>
@@ -324,6 +324,13 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 <button onClick={() => navigate(`/teachers/details/${teacher.id}`)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all">
                                     <Eye size={16} className="ml-2" /> دیکھیں
                                 </button>
+                                {staffType === 'teacher' ? (
+                                    <Can permission="teachers.attendance.view">
+                                        <button onClick={() => navigate(`/teachers/attendance-history/${teacher.id}`)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all" aria-label="حاضری ریکارڈ">
+                                            <CalendarRange size={16} className="ml-2" />
+                                        </button>
+                                    </Can>
+                                ) : null}
                                 <Can anyPermissions={[`${permissionPrefix}.update`, `${permissionPrefix}.edit`]}>
                                     <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="flex-1 flex justify-center items-center py-2.5 rounded-xl bg-[#00d094]/10 text-[#00d094] hover:bg-[#00d094] hover:text-white transition-all" aria-label="تبدیل کریں">
                                         <Edit2 size={16} className="ml-2" />
@@ -363,12 +370,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 <tr key={teacher.id} className="hover:bg-[var(--color-bg)]/50 transition-colors group">
                                     <td className="p-5"><span className="text-[12px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-lg">{index + 1}</span></td>
                                     <td className="p-5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00d094] to-[#008a63] flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                                {(teacher.fullName || '?').charAt(0)}
-                                            </div>
-                                            <span className="text-[14px] font-black text-[var(--color-text-main)]">{teacher.fullName}</span>
-                                        </div>
+                                        <span className="text-[14px] font-black text-[var(--color-text-main)]">{teacher.fullName}</span>
                                     </td>
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{teacher.subject || '---'}</td>
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{getTeacherShiftLabel(teacher)}</td>
@@ -381,6 +383,11 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                     <td className="p-5">
                                         <div className="flex items-center justify-center gap-2">
                                             <button onClick={() => navigate(`/teachers/details/${teacher.id}`)} className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all shadow-sm" aria-label="دیکھیں"><Eye size={16} /></button>
+                                            {staffType === 'teacher' ? (
+                                                <Can permission="teachers.attendance.view">
+                                                    <button onClick={() => navigate(`/teachers/attendance-history/${teacher.id}`)} className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all shadow-sm" aria-label="حاضری ریکارڈ"><CalendarRange size={16} /></button>
+                                                </Can>
+                                            ) : null}
                                             <Can anyPermissions={[`${permissionPrefix}.update`, `${permissionPrefix}.edit`]}>
                                                 <button onClick={() => navigate(`/HRManagement?teacherId=${teacher.id}`)} className="p-2.5 rounded-xl bg-[#00d094]/10 text-[#00d094] hover:bg-[#00d094] hover:text-white transition-all shadow-sm" aria-label="تبدیل کریں"><Edit2 size={16} /></button>
                                             </Can>

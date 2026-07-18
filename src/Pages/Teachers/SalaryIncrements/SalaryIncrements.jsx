@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, Plus, Search, TrendingUp, UserCheck, Wallet } from 'lucide-react';
+import { Edit2, Eye, Plus, Search, Trash2, TrendingUp, UserCheck, Wallet, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createTeacherIncrement, getAllTeacherIncrements, getTeachers } from '../../../Constant/TeachersApi';
+import { createTeacherIncrement, deleteTeacherIncrement, getAllTeacherIncrements, getTeachers, updateTeacherIncrement } from '../../../Constant/TeachersApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
@@ -15,7 +15,7 @@ const initialForm = {
     reason: '',
 };
 
-export const SalaryIncrements = () => {
+export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
     const navigate = useNavigate();
     const notify = useNotifier();
     const [teachers, setTeachers] = useState([]);
@@ -23,18 +23,24 @@ export const SalaryIncrements = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [staffType, setStaffType] = useState('');
     const [formData, setFormData] = useState(initialForm);
+    const [editingIncrement, setEditingIncrement] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
+            const activeStaffType = fixedStaffType || staffType;
             const params = new URLSearchParams({ page: '1', limit: '100' });
-            if (staffType) params.set('staffType', staffType);
+            if (activeStaffType) params.set('staffType', activeStaffType);
             if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            const teacherParams = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
+            if (activeStaffType) teacherParams.set('staffType', activeStaffType);
 
             const [teacherResult, incrementResult] = await Promise.all([
-                getTeachers('page=1&limit=100&status=active'),
+                getTeachers(teacherParams.toString()),
                 getAllTeacherIncrements(params.toString()),
             ]);
 
@@ -45,7 +51,7 @@ export const SalaryIncrements = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [notify, searchTerm, staffType]);
+    }, [fixedStaffType, notify, searchTerm, staffType]);
 
     useEffect(() => {
         loadData();
@@ -77,18 +83,57 @@ export const SalaryIncrements = () => {
 
         setIsSaving(true);
         try {
-            await createTeacherIncrement(formData.teacherId, {
+            const payload = {
                 incrementAmount: Number(formData.incrementAmount),
                 effectiveDate: formData.effectiveDate,
                 reason: formData.reason,
-            });
-            notify.success('تنخواہ انکریمنٹ محفوظ ہو گیا۔', 'انکریمنٹ محفوظ');
+            };
+            if (editingIncrement) {
+                await updateTeacherIncrement(editingIncrement.id, payload);
+            } else {
+                await createTeacherIncrement(formData.teacherId, payload);
+            }
+            notify.success(editingIncrement ? 'تنخواہ انکریمنٹ تبدیل ہو گیا۔' : 'تنخواہ انکریمنٹ محفوظ ہو گیا۔', editingIncrement ? 'انکریمنٹ تبدیل' : 'انکریمنٹ محفوظ');
             setFormData(initialForm);
+            setEditingIncrement(null);
             await loadData();
         } catch (error) {
-            notify.error(error?.message || 'انکریمنٹ محفوظ نہیں ہو سکا۔', 'محفوظ کرنے میں مسئلہ');
+            notify.error(error?.message || (editingIncrement ? 'انکریمنٹ تبدیل نہیں ہو سکا۔' : 'انکریمنٹ محفوظ نہیں ہو سکا۔'), 'محفوظ کرنے میں مسئلہ');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleEditIncrement = (item) => {
+        setEditingIncrement(item);
+        setFormData({
+            teacherId: String(item.teacherId || ''),
+            incrementAmount: String(item.incrementAmount || ''),
+            effectiveDate: item.effectiveDate || todayInputValue(),
+            reason: item.reason || '',
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const cancelEdit = () => {
+        setEditingIncrement(null);
+        setFormData(initialForm);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+
+        setIsDeleting(true);
+        try {
+            await deleteTeacherIncrement(deleteTarget.id);
+            notify.success('تنخواہ انکریمنٹ حذف ہو گیا۔', 'انکریمنٹ حذف');
+            setDeleteTarget(null);
+            if (editingIncrement?.id === deleteTarget.id) cancelEdit();
+            await loadData();
+        } catch (error) {
+            notify.error(error?.message || 'انکریمنٹ حذف نہیں ہو سکا۔', 'حذف کرنے میں مسئلہ');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -101,7 +146,7 @@ export const SalaryIncrements = () => {
                             <TrendingUp size={18} />
                             تنخواہ انکریمنٹ
                         </div>
-                        <h1 className="text-3xl font-black text-[var(--color-text-main)]">اساتذہ / عملہ انکریمنٹ</h1>
+                        <h1 className="text-3xl font-black text-[var(--color-text-main)]">{fixedStaffType === 'staff' ? 'عملہ انکریمنٹ' : fixedStaffType === 'teacher' ? 'اساتذہ انکریمنٹ' : 'اساتذہ / عملہ انکریمنٹ'}</h1>
                         <p className="mt-3 text-base font-bold leading-8 text-[var(--color-text-muted)]">
                             تمام اساتذہ اور عملہ کی تنخواہ میں اضافہ یہاں سے درج اور ٹریک کریں۔
                         </p>
@@ -134,7 +179,7 @@ export const SalaryIncrements = () => {
                             <option value="">منتخب کریں</option>
                             {teachers.map((teacher) => (
                                 <option key={teacher.id} value={teacher.id}>
-                                    {teacher.fullName} - {staffTypeLabel(teacher.staffType)} - {formatCurrency(teacher.basicSalary)}
+                                    {teacher.fullName} - {staffTypeLabel(teacher.staffType)}
                                 </option>
                             ))}
                         </select>
@@ -173,10 +218,23 @@ export const SalaryIncrements = () => {
                             className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-primary)] px-6 text-sm font-black text-white shadow-lg shadow-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <Plus size={18} />
-                            {isSaving ? 'محفوظ...' : 'شامل کریں'}
+                            {isSaving ? 'محفوظ...' : editingIncrement ? 'تبدیل کریں' : 'شامل کریں'}
                         </button>
                     </div>
                 </div>
+
+                {editingIncrement ? (
+                    <div className="mt-4 flex justify-end">
+                        <button
+                            type="button"
+                            onClick={cancelEdit}
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-sm font-black text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                        >
+                            <X size={16} />
+                            منسوخ کریں
+                        </button>
+                    </div>
+                ) : null}
 
                 <div className="mt-4">
                     <Field label="وجہ / نوٹ">
@@ -201,34 +259,40 @@ export const SalaryIncrements = () => {
                             className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pl-12 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
                         />
                     </div>
-                    <select
-                        value={staffType}
-                        onChange={(event) => setStaffType(event.target.value)}
-                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
-                    >
-                        <option value="">تمام</option>
-                        <option value="teacher">اساتذہ</option>
-                        <option value="staff">دیگر عملہ</option>
-                    </select>
+                    {fixedStaffType ? (
+                        <div className="flex h-14 w-full items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)]">
+                            {staffTypeLabel(fixedStaffType)}
+                        </div>
+                    ) : (
+                        <select
+                            value={staffType}
+                            onChange={(event) => setStaffType(event.target.value)}
+                            className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
+                        >
+                            <option value="">تمام</option>
+                            <option value="teacher">اساتذہ</option>
+                            <option value="staff">دیگر عملہ</option>
+                        </select>
+                    )}
                 </div>
             </div>
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                <div className="hidden grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_90px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/40 px-5 py-4 text-sm font-black text-[var(--color-text-muted)] lg:grid">
+                <div className="hidden grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_150px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/40 px-5 py-4 text-sm font-black text-[var(--color-text-muted)] lg:grid">
                     <span>نام</span>
                     <span>قسم</span>
                     <span>تاریخ</span>
                     <span>پرانی تنخواہ</span>
                     <span>اضافہ</span>
                     <span>نئی تنخواہ</span>
-                    <span>عمل</span>
+                    <span>ایکشن</span>
                 </div>
 
                 {isLoading ? (
                     <div className="px-5 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">ریکارڈز لوڈ ہو رہے ہیں...</div>
                 ) : increments.length ? (
                     increments.map((item) => (
-                        <div key={item.id} className="grid grid-cols-1 gap-3 border-b border-[var(--color-border)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] last:border-b-0 lg:grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_90px] lg:items-center">
+                        <div key={item.id} className="grid grid-cols-1 gap-3 border-b border-[var(--color-border)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] last:border-b-0 lg:grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_150px] lg:items-center">
                             <div>
                                 <p className="text-base font-black">{item.teacherName || '---'}</p>
                                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.department || item.jobTitle || item.reason || '---'}</p>
@@ -238,20 +302,80 @@ export const SalaryIncrements = () => {
                             <span>{formatCurrency(item.previousSalary)}</span>
                             <span className="text-[var(--color-primary)]">{formatCurrency(item.incrementAmount)}</span>
                             <span>{formatCurrency(item.newSalary)}</span>
-                            <button
-                                type="button"
-                                onClick={() => navigate(`/teachers/details/${item.teacherId}`)}
-                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-500/10 px-4 text-blue-500 transition-all hover:bg-blue-500 hover:text-white"
-                            >
-                                <Eye size={16} />
-                                دیکھیں
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(`/teachers/details/${item.teacherId}`)}
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 transition-all hover:bg-blue-500 hover:text-white"
+                                    title="دیکھیں"
+                                >
+                                    <Eye size={16} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleEditIncrement(item)}
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-white"
+                                    title="تبدیل کریں"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDeleteTarget(item)}
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white"
+                                    title="حذف کریں"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
                     ))
                 ) : (
                     <div className="px-5 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی انکریمنٹ ریکارڈ موجود نہیں۔</div>
                 )}
             </div>
+
+            {deleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="text-right">
+                                <h3 className="text-xl font-black text-[var(--color-text-main)]">انکریمنٹ حذف کریں؟</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی <span className="text-rose-500">{deleteTarget.teacherName || 'یہ ریکارڈ'}</span> کا انکریمنٹ حذف کرنا چاہتے ہیں؟
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => !isDeleting && setDeleteTarget(null)}
+                                className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                                aria-label="بند کریں"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(null)}
+                                disabled={isDeleting}
+                                className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                منسوخ کریں
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDelete}
+                                disabled={isDeleting}
+                                className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isDeleting ? 'حذف ہو رہا ہے...' : 'حذف کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 };
