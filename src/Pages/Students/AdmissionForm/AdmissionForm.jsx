@@ -22,6 +22,7 @@ import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
+import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
 
 const INITIAL_VALUES = {
     idNo: '',
@@ -139,6 +140,70 @@ const toDateInputValue = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value).split('T')[0];
     return date.toISOString().split('T')[0];
+};
+
+const isBlank = (value) => !String(value || '').trim();
+const isValidEmail = (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+const isValidAmount = (value) => value === '' || value === null || value === undefined || (Number.isFinite(Number(value)) && Number(value) >= 0);
+const isValidPhone = (value) => !value || /^[0-9+\-\s()]{7,20}$/.test(String(value).trim());
+const isValidOptionalCnic = (value) => !String(value || '').trim() || isCompleteCnic(value);
+
+const admissionValidationMessages = {
+    idNo: 'داخلہ نمبر لازمی درج کریں۔',
+    admissionDate: 'تاریخ داخلہ لازمی منتخب کریں۔',
+    admissionFee: 'داخلہ فیس لازمی درج کریں۔',
+    fullName: 'طالب علم کا نام لازمی درج کریں۔',
+    fatherName: 'والد کا نام لازمی درج کریں۔',
+    gender: 'جنس لازمی منتخب کریں۔',
+    dob: 'تاریخ پیدائش لازمی منتخب کریں۔',
+    currentAddress: 'حالیہ پتہ لازمی درج کریں۔',
+    permanentAddress: 'مستقل پتہ لازمی درج کریں۔',
+    guardianName: 'سرپرست کا نام لازمی درج کریں۔',
+    relation: 'رشتہ لازمی درج کریں۔',
+    guardianMobile: 'سرپرست موبائل لازمی درج کریں۔',
+    monthlyFee: 'ماہانہ فیس لازمی درج کریں۔',
+    email: 'درست ای میل درج کریں۔',
+    phone: 'درست فون نمبر درج کریں۔',
+    amount: 'رقم درست درج کریں۔',
+    cnic: 'شناختی کارڈ نمبر 00000-0000000-0 کے فارمیٹ میں درج کریں۔',
+};
+
+const validateAdmissionForm = (values) => {
+    const errors = {};
+
+    if (isBlank(values.idNo)) errors.idNo = admissionValidationMessages.idNo;
+    if (isBlank(values.admissionDate)) errors.admissionDate = admissionValidationMessages.admissionDate;
+    if (isBlank(values.admissionFee)) errors.admissionFee = admissionValidationMessages.admissionFee;
+    if (isBlank(values.fullName)) errors.fullName = admissionValidationMessages.fullName;
+    if (isBlank(values.fatherName)) errors.fatherName = admissionValidationMessages.fatherName;
+    if (isBlank(values.gender)) errors.gender = admissionValidationMessages.gender;
+    if (isBlank(values.dob)) errors.dob = admissionValidationMessages.dob;
+    if (isBlank(values.currentAddress)) errors.currentAddress = admissionValidationMessages.currentAddress;
+    if (isBlank(values.permanentAddress)) errors.permanentAddress = admissionValidationMessages.permanentAddress;
+    if (isBlank(values.guardianName)) errors.guardianName = admissionValidationMessages.guardianName;
+    if (isBlank(values.relation)) errors.relation = admissionValidationMessages.relation;
+    if (isBlank(values.guardianMobile)) errors.guardianMobile = admissionValidationMessages.guardianMobile;
+    if (isBlank(values.monthlyFee)) errors.monthlyFee = admissionValidationMessages.monthlyFee;
+    if (!isValidAmount(values.admissionFee)) errors.admissionFee = admissionValidationMessages.amount;
+    if (!isValidAmount(values.monthlyFee)) errors.monthlyFee = admissionValidationMessages.amount;
+    if (!isValidEmail(values.guardianEmail)) errors.guardianEmail = admissionValidationMessages.email;
+    if (!isValidPhone(values.mobile)) errors.mobile = admissionValidationMessages.phone;
+    if (!isValidPhone(values.whatsapp)) errors.whatsapp = admissionValidationMessages.phone;
+    if (!isValidPhone(values.guardianMobile)) errors.guardianMobile = admissionValidationMessages.phone;
+    if (!isValidPhone(values.guardianWhatsapp)) errors.guardianWhatsapp = admissionValidationMessages.phone;
+    if (!isValidOptionalCnic(values.cnic)) errors.cnic = admissionValidationMessages.cnic;
+    if (!isValidOptionalCnic(values.guardianCnic)) errors.guardianCnic = admissionValidationMessages.cnic;
+
+    return errors;
+};
+
+const toUrduAdmissionError = (message) => {
+    if (!message) return 'براہ کرم مطلوبہ معلومات درست اور مکمل درج کریں۔';
+    if (/[\u0600-\u06FF]/.test(message)) return message;
+    if (/required|missing|invalid|must be|please fill|validation/i.test(message)) {
+        return 'براہ کرم مطلوبہ معلومات درست اور مکمل درج کریں۔';
+    }
+    return message;
 };
 
 const mapStudentToFormValues = (student) => {
@@ -549,7 +614,7 @@ export const AdmissionForm = () => {
                 ? 'طالب علم کا ریکارڈ کامیابی سے اپڈیٹ ہو گیا۔'
                 : 'طالب علم کا داخلہ کامیابی سے محفوظ ہو گیا۔');
         } catch (error) {
-            setSubmitError(error.message || 'طالب علم کا ریکارڈ محفوظ نہیں ہو سکا۔');
+            setSubmitError(toUrduAdmissionError(error.message) || 'طالب علم کا ریکارڈ محفوظ نہیں ہو سکا۔');
         } finally {
             setSubmitting(false);
         }
@@ -566,8 +631,8 @@ export const AdmissionForm = () => {
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-2 bg-[var(--color-bg)]" dir="rtl">
-            <Formik initialValues={initialFormValues} enableReinitialize onSubmit={handleFormSubmit}>
-                {({ setFieldValue, values, isSubmitting }) => {
+            <Formik initialValues={initialFormValues} enableReinitialize validate={validateAdmissionForm} onSubmit={handleFormSubmit}>
+                {({ setFieldValue, values, isSubmitting, errors, touched }) => {
                     const printValues = savedPrintValues || values;
                     const printImagePreview = savedPrintImagePreview || imagePreview;
                     const madrassaName = madrassaProfile?.name?.trim() || 'جامعہ انوار القرآن';
@@ -575,7 +640,7 @@ export const AdmissionForm = () => {
 
                     return (
                     <>
-                        <Form className="admission-form print:hidden space-y-8 pb-10">
+                        <Form noValidate className="admission-form print:hidden space-y-8 pb-10">
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
                                 <div className="bg-[#002a33] p-8 text-center text-white">
                                     <h2 className="text-3xl font-bold">طالب علم داخلہ فارم</h2>
@@ -588,11 +653,12 @@ export const AdmissionForm = () => {
                                             label="داخلہ نمبر"
                                             name="idNo"
                                             required
+                                            error={touched.idNo && errors.idNo ? errors.idNo : ''}
                                             placeholder={isAdmissionNumberLoading ? 'بن رہا ہے...' : ''}
                                             className="text-[var(--color-text-main)]"
                                         />
-                                        <FormikInputField label="داخلہ فیس" name="admissionFee" />
-                                        <FormikInputField label="تاریخ داخلہ" name="admissionDate" type="date" />
+                                        <FormikInputField label="داخلہ فیس" name="admissionFee" required error={touched.admissionFee && errors.admissionFee ? errors.admissionFee : ''} />
+                                        <FormikInputField label="تاریخ داخلہ" name="admissionDate" type="date" required error={touched.admissionDate && errors.admissionDate ? errors.admissionDate : ''} />
                                         <div className="flex justify-center">
                                             <label className="w-28 h-34 border-4 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 transition-all overflow-hidden bg-slate-50">
                                                 {imagePreview ? <img src={imagePreview} className="w-full h-full object-cover" alt="preview" /> : <Camera className="text-slate-400" />}
@@ -678,18 +744,21 @@ export const AdmissionForm = () => {
                                                 label="نام طالب علم"
                                                 name="fullName"
                                                 required
+                                                error={touched.fullName && errors.fullName ? errors.fullName : ''}
                                                 className="admission-urdu-input"
                                             />
                                             <FormikInputField
                                                 label="والد کا نام"
                                                 name="fatherName"
                                                 required
+                                                error={touched.fatherName && errors.fatherName ? errors.fatherName : ''}
                                                 className="admission-urdu-input"
                                             />
                                             <FormikSelectField
                                                 label="جنس"
                                                 name="gender"
                                                 required
+                                                error={touched.gender && errors.gender ? errors.gender : ''}
                                                 options={[
                                                     { value: 'male', label: 'مرد' },
                                                     { value: 'female', label: 'خاتون' },
@@ -697,9 +766,9 @@ export const AdmissionForm = () => {
                                                 ]}
                                             />
                                             <FormikInputField label="قومیت / ذات" name="caste" />
-                                            <FormikInputField label="آئی ڈی نمبر" name="cnic" />
+                                            <FormikCnicField label="آئی ڈی نمبر" name="cnic" error={touched.cnic && errors.cnic ? errors.cnic : ''} />
                                             <FormikInputField label="بے فارم نمبر" name="bForm" />
-                                            <FormikInputField label="تاریخ پیدائش" name="dob" type="date" />
+                                            <FormikInputField label="تاریخ پیدائش" name="dob" type="date" required error={touched.dob && errors.dob ? errors.dob : ''} />
                                         </div>
                                     </FormSection>
 
@@ -708,11 +777,15 @@ export const AdmissionForm = () => {
                                             <FormikInputField
                                                 label="حالیہ پتہ"
                                                 name="currentAddress"
+                                                required
+                                                error={touched.currentAddress && errors.currentAddress ? errors.currentAddress : ''}
                                                 className="admission-urdu-input"
                                             />
                                             <FormikInputField
                                                 label="مستقل پتہ"
                                                 name="permanentAddress"
+                                                required
+                                                error={touched.permanentAddress && errors.permanentAddress ? errors.permanentAddress : ''}
                                                 className="admission-urdu-input"
                                             />
                                         </div>
@@ -722,20 +795,20 @@ export const AdmissionForm = () => {
                                                 name="district"
                                                 className="admission-urdu-input"
                                             />
-                                            <FormikInputField label="موبائل نمبر" name="mobile" />
-                                            <FormikInputField label="واٹس ایپ" name="whatsapp" />
+                                            <FormikInputField label="موبائل نمبر" name="mobile" error={touched.mobile && errors.mobile ? errors.mobile : ''} />
+                                            <FormikInputField label="واٹس ایپ" name="whatsapp" error={touched.whatsapp && errors.whatsapp ? errors.whatsapp : ''} />
                                         </div>
                                     </FormSection>
 
                                     <FormSection title="سرپرست کی تفصیل" icon={<Phone size={20} />}>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            <FormikInputField label="نام سرپرست" name="guardianName" />
-                                            <FormikInputField label="رشتہ" name="relation" />
-                                            <FormikInputField label="سرپرست موبائل" name="guardianMobile" />
-                                            <FormikInputField label="سرپرست واٹس ایپ" name="guardianWhatsapp" />
-                                            <FormikInputField label="سرپرست آئی ڈی نمبر" name="guardianCnic" />
+                                            <FormikInputField label="نام سرپرست" name="guardianName" required error={touched.guardianName && errors.guardianName ? errors.guardianName : ''} />
+                                            <FormikInputField label="رشتہ" name="relation" required error={touched.relation && errors.relation ? errors.relation : ''} />
+                                            <FormikInputField label="سرپرست موبائل" name="guardianMobile" required error={touched.guardianMobile && errors.guardianMobile ? errors.guardianMobile : ''} />
+                                            <FormikInputField label="سرپرست واٹس ایپ" name="guardianWhatsapp" error={touched.guardianWhatsapp && errors.guardianWhatsapp ? errors.guardianWhatsapp : ''} />
+                                            <FormikCnicField label="سرپرست آئی ڈی نمبر" name="guardianCnic" error={touched.guardianCnic && errors.guardianCnic ? errors.guardianCnic : ''} />
                                             <FormikInputField label="سرپرست کا پیشہ" name="fatherOccupation" />
-                                            <FormikInputField label="ای میل" name="guardianEmail" />
+                                            <FormikInputField label="ای میل" name="guardianEmail" error={touched.guardianEmail && errors.guardianEmail ? errors.guardianEmail : ''} />
                                         </div>
                                     </FormSection>
 
@@ -801,7 +874,7 @@ export const AdmissionForm = () => {
 
                                     <FormSection title="دیگر معلومات" icon={<HeartPulse size={20} />}>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            <FormikInputField label="ماہانہ فیس" name="monthlyFee" />
+                                            <FormikInputField label="ماہانہ فیس" name="monthlyFee" required error={touched.monthlyFee && errors.monthlyFee ? errors.monthlyFee : ''} />
                                             <FormikInputField label="بیماری (اگر ہے)" name="medicalCondition" />
                                             <FormikInputField label="رہائشی (ہاں/نہیں)" name="reside" />
                                         </div>
@@ -853,7 +926,7 @@ export const AdmissionForm = () => {
                             </div>
                         ) : null}
 
-                        <div className="admission-print-area hidden print:block w-full text-[13px] px-2 py-3 relative" dir="rtl" style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }}>
+                        <div className="admission-print-area hidden print:block w-full text-[13px] relative" dir="rtl" style={{ fontFamily: 'Jameel Noori Nastaleeq, Noto Nastaliq Urdu, serif' }}>
                             <div className="absolute inset-0 flex items-center justify-center z-0" style={{ pointerEvents: 'none' }}>
                                 <img
                                     src={madrassaLogo}
@@ -863,17 +936,17 @@ export const AdmissionForm = () => {
                                 />
                             </div>
 
-                            <div className="border-[3px] border-[#004a5e] border-dashed rounded-md p-6 relative bg-white h-[1095px] z-10">
-                                <div className="text-center border-b-2 border-[#004a5e] pb-2 mb-6">
+                            <div className="admission-print-sheet border-[3px] border-[#004a5e] border-dashed rounded-md p-6 relative bg-white z-10">
+                                <div className="admission-print-header text-center border-b-2 border-[#004a5e] pb-2 mb-6">
                                     <h1 className="text-4xl font-bold text-[#0f172a]">{madrassaName}</h1>
                                     <div className="bg-[#00d094] text-white px-6 py-2 rounded-full shadow-xl inline-block text-lg font-bold mt-7">داخلہ فارم</div>
                                 </div>
 
-                                <div className="flex gap-6 mb-8 items-start">
-                                    <div className="w-32 h-40 border-2 border-[#00d094] rounded-xl flex-shrink-0 flex items-center justify-center bg-gray-50 z-20">
+                                <div className="admission-print-top flex gap-6 mb-8 items-start">
+                                    <div className="admission-print-photo w-32 h-40 border-2 border-[#00d094] rounded-xl flex-shrink-0 flex items-center justify-center bg-gray-50 z-20">
                                         {printImagePreview ? <img src={printImagePreview} className="w-full h-full object-cover rounded-lg" alt="Student" /> : <span className="text-xs">تصویر</span>}
                                     </div>
-                                    <div className="flex-1 space-y-6 pt-2">
+                                    <div className="admission-print-main-fields flex-1 space-y-6 pt-2">
                                         <div className="flex gap-4">
                                             <PrintLine label="داخلہ نمبر" value={printValues.idNo} />
                                             <PrintLine label="تاریخ داخلہ" value={formatDate(printValues.admissionDate)} />
@@ -886,7 +959,7 @@ export const AdmissionForm = () => {
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="admission-print-body space-y-6">
                                     <div className="flex gap-6">
                                         <PrintLine label="والد کا نام" value={printValues.fatherName} />
                                         <PrintLine label="آئی ڈی نمبر" value={printValues.cnic} />
@@ -903,7 +976,7 @@ export const AdmissionForm = () => {
                                         <PrintLine label="واٹس ایپ" value={printValues.whatsapp} />
                                     </div>
 
-                                    <div className="bg-[#e5faf4]/80 p-4 shadow-sm rounded-lg space-y-4 border border-[#00d094]/20">
+                                    <div className="admission-print-guardian bg-[#e5faf4]/80 p-4 shadow-sm rounded-lg space-y-4 border border-[#00d094]/20">
                                         <div className="flex gap-6">
                                             <PrintLine label="نام سرپرست" value={printValues.guardianName} />
                                             <PrintLine label="رشتہ" value={printValues.relation} />
@@ -918,7 +991,7 @@ export const AdmissionForm = () => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-x-10 gap-y-6 border-t pt-4 border-[#004a5e]">
+                                    <div className="admission-print-education grid grid-cols-2 gap-x-10 gap-y-6 border-t pt-4 border-[#004a5e]">
                                         <PrintLine label="دینی تعلیم" value={printValues.religiousEdu} />
                                         <PrintLine label="عصری تعلیم" value={printValues.secularEdu} />
                                         <PrintLine label="سابقہ مدرسہ" value={printValues.prevMadrassa} />
@@ -927,7 +1000,7 @@ export const AdmissionForm = () => {
                                         <PrintLine label="استاد کا نام" value={printValues.teacherName} />
                                     </div>
 
-                                    <div className="flex gap-6 bg-[#e5faf4]/80 shadow-sm p-3 rounded border border-[#00d094]/20">
+                                    <div className="admission-print-class flex gap-6 bg-[#e5faf4]/80 shadow-sm p-3 rounded border border-[#00d094]/20">
                                         <PrintLine label="جماعت" value={printValues.requiredClass} />
                                         <PrintLine label="سیکشن" value={printValues.requiredJamaat} />
                                         <PrintLine label="ماہانہ فیس" value={printValues.monthlyFee} />
@@ -942,7 +1015,15 @@ export const AdmissionForm = () => {
                                 __html: `
                             @media print {
                                 @page { size: A4 portrait; margin: 0; }
-                                html, body, #root { width: 100%; min-height: 100%; }
+                                html, body, #root {
+                                    width: 210mm;
+                                    height: 297mm;
+                                    min-height: 297mm;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    overflow: hidden !important;
+                                    background: #ffffff !important;
+                                }
                                 body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                                 body * { visibility: hidden; }
                                 .admission-print-area,
@@ -954,8 +1035,95 @@ export const AdmissionForm = () => {
                                     position: absolute;
                                     top: 0;
                                     left: 0;
-                                    width: 100%;
+                                    width: 210mm !important;
+                                    height: 297mm !important;
+                                    padding: 7mm 8mm !important;
+                                    overflow: hidden !important;
+                                    background: #ffffff !important;
                                     font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
+                                }
+                                .admission-print-sheet {
+                                    width: 194mm !important;
+                                    height: 283mm !important;
+                                    max-height: 283mm !important;
+                                    overflow: hidden !important;
+                                    padding: 8mm !important;
+                                    break-inside: avoid !important;
+                                    page-break-inside: avoid !important;
+                                }
+                                .admission-print-header {
+                                    margin-bottom: 4mm !important;
+                                    padding-bottom: 2mm !important;
+                                }
+                                .admission-print-header h1 {
+                                    font-size: 25px !important;
+                                    line-height: 1.25 !important;
+                                }
+                                .admission-print-header div {
+                                    margin-top: 3mm !important;
+                                    padding: 1.5mm 9mm !important;
+                                    font-size: 15px !important;
+                                }
+                                .admission-print-top {
+                                    gap: 5mm !important;
+                                    margin-bottom: 4mm !important;
+                                }
+                                .admission-print-photo {
+                                    width: 26mm !important;
+                                    height: 33mm !important;
+                                }
+                                .admission-print-main-fields,
+                                .admission-print-body,
+                                .admission-print-guardian {
+                                    gap: 0 !important;
+                                    row-gap: 0 !important;
+                                }
+                                .admission-print-main-fields,
+                                .admission-print-body {
+                                    --tw-space-y-reverse: 0 !important;
+                                }
+                                .admission-print-main-fields > :not([hidden]) ~ :not([hidden]) {
+                                    margin-top: 4mm !important;
+                                }
+                                .admission-print-body > :not([hidden]) ~ :not([hidden]) {
+                                    margin-top: 4mm !important;
+                                }
+                                .admission-print-guardian {
+                                    padding: 3mm !important;
+                                }
+                                .admission-print-guardian > :not([hidden]) ~ :not([hidden]) {
+                                    margin-top: 3mm !important;
+                                }
+                                .admission-print-education {
+                                    gap: 4mm 8mm !important;
+                                    padding-top: 3mm !important;
+                                }
+                                .admission-print-class {
+                                    padding: 2.5mm !important;
+                                }
+                                .admission-print-line {
+                                    align-items: baseline !important;
+                                    gap: 2mm !important;
+                                    min-height: 7mm !important;
+                                    break-inside: avoid !important;
+                                    page-break-inside: avoid !important;
+                                }
+                                .admission-print-label {
+                                    font-size: 11px !important;
+                                    line-height: 1.4 !important;
+                                }
+                                .admission-print-value {
+                                    min-height: 6mm !important;
+                                    font-size: 12px !important;
+                                    line-height: 1.4 !important;
+                                    padding-left: 2mm !important;
+                                    padding-right: 2mm !important;
+                                    overflow-wrap: anywhere !important;
+                                }
+                                .admission-print-area .absolute.inset-0 img {
+                                    width: 115mm !important;
+                                    height: 62mm !important;
+                                    margin-top: -35mm !important;
                                 }
                                 h1 { font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important; }
                             }
@@ -1005,12 +1173,32 @@ const FormikInputField = ({ label, name, type = 'text', className = '', ...props
     </Field>
 );
 
-const FormikSelectField = ({ label, name, options, required = false }) => (
+const FormikCnicField = ({ label, name, error = '' }) => (
+    <Field name={name}>
+        {({ field, form }) => (
+            <InputField
+                label={label}
+                {...field}
+                value={field.value || ''}
+                onChange={(event) => form.setFieldValue(name, formatCnicInput(event.target.value))}
+                maxLength={CNIC_INPUT_MAX_LENGTH}
+                inputMode="numeric"
+                dir="ltr"
+                error={error}
+                placeholder="00000-0000000-0"
+                className="admission-form-control text-right"
+            />
+        )}
+    </Field>
+);
+
+const FormikSelectField = ({ label, name, options, required = false, error = '' }) => (
     <Field name={name}>
         {({ field, form }) => (
             <SelectField
                 label={label}
                 required={required}
+                error={error}
                 options={options}
                 value={field.value || options[0]?.value || options[0]}
                 onChange={(event) => form.setFieldValue(name, event.target.value)}
@@ -1081,9 +1269,9 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
 };
 
 const PrintLine = ({ label, value, flex = '1' }) => (
-    <div style={{ flex }} className="flex items-baseline gap-2">
-        <span className="font-bold text-gray-800 whitespace-nowrap">{label}:</span>
-        <span className="flex-1 border-b border-black border-dotted min-h-[22px] px-2 text-[14px] font-bold text-[#0f172a]" style={{ color: '#0f172a' }}>
+    <div style={{ flex }} className="admission-print-line flex items-baseline gap-2">
+        <span className="admission-print-label font-bold text-gray-800 whitespace-nowrap">{label}:</span>
+        <span className="admission-print-value flex-1 border-b border-black border-dotted min-h-[22px] px-2 text-[14px] font-bold text-[#0f172a]" style={{ color: '#0f172a' }}>
             {value || ''}
         </span>
     </div>

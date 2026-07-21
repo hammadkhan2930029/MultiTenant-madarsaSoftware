@@ -18,12 +18,20 @@ const formatDate = (value) => {
     return date.toLocaleDateString();
 };
 
+const formatAdmissionFee = (value) => {
+    if (value === 0 || value === '0') return '-';
+    return value;
+};
+
+const getProfileClassName = (student, assignment) => assignment?.class?.name || student?.requiredClass || '---';
+const getProfileSectionName = (student, assignment) => assignment?.section?.name || student?.requiredJamaat || '---';
+
 const InfoGrid = ({ items }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => (
             <div key={item.label} className="bg-[var(--color-bg)] border border-[var(--color-border)] rounded-[1.5rem] p-4">
-                <p className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-widest">{item.label}</p>
-                <p className="text-sm font-bold text-[var(--color-text-main)] mt-2">{item.value || '---'}</p>
+                <p className="text-xs font-black text-[var(--color-text-muted)] uppercase tracking-widest">{item.label}</p>
+                <p className="text-base font-bold text-[var(--color-text-main)] mt-2 leading-8">{item.value || '---'}</p>
             </div>
         ))}
     </div>
@@ -110,11 +118,11 @@ export const StudentProfile = () => {
                         </div>
 
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                            <InfoCard label="Admission No" value={student.admissionNumber} />
+                            <InfoCard label="داخلہ نمبر" value={student.admissionNumber} />
                             <InfoCard label="تاریخ داخلہ" value={formatDate(student.admissionDate)} />
-                            <InfoCard label="داخلہ فیس" value={student.admissionFee} />
-                            <InfoCard label="Class" value={activeAssignment?.class?.name || '---'} />
-                            <InfoCard label="Section" value={activeAssignment?.section?.name || '---'} />
+                            <InfoCard label="داخلہ فیس" value={formatAdmissionFee(student.admissionFee)} />
+                            <InfoCard label="جماعت" value={getProfileClassName(student, activeAssignment)} />
+                            <InfoCard label="جماعت سیکشن" value={getProfileSectionName(student, activeAssignment)} />
                         </div>
                     </div>
                 </div>
@@ -143,17 +151,17 @@ export const StudentProfile = () => {
             <SectionCard title="جماعت اور داخلہ" icon={GraduationCap}>
                 <InfoGrid
                     items={[
-                        { label: 'جماعت', value: activeAssignment?.class?.name || '---' },
-                        { label: 'سیکشن', value: activeAssignment?.section?.name || '---' },
+                        { label: 'جماعت', value: getProfileClassName(student, activeAssignment) },
+                        { label: 'جماعت سیکشن', value: getProfileSectionName(student, activeAssignment) },
                         { label: 'سیشن', value: activeAssignment?.session?.name || '---' },
                         { label: 'تاریخ داخلہ', value: formatDate(student.admissionDate) },
-                        { label: 'داخلہ فیس', value: student.admissionFee },
+                        { label: 'داخلہ فیس', value: formatAdmissionFee(student.admissionFee) },
                         { label: 'دینی تعلیم', value: student.religiousEdu },
                         { label: 'عصری تعلیم', value: student.secularEdu },
                         { label: 'سابقہ مدرسہ', value: student.prevMadrassa },
                         { label: 'سابقہ اسکول', value: student.prevSchool },
                         { label: 'بیماری (اگر ہے)', value: student.medicalCondition },
-                        { label: 'Assigned At', value: formatDate(activeAssignment?.assignedAt) },
+                        { label: 'تفویض کی تاریخ', value: formatDate(activeAssignment?.assignedAt) },
                     ]}
                 />
             </SectionCard>
@@ -182,8 +190,8 @@ export const StudentProfile = () => {
             <SectionCard title="ریکارڈ" icon={ShieldCheck}>
                 <InfoGrid
                     items={[
-                        { label: 'Created At', value: student.createdAt ? new Date(student.createdAt).toLocaleString() : '---' },
-                        { label: 'Updated At', value: student.updatedAt ? new Date(student.updatedAt).toLocaleString() : '---' },
+                        { label: 'بننے کی تاریخ', value: student.createdAt ? new Date(student.createdAt).toLocaleString() : '---' },
+                        { label: 'تبدیلی کی تاریخ', value: student.updatedAt ? new Date(student.updatedAt).toLocaleString() : '---' },
                     ]}
                 />
             </SectionCard>
@@ -193,7 +201,7 @@ export const StudentProfile = () => {
 
 const InfoCard = ({ label, value }) => (
     <div className="bg-[var(--color-bg)] rounded-[1.8rem] p-4 border border-[var(--color-border)]">
-        <p className="text-[10px] text-[var(--color-text-muted)] font-black uppercase">{label}</p>
-        <p className="text-lg font-black text-[var(--color-text-main)] mt-2">{value || '---'}</p>
+        <p className="text-xs text-[var(--color-text-muted)] font-black uppercase">{label}</p>
+        <p className="text-xl font-black text-[var(--color-text-main)] mt-2 leading-9">{value || '---'}</p>
     </div>
 );

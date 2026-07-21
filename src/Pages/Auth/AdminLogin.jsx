@@ -7,6 +7,7 @@ import {
     fetchCurrentTenantBranding,
     loginAdmin,
     logoutAdmin,
+    requestForgotPassword,
 } from '../../Constant/AdminAuth';
 import { SESSION_EXPIRED_MESSAGE_KEY } from '../../Constant/Api';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
@@ -32,10 +33,14 @@ const LoginForm = ({
 }) => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ username: '', password: '' });
+    const [forgotData, setForgotData] = useState({ identity: '', contactEmail: '' });
+    const [showForgotForm, setShowForgotForm] = useState(false);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
     const [tenantBranding, setTenantBranding] = useState(null);
-    useNotificationBridge({ error });
+    useNotificationBridge({ error, success });
 
     React.useEffect(() => {
         let isMounted = true;
@@ -69,6 +74,13 @@ const LoginForm = ({
     const handleChange = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
         if (error) setError('');
+        if (success) setSuccess('');
+    };
+
+    const handleForgotChange = (field, value) => {
+        setForgotData((prev) => ({ ...prev, [field]: value }));
+        if (error) setError('');
+        if (success) setSuccess('');
     };
 
     const handleSubmit = async (e) => {
@@ -96,6 +108,33 @@ const LoginForm = ({
             setError(loginError?.message || 'لاگ اِن نہیں ہو سکا۔');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleForgotSubmit = async () => {
+        const identity = (forgotData.identity || formData.username || '').trim();
+
+        if (!identity) {
+            setError('صارف نام یا ای میل درج کریں۔');
+            return;
+        }
+
+        setIsForgotSubmitting(true);
+        setError('');
+        setSuccess('');
+
+        try {
+            await requestForgotPassword({
+                identity,
+                contactEmail: forgotData.contactEmail,
+            });
+            setSuccess('پاس ورڈ بحالی کی درخواست بھیج دی گئی ہے۔ سپورٹ ٹیم رابطہ کرے گی۔');
+            setShowForgotForm(false);
+            setForgotData({ identity: '', contactEmail: '' });
+        } catch (forgotError) {
+            setError(forgotError?.message || 'پاس ورڈ بحالی کی درخواست نہیں بھیجی جا سکی۔');
+        } finally {
+            setIsForgotSubmitting(false);
         }
     };
 
@@ -196,6 +235,53 @@ const LoginForm = ({
                             {isSubmitting ? 'لاگ اِن ہو رہا ہے...' : submitLabel}
                             <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
                         </MotionButton>
+
+                        <MotionDiv
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="space-y-3"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowForgotForm((value) => !value);
+                                    setForgotData((prev) => ({ ...prev, identity: prev.identity || formData.username }));
+                                    setError('');
+                                    setSuccess('');
+                                }}
+                                className="w-full text-center text-sm font-black text-teal-200 transition-all hover:text-white"
+                            >
+                                پاس ورڈ بھول گئے؟
+                            </button>
+
+                            {showForgotForm ? (
+                                <div className="space-y-3 rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.55)] p-4">
+                                    <input
+                                        type="text"
+                                        value={forgotData.identity || formData.username}
+                                        onChange={(e) => handleForgotChange('identity', e.target.value)}
+                                        placeholder="صارف نام یا ای میل"
+                                        className="h-12 w-full rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.82)] px-4 text-right text-sm font-bold text-white outline-none placeholder:text-slate-400 focus:border-teal-300"
+                                    />
+                                    <input
+                                        type="email"
+                                        value={forgotData.contactEmail}
+                                        onChange={(e) => handleForgotChange('contactEmail', e.target.value)}
+                                        placeholder="رابطہ ای میل"
+                                        className="h-12 w-full rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.82)] px-4 text-right text-sm font-bold text-white outline-none placeholder:text-slate-400 focus:border-teal-300"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleForgotSubmit}
+                                        disabled={isForgotSubmitting}
+                                        className="h-12 w-full rounded-2xl bg-[rgba(45,212,191,0.16)] text-sm font-black text-teal-100 transition-all hover:bg-[rgba(45,212,191,0.24)] disabled:cursor-not-allowed disabled:opacity-70"
+                                    >
+                                        {isForgotSubmitting ? 'درخواست بھیجی جا رہی ہے...' : 'درخواست بھیجیں'}
+                                    </button>
+                                </div>
+                            ) : null}
+                        </MotionDiv>
                     </div>
                 </MotionForm>
             </div>

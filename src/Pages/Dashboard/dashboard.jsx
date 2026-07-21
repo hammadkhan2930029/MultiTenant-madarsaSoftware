@@ -26,18 +26,10 @@ import { formatCurrencyAmount } from '../../Utils/amountFormat';
 
 //--------------------------------------------------------------------------
 
-const fallbackLineData = [
-    { name: 'ہفتہ', value: 80 },
-    { name: 'اتوار', value: 85 },
-    { name: 'پیر', value: 83 },
-    { name: 'منگل', value: 91 },
-    { name: 'بدھ', value: 88 },
-    { name: 'جمعرات', value: 89 },
-    { name: 'جمعہ', value: 95 },
-];
-const fallbackPieData = [
-    { name: 'موصول', value: 75, color: '#00d094' },
-    { name: 'باقی', value: 25, color: 'var(--color-bg)' },
+const urduWeekdayNames = ['اتوار', 'پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ'];
+const emptyPieData = [
+    { name: 'موصول', value: 0, color: '#00d094' },
+    { name: 'باقی', value: 100, color: 'var(--color-bg)' },
 ];
 
 const quickActionCatalog = [
@@ -91,6 +83,13 @@ const getLastSevenDays = () =>
         date.setDate(date.getDate() - (6 - index));
         return date;
     });
+
+const getUrduWeekdayName = (date) => urduWeekdayNames[date.getDay()];
+
+const buildEmptyLineData = () => getLastSevenDays().map((date) => ({
+    name: getUrduWeekdayName(date),
+    value: 0,
+}));
 
 const getAttendancePercent = (items = []) => {
     if (!items.length) return null;
@@ -238,17 +237,17 @@ export const Dashboard = () => {
     const [quickActionIds, setQuickActionIds] = useState(getInitialQuickActionIds);
     const [isQuickActionSettingsOpen, setIsQuickActionSettingsOpen] = useState(false);
     const [topStats, setTopStats] = useState({
-        students: '350',
-        teachers: '15',
+        students: '0',
+        teachers: '0',
         staff: '0',
-        fees: 'PKR 1,700,000',
+        fees: 'PKR 0',
     });
     const [chartStats, setChartStats] = useState({
-        pieData: fallbackPieData,
-        feePercent: 75,
-        receivedAmount: 'PKR 1,320,000',
-        attendanceData: fallbackLineData,
-        attendancePercent: 91,
+        pieData: emptyPieData,
+        feePercent: 0,
+        receivedAmount: 'PKR 0',
+        attendanceData: buildEmptyLineData(),
+        attendancePercent: 0,
     });
     const [recentActivities, setRecentActivities] = useState([]);
     const [dashboardStatus, setDashboardStatus] = useState({
@@ -335,31 +334,31 @@ export const Dashboard = () => {
                     const income = Number(summary.totalAmdan || 0);
                     const expense = Number(summary.totalKharch || 0);
                     const total = income + expense;
+                    const incomePercent = total > 0 ? Math.round((income / total) * 100) : 0;
                     setFinanceCards({
                         payableAmount: Number(summary.payableAmount || 0),
                         receivableAmount: Number(summary.receivableAmount || 0),
                         totalKharch: expense,
                         total: Number(summary.remainingBalance || 0),
                     });
-
-                    if (total > 0) {
-                        hasChartData = true;
-                        const incomePercent = Math.round((income / total) * 100);
-                        setChartStats((current) => ({
-                            ...current,
-                            feePercent: incomePercent,
-                            receivedAmount: formatCurrency(income, current.receivedAmount),
-                            pieData: [
+                    hasChartData = true;
+                    setChartStats((current) => ({
+                        ...current,
+                        feePercent: incomePercent,
+                        receivedAmount: formatCurrency(income, 'PKR 0'),
+                        pieData: total > 0
+                            ? [
                                 { name: 'موصول', value: incomePercent, color: '#00d094' },
                                 { name: 'باقی', value: Math.max(0, 100 - incomePercent), color: 'var(--color-bg)' },
-                            ],
-                        }));
-                    }
+                            ]
+                            : emptyPieData,
+                    }));
                 }
 
+                const attendanceDays = getLastSevenDays();
                 const attendanceResults = canViewAttendance
                     ? await Promise.allSettled(
-                        getLastSevenDays().map((date) =>
+                        attendanceDays.map((date) =>
                             getStudentAttendance(`page=1&limit=100&date=${toDateKey(date)}`),
                         ),
                     )
@@ -367,14 +366,16 @@ export const Dashboard = () => {
 
                 if (!isMounted) return;
 
-                const nextAttendanceData = attendanceResults.map((result, index) => {
-                    const fallback = fallbackLineData[index];
-                    if (result.status !== 'fulfilled') return fallback;
+                const nextAttendanceData = attendanceDays.map((date, index) => {
+                    const result = attendanceResults[index];
+                    if (!result || result.status !== 'fulfilled') {
+                        return { name: getUrduWeekdayName(date), value: 0 };
+                    }
 
                     const percent = getAttendancePercent(result.value?.items || []);
                     return {
-                        name: fallback.name,
-                        value: percent ?? fallback.value,
+                        name: getUrduWeekdayName(date),
+                        value: percent ?? 0,
                     };
                 });
                 const realAttendanceValues = attendanceResults
@@ -382,9 +383,11 @@ export const Dashboard = () => {
                     .map((result) => getAttendancePercent(result.value?.items || []))
                     .filter((value) => value !== null);
 
-                if (realAttendanceValues.length) {
+                if (canViewAttendance) {
                     hasChartData = true;
-                    const average = Math.round(realAttendanceValues.reduce((sum, value) => sum + value, 0) / realAttendanceValues.length);
+                    const average = realAttendanceValues.length
+                        ? Math.round(realAttendanceValues.reduce((sum, value) => sum + value, 0) / realAttendanceValues.length)
+                        : 0;
                     setChartStats((current) => ({
                         ...current,
                         attendanceData: nextAttendanceData,
@@ -395,6 +398,14 @@ export const Dashboard = () => {
                 setDashboardStatus((current) => ({ ...current, charts: hasChartData ? 'ready' : 'error' }));
             } catch {
                 if (!isMounted) return;
+                setChartStats((current) => ({
+                    ...current,
+                    pieData: emptyPieData,
+                    feePercent: 0,
+                    receivedAmount: formatCurrency(0, 'PKR 0'),
+                    attendanceData: buildEmptyLineData(),
+                    attendancePercent: 0,
+                }));
                 setDashboardStatus((current) => ({ ...current, stats: 'error', charts: 'error' }));
             }
         };
@@ -725,7 +736,7 @@ export const Dashboard = () => {
                                 padding={{ left: 20, right: 20 }}
                             />
 
-                            <YAxis hide domain={['auto', 'auto']} />
+                            <YAxis hide domain={[0, 100]} />
 
                             <Tooltip
                                 contentStyle={{

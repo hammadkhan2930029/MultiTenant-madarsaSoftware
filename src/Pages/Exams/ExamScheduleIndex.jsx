@@ -6,22 +6,22 @@ import { getAdminSession } from '../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const text = {
-    title: 'امتحانی شیڈول فہرست',
-    subtitle: 'تمام بنائے گئے امتحانی شیڈول یہاں دیکھیں، ترمیم کریں، حذف کریں یا پرنٹ کریں',
+    title: 'امتحان کی فہرست',
+    subtitle: 'تمام بنائے گئے امتحانی نظام الاوقات یہاں دیکھیں، ترمیم کریں، حذف کریں یا پرنٹ کریں',
     searchPlaceholder: 'امتحان، مضمون، کلاس، نگران یا کمرہ تلاش کریں...',
     allSessions: 'تمام سیشن',
     allClasses: 'تمام کلاسیں',
-    loading: 'شیڈول لوڈ ہو رہا ہے...',
-    empty: 'ابھی کوئی امتحانی شیڈول موجود نہیں',
+    loading: ' امتحانی نظام الاوقات لوڈ ہو رہا ہے...',
+    empty: 'ابھی کوئی امتحانی نظام الاوقات موجود نہیں',
     edit: 'ترمیم',
     delete: 'حذف',
     print: 'پرنٹ',
     save: 'تبدیلی محفوظ کریں',
     saving: 'محفوظ ہو رہا ہے...',
     cancel: 'بند کریں',
-    deleted: 'شیڈول حذف کر دیا گیا۔',
-    updated: 'شیڈول اپڈیٹ ہو گیا۔',
-    loadError: 'امتحانی شیڈول لوڈ نہیں ہو سکا۔',
+    deleted: 'نظام الاوقات حذف کر دیا گیا۔',
+    updated: 'نظام الاوقات اپڈیٹ ہو گیا۔',
+    loadError: 'امتحانی نظام الاوقات لوڈ نہیں ہو سکا۔',
     required: 'براہ کرم امتحان، سیشن، کلاس، مضمون، تاریخ اور وقت مکمل کریں۔',
 };
 
@@ -260,7 +260,7 @@ export const ExamScheduleIndex = () => {
                 </head>
                 <body>
                     <div class="header">
-                        <h1>${profile.name || 'امتحانی شیڈول'}</h1>
+                        <h1>${profile.name || 'امتحانی نظام الاوقات'}</h1>
                         <p>${profile.address || ''}</p>
                         <p>کلاس وائز امتحانی ٹائم ٹیبل</p>
                     </div>
@@ -283,7 +283,7 @@ export const ExamScheduleIndex = () => {
                                 <th>نوٹ</th>
                             </tr>
                         </thead>
-                        <tbody>${rows || '<tr><td colspan="9">کوئی شیڈول موجود نہیں</td></tr>'}</tbody>
+                        <tbody>${rows || '<tr><td colspan="9">کوئی نظام الاوقات موجود نہیں</td></tr>'}</tbody>
                     </table>
                 </body>
             </html>
@@ -443,7 +443,7 @@ const EditModal = ({ formData, setFormData, sessionOptions, classOptions, subjec
                 <div className="mb-5 flex items-center justify-between border-b border-[var(--color-border)] pb-4">
                     <div className="flex items-center gap-3">
                         <CalendarDays className="text-[var(--color-primary)]" size={22} />
-                        <h2 className="text-xl font-black">شیڈول ترمیم</h2>
+                        <h2 className="text-xl font-black">نظام الاوقات ترمیم</h2>
                     </div>
                     <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-bg)]">
                         <X size={18} />
@@ -485,7 +485,7 @@ const DeleteModal = ({ schedule, isDeleting, onClose, onConfirm }) => (
         <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
             <div className="flex items-start justify-between gap-4">
                 <div className="text-right">
-                    <h3 className="text-xl font-black text-[var(--color-text)]">شیڈول حذف کرنے کی تصدیق</h3>
+                    <h3 className="text-xl font-black text-[var(--color-text)]">نظام الاوقات حذف کرنے کی تصدیق</h3>
                     <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
                         کیا آپ واقعی <span className="text-rose-500">{schedule.examName}</span> کو حذف کرنا چاہتے ہیں؟
                         یہ عمل واپس نہیں ہو گا۔

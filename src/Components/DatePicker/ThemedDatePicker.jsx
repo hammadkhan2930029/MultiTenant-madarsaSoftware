@@ -57,6 +57,7 @@ export const ThemedDatePicker = ({
   className = '',
   size = 'md',
   required = false,
+  error = '',
 }) => {
   const wrapperRef = useRef(null);
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
@@ -267,6 +268,8 @@ export const ThemedDatePicker = ({
       <button
         type="button"
         name={name}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error && name ? `${name}-error` : undefined}
         onClick={() => {
           if (isOpen) {
             setIsOpen(false);
@@ -281,6 +284,7 @@ export const ThemedDatePicker = ({
           {buttonDisplayValue}
         </span>
       </button>
+      {error ? <p id={name ? `${name}-error` : undefined} className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
 
       {isOpen ? (
         <div

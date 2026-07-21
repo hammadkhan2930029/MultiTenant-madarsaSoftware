@@ -277,11 +277,11 @@ export const AttendancePage = () => {
     );
 
     const exportColumns = useMemo(() => [
-        { header: 'Admission No', accessor: 'rollNo' },
+        { header: 'داخلہ نمبر', accessor: 'rollNo' },
         { header: 'Student Name', accessor: 'name' },
         { header: 'Date', accessor: () => searchFilters.date },
         { header: 'Status', accessor: (student) => STATUS_OPTIONS.find((status) => status.value === student.status)?.label || student.status },
-        { header: 'Remarks', accessor: 'remarks' },
+        { header: 'نوٹ', accessor: 'remarks' },
     ], [searchFilters.date]);
 
     return (
@@ -384,7 +384,10 @@ export const AttendancePage = () => {
                                 <div className="flex items-center gap-4 min-w-0">
                                     <div className="min-w-0">
                                         <h4 className="font-black text-sm text-[var(--color-text)] truncate">{student.name}</h4>
-                                        <p className="text-[9px] text-[var(--color-text-muted)] font-bold">{student.rollNo} :داخلہ نمبر</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)] font-bold">
+                                            <span>داخلہ نمبر: </span>
+                                            <span dir="ltr" className="inline-block">{student.rollNo || '---'}</span>
+                                        </p>
                                     </div>
                                 </div>
 
@@ -408,7 +411,7 @@ export const AttendancePage = () => {
                                     value={student.remarks}
                                     onChange={(event) => updateRemarks(student.id, event.target.value)}
                                     disabled={!canEditAttendance}
-                                    placeholder="Remarks"
+                                    placeholder="نوٹ"
                                     className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-xs font-bold text-[var(--color-text-main)] outline-none transition-colors focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-70"
                                 />
 

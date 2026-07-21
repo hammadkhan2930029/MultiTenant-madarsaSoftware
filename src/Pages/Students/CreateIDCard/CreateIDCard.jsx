@@ -4,6 +4,7 @@ import { CreditCard, GraduationCap, Layout, Printer, Search, Smartphone, User } 
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppImages } from '../../../Constant/AppImages';
 import { getStudents } from '../../../Constant/StudentsApi';
+import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
@@ -61,8 +62,8 @@ const mapStudentForCard = (student, madrassaProfile) => {
         idNo: student.admissionNumber || '---',
         name: student.fullName || '---',
         fatherName: student.fatherName || primaryParent?.fullName || '---',
-        className: activeAssignment?.class?.name || '---',
-        section: activeAssignment?.section?.name || '---',
+        className: activeAssignment?.class?.name || student?.requiredClass || '---',
+        section: activeAssignment?.section?.name || student?.requiredJamaat || '---',
         session: activeAssignment?.session?.name || '---',
         mobile: student.phone || primaryParent?.phone || '---',
         address: student.address || madrassaProfile?.address || '',
@@ -72,12 +73,29 @@ const mapStudentForCard = (student, madrassaProfile) => {
     };
 };
 
+const getStudentClassName = (student) => getActiveAssignment(student)?.class?.name || student?.requiredClass || '---';
+const getStudentSectionName = (student) => getActiveAssignment(student)?.section?.name || student?.requiredJamaat || '---';
+const getStudentSessionName = (student) => getActiveAssignment(student)?.session?.name || '---';
+
+const buildStudentQuery = (filters = {}, search = '') => {
+    const params = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
+    if (filters.sessionId) params.set('sessionId', filters.sessionId);
+    if (filters.classId) params.set('classId', filters.classId);
+    if (filters.sectionId) params.set('sectionId', filters.sectionId);
+    if (search?.trim()) params.set('search', search.trim());
+    return params.toString();
+};
+
 export const CreateIdCard = () => {
     const [searchId, setSearchId] = useState('');
     const [layout, setLayout] = useState('horizontal');
     const [studentData, setStudentData] = useState(null);
     const [students, setStudents] = useState([]);
     const [searchResults, setSearchResults] = useState([]);
+    const [sessions, setSessions] = useState([]);
+    const [classes, setClasses] = useState([]);
+    const [sections, setSections] = useState([]);
+    const [filters, setFilters] = useState({ sessionId: '', classId: '', sectionId: '' });
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [loading, setLoading] = useState(true);
@@ -95,13 +113,19 @@ export const CreateIdCard = () => {
             setError('');
 
             try {
-                const [studentsResult, profileResult] = await Promise.all([
+                const [studentsResult, profileResult, sessionsResult, classesResult, sectionsResult] = await Promise.all([
                     getStudents('page=1&limit=100&status=active'),
                     fetchMadrassaProfile().catch(() => getAdminSession()?.madrassaProfile || null),
+                    getSessions('page=1&limit=100&status=active'),
+                    getClasses('page=1&limit=100&status=active'),
+                    getSections('page=1&limit=100&status=active'),
                 ]);
 
                 setStudents(normalizeStudentItems(studentsResult));
                 setMadrassaProfile(profileResult);
+                setSessions(sessionsResult.items || []);
+                setClasses(classesResult.items || []);
+                setSections(sectionsResult.items || []);
             } catch (loadError) {
                 setError(loadError.message || 'آئی ڈی کارڈ کا ڈیٹا لوڈ نہیں ہو سکا۔');
             } finally {
@@ -111,6 +135,45 @@ export const CreateIdCard = () => {
 
         loadIdCardData();
     }, []);
+
+    useEffect(() => {
+        let isCurrent = true;
+
+        const loadFilteredStudents = async () => {
+            setLoading(true);
+            setError('');
+            setSearchResults([]);
+
+            try {
+                const result = await getStudents(buildStudentQuery(filters));
+                if (!isCurrent) return;
+                setStudents(normalizeStudentItems(result));
+            } catch (loadError) {
+                if (!isCurrent) return;
+                setStudents([]);
+                setError(loadError.message || 'طلبہ کی فہرست لوڈ نہیں ہو سکی۔');
+            } finally {
+                if (!isCurrent) return;
+                setLoading(false);
+            }
+        };
+
+        loadFilteredStudents();
+
+        return () => {
+            isCurrent = false;
+        };
+    }, [filters]);
+
+    const availableSections = useMemo(
+        () => sections.filter((section) => !filters.classId || String(section.classId) === String(filters.classId)),
+        [filters.classId, sections],
+    );
+
+    const tableStudents = useMemo(
+        () => students.slice(0, 100),
+        [students],
+    );
 
     const filteredStudents = useMemo(() => {
         const query = normalizeSearchText(searchId);
@@ -137,7 +200,7 @@ export const CreateIdCard = () => {
             setIsSearching(true);
 
             try {
-                const result = await getStudents(`page=1&limit=20&status=active&search=${encodeURIComponent(query)}`);
+                const result = await getStudents(buildStudentQuery(filters, query).replace('limit=100', 'limit=20'));
                 setSearchResults(normalizeStudentItems(result));
             } catch {
                 setSearchResults([]);
@@ -147,7 +210,7 @@ export const CreateIdCard = () => {
         }, 250);
 
         return () => clearTimeout(timeoutId);
-    }, [searchId]);
+    }, [filters, searchId]);
 
     const selectStudent = (student) => {
         setStudentData(mapStudentForCard(student, madrassaProfile));
@@ -172,7 +235,7 @@ export const CreateIdCard = () => {
                 return;
             }
 
-            const result = await getStudents(`page=1&limit=20&status=active&search=${encodeURIComponent(query)}`);
+            const result = await getStudents(buildStudentQuery(filters, query).replace('limit=100', 'limit=20'));
             const serverStudents = normalizeStudentItems(result);
             const serverMatch = findStudentMatch(serverStudents, query) || serverStudents[0];
 
@@ -206,8 +269,30 @@ export const CreateIdCard = () => {
                     <CreditCard className="text-[var(--color-primary)]" /> آئی ڈی کارڈ جنریٹر
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                    <div className="flex flex-col gap-2 relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5 items-end">
+                    <FilterSelect
+                        label="سیشن"
+                        value={filters.sessionId}
+                        onChange={(value) => setFilters((current) => ({ ...current, sessionId: value }))}
+                        options={sessions}
+                        placeholder="تمام سیشن"
+                    />
+                    <FilterSelect
+                        label="جماعت"
+                        value={filters.classId}
+                        onChange={(value) => setFilters((current) => ({ ...current, classId: value, sectionId: '' }))}
+                        options={classes}
+                        placeholder="تمام جماعتیں"
+                    />
+                    <FilterSelect
+                        label="جماعت سیکشن"
+                        value={filters.sectionId}
+                        onChange={(value) => setFilters((current) => ({ ...current, sectionId: value }))}
+                        options={availableSections}
+                        placeholder="تمام سیکشن"
+                        disabled={!filters.classId}
+                    />
+                    <div className="relative flex flex-col gap-2 xl:col-span-2">
                         <label className="text-xs font-bold text-[var(--color-text-muted)] mr-2">رجسٹریشن نمبر یا نام<span className="text-red-500"> *</span></label>
                         <div className="relative">
                             <input
@@ -229,10 +314,10 @@ export const CreateIdCard = () => {
                                         handleSearch();
                                     }
                                 }}
-                                className="w-full bg-[var(--color-input)] border-2 border-[var(--color-border)] focus:border-[var(--color-primary)] p-3.5 pl-11 rounded-xl outline-none font-bold text-[var(--color-text-main)] transition-all"
+                                className="h-14 w-full bg-[var(--color-input)] border-2 border-[var(--color-border)] focus:border-[var(--color-primary)] px-4 pl-11 rounded-xl outline-none font-bold text-[var(--color-text-main)] transition-all"
                                 placeholder={loading || isSearching ? 'طلبہ تلاش ہو رہے ہیں...' : '0001 یا طالب علم کا نام'}
                             />
-                            <Search size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)]" />
+                            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         </div>
 
                         {isDropdownOpen && searchId && filteredStudents.length > 0 ? (
@@ -260,20 +345,20 @@ export const CreateIdCard = () => {
 
                     <div className="flex flex-col gap-2">
                         <label className="text-xs font-bold text-[var(--color-text-muted)] mr-2">لے آؤٹ</label>
-                        <div className="flex bg-[var(--color-input)] p-1 rounded-xl border-2 border-[var(--color-border)]">
+                        <div className="grid h-14 grid-cols-2 gap-1 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-input)] p-1">
                             <button
                                 type="button"
                                 onClick={() => setLayout('horizontal')}
-                                className={`flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-2 ${layout === 'horizontal' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)]'}`}
+                                className={`min-w-0 rounded-lg px-2 text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${layout === 'horizontal' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)]'}`}
                             >
-                                <Layout size={16} /> Horizontal
+                                <Layout size={15} className="shrink-0" /> <span className="truncate">افقی</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setLayout('vertical')}
-                                className={`flex-1 py-2 rounded-lg font-bold flex items-center justify-center gap-2 ${layout === 'vertical' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)]'}`}
+                                className={`min-w-0 rounded-lg px-2 text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${layout === 'vertical' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-text-muted)]'}`}
                             >
-                                <Smartphone size={16} /> Vertical
+                                <Smartphone size={15} className="shrink-0" /> <span className="truncate">عمودی</span>
                             </button>
                         </div>
                     </div>
@@ -282,10 +367,43 @@ export const CreateIdCard = () => {
                         type="button"
                         onClick={handleSearch}
                         disabled={loading || isSearching || !searchId.trim()}
-                        className="bg-[var(--color-primary)] text-white py-4 rounded-xl font-black shadow-lg shadow-[var(--color-primary)]/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-14 bg-[var(--color-primary)] text-white px-4 rounded-xl font-black shadow-lg shadow-[var(--color-primary)]/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {loading || isSearching ? 'تلاش جاری...' : 'کارڈ جنریٹ کریں'}
                     </button>
+                </div>
+
+                <div className="mt-8 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)]">
+                    <div className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] gap-3 border-b border-[var(--color-border)] px-4 py-4 text-xs font-black text-[var(--color-text-muted)]">
+                        <span>داخلہ نمبر</span>
+                        <span>نام</span>
+                        <span>سیشن</span>
+                        <span>جماعت</span>
+                        <span>جماعت سیکشن</span>
+                        <span>ایکشن</span>
+                    </div>
+                    {loading ? (
+                        <div className="px-4 py-6 text-center text-sm font-bold text-[var(--color-text-muted)]">طلبہ لوڈ ہو رہے ہیں...</div>
+                    ) : tableStudents.length > 0 ? (
+                        tableStudents.map((student) => (
+                            <div key={student.id} className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 text-sm font-bold last:border-b-0">
+                                <span className="text-[var(--color-text-muted)]">{student.admissionNumber || '---'}</span>
+                                <span className="text-[var(--color-text-main)]">{student.fullName || '---'}</span>
+                                <span className="text-[var(--color-text-muted)]">{getStudentSessionName(student)}</span>
+                                <span className="text-[var(--color-text-muted)]">{getStudentClassName(student)}</span>
+                                <span className="text-[var(--color-text-muted)]">{getStudentSectionName(student)}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => selectStudent(student)}
+                                    className="rounded-xl bg-[var(--color-primary)] px-4 py-2 text-xs font-black text-white transition-all hover:opacity-90"
+                                >
+                                    کارڈ جنریٹ کریں
+                                </button>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-4 py-6 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی طالب علم نہیں ملا۔</div>
+                    )}
                 </div>
             </div>
 
@@ -359,6 +477,25 @@ const StudentPhoto = ({ data, className, iconSize = 35 }) => (
         ) : (
             <User size={iconSize} className="text-gray-300" />
         )}
+    </div>
+);
+
+const FilterSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => (
+    <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold text-[var(--color-text-muted)] mr-2">{label}</label>
+        <select
+            value={value}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-14 w-full rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-input)] px-4 font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+            <option value="">{placeholder}</option>
+            {(options || []).map((item) => (
+                <option key={item.id} value={item.id}>
+                    {item.name}
+                </option>
+            ))}
+        </select>
     </div>
 );
 

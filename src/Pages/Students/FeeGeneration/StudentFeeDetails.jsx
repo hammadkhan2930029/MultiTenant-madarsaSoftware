@@ -93,19 +93,28 @@ export const StudentFeeDetail = () => {
         <div dir="rtl" className="min-h-screen bg-[var(--color-bg)] p-4 md:p-8 font-urdu text-[var(--color-text-main)]">
             <div className="mx-auto max-w-6xl space-y-6">
                 <div className="flex items-center justify-between">
-                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[var(--color-text-muted)] transition-all hover:text-[var(--color-primary)]">
+                    <h2 className="text-3xl font-black">طالب علم فیس پروفائل</h2>
+                    <button onClick={() => navigate(-1)}  className="flex justify-center items-center rounded-2xl bg-[var(--color-primary)] px-7 py-3 text-sm font-black text-white shadow-lg shadow-[var(--color-primary)]/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
                         <ArrowRight size={20} /> واپس جائیں
                     </button>
-                    <h2 className="text-3xl font-black">طالب علم فیس پروفائل</h2>
+                    
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:col-span-2">
                         <p className="text-sm font-black text-[var(--color-text-muted)]">طالب علم</p>
                         <h3 className="mt-2 text-3xl font-black">{student?.fullName}</h3>
-                        <div className="mt-2 flex flex-col gap-1 text-sm font-bold text-[var(--color-text-muted)]">
-                            <span>{student?.admissionNumber || '---'} :داخلہ نمبر</span>
-                            <span>{student?.fatherName || '---'} :سرپرست</span>
+                        <div className="mt-3 flex max-w-sm flex-col gap-2 text-sm font-bold text-[var(--color-text-muted)] [&>div>span:first-child]:text-right [&>div>span:first-child]:text-base [&>div>span:first-child]:font-black [&>div>span:last-child]:text-left">
+                            {/* <span>{student?.admissionNumber || '---'} :داخلہ نمبر</span>
+                            <span>{student?.fatherName || '---'} :سرپرست</span> */}
+                            <div >
+                                <span> داخلہ نمبر : </span>
+                                <span className='mr-3'>{student?.admissionNumber || '---'}</span>
+                            </div>
+                            <div >
+                                <span> سرپرست کا نام : </span>
+                                <span className='mr-3'>{student?.fatherName || '---'}</span>
+                            </div>
                         </div>
                         <p className="mt-2 text-sm font-bold text-[var(--color-primary)]">
                             {assignment.class?.name || '---'} / {assignment.section?.name || '---'} / {assignment.session?.name || '---'}

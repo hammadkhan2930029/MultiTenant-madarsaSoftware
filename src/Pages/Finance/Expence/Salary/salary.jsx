@@ -18,6 +18,7 @@ const createEmptyForm = (financeHeadId = '') => ({
     amount: '',
     salaryMonth: currentMonth(),
     paymentDate: today(),
+    paymentMethod: 'Cash',
     remarks: '',
 });
 
@@ -30,6 +31,7 @@ const readMonthParts = (value) => {
     const [year, month] = value.split('-').map(Number);
     return { salaryYear: year, salaryMonth: month };
 };
+const paymentMethods = ['Cash', 'Online', 'Cheque', 'Bank Transfer'];
 
 const toUrduSalaryError = (message, fallback) => {
     if (!message) return fallback;
@@ -46,7 +48,6 @@ const toUrduSalaryError = (message, fallback) => {
 
 export const SalaryEntry = ({ staffType = '' }) => {
     const [teachers, setTeachers] = useState([]);
-    const [expenseHeads, setExpenseHeads] = useState([]);
     const [entries, setEntries] = useState([]);
     const [formData, setFormData] = useState(createEmptyForm());
     const [editingEntry, setEditingEntry] = useState(null);
@@ -102,7 +103,6 @@ export const SalaryEntry = ({ staffType = '' }) => {
             const salaryHead = heads.find((head) => /salary|تنخواہ|payroll/i.test(head.name || '')) || heads[0];
 
             setTeachers(teacherResult.items || []);
-            setExpenseHeads(heads);
             setEntries(salaryResult.items || []);
             setFormData((prev) => ({
                 ...prev,
@@ -144,6 +144,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
             salaryMonth: monthParts.salaryMonth,
             salaryYear: monthParts.salaryYear,
             paymentDate: formData.paymentDate,
+            paymentMethod: formData.paymentMethod,
             remarks: formData.remarks,
             status: 'active',
         };
@@ -154,8 +155,8 @@ export const SalaryEntry = ({ staffType = '' }) => {
         setError('');
         setSuccess('');
 
-        if (!formData.teacherId || !formData.financeHeadId || !formData.amount || !formData.salaryMonth || !formData.paymentDate) {
-            setError('براہ کرم استاد، مد، رقم، مہینہ اور ادائیگی کی تاریخ مکمل کریں۔');
+        if (!formData.teacherId || !formData.financeHeadId || !formData.amount || !formData.salaryMonth || !formData.paymentDate || !formData.paymentMethod) {
+            setError('براہ کرم استاد، طریقہ ادائیگی، رقم، مہینہ اور ادائیگی کی تاریخ مکمل کریں۔');
             return;
         }
 
@@ -187,6 +188,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
             amount: String(entry.amount || ''),
             salaryMonth: toMonthInputValue(entry.salaryMonth, entry.salaryYear),
             paymentDate: toDateInputValue(entry.paymentDate),
+            paymentMethod: entry.paymentMethod || 'Cash',
             remarks: entry.remarks || '',
         });
         setSearchQuery(entry.teacher?.fullName || '');
@@ -276,7 +278,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
                             ) : null}
                         </div>
 
-                        <form onSubmit={handleSave} className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <form onSubmit={handleSave} noValidate className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-dashed border-[var(--color-border)]">
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mb-1">منتخب عملہ / استاد:</p>
                                 <p className="text-lg font-bold text-[var(--color-primary)]">{selectedTeacher?.fullName || searchQuery || '---'}</p>
@@ -284,16 +286,15 @@ export const SalaryEntry = ({ staffType = '' }) => {
                             </div>
 
                             <div>
-                                <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">خرچ کی مد<span className="text-red-500"> *</span></label>
+                                <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">طریقہ ادائیگی<span className="text-red-500"> *</span></label>
                                 <select
                                     required
                                     className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none"
-                                    value={formData.financeHeadId}
-                                    onChange={(event) => setFormData({ ...formData, financeHeadId: event.target.value })}
+                                    value={formData.paymentMethod}
+                                    onChange={(event) => setFormData({ ...formData, paymentMethod: event.target.value })}
                                 >
-                                    <option value="">مد منتخب کریں</option>
-                                    {expenseHeads.map((head) => (
-                                        <option key={head.id} value={head.id}>{head.name}</option>
+                                    {paymentMethods.map((method) => (
+                                        <option key={method} value={method}>{method}</option>
                                     ))}
                                 </select>
                             </div>
@@ -321,9 +322,10 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 </div>
                             </div>
 
-                            <div className="[&_label]:!text-sm [&_button]:!py-2.5 [&_input]:!py-2.5">
+                            <div className="[&_label]:!mb-2 [&_label]:!mr-2 [&_label]:!block [&_label]:!text-md [&_label]:!font-bold [&_button]:!py-2.5 [&_input]:!py-2.5">
+                               <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">ادائیگی کی تاریخ<span className="text-red-500"> *</span></label>
                                 <DateField
-                                    label="ادائیگی کی تاریخ"
+                                    // label="ادائیگی کی تاریخ"
                                     required
                                     value={formData.paymentDate}
                                     onChange={(nextValue) => setFormData({ ...formData, paymentDate: nextValue })}

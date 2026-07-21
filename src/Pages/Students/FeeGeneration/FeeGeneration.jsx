@@ -734,8 +734,15 @@ export const FeesCollection = () => {
                                             <td className="px-5 py-4">
                                                 <div className="text-base font-black text-[var(--color-text)]">{voucher.student?.fullName || '---'}</div>
                                                 <div className="mt-1 flex flex-col gap-0.5 text-[11px] font-bold leading-5 text-[var(--color-text-muted)]">
-                                                    <span>{voucher.student?.admissionNumber || '---'} :داخلہ نمبر</span>
-                                                    <span>{voucher.student?.fatherName || '---'} :سرپرست کا نام</span>
+                                                    <div>
+                                                        <span> داخلہ نمبر : </span>
+                                                        <span>{voucher.student?.admissionNumber || '---'}</span>
+                                                    </div>
+                                                     <div>
+                                                        <span> سرپرست کا نام : </span>
+                                                        <span>{voucher.student?.fatherName || '---'}</span>
+                                                    </div>
+                                                   
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-sm font-bold text-[var(--color-text-muted)]">{assignment.class?.name || '---'} / {assignment.section?.name || '---'}</td>
@@ -775,8 +782,22 @@ export const FeesCollection = () => {
             </div>
 
             {paymentTarget ? (
-                <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm print:hidden">
-                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                <div
+                    className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm print:hidden"
+                    onClick={() => setPaymentTarget(null)}
+                >
+                    <div
+                        className="relative w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setPaymentTarget(null)}
+                            className="w-10 h-15 absolute left-5 top-5 rounded-xl bg-[var(--color-bg)]  transition-all hover:text-rose-500 "
+                            aria-label="بند کریں"
+                        >
+                           <span className="text-lg text-[var(--color-text-primary)]">X</span>
+                        </button>
                         <h3 className="text-xl font-black">فیس ادائیگی</h3>
                         <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">{paymentTarget.student?.fullName} - {paymentTarget.voucherNo}</p>
                         <div className="mt-5 space-y-4">
@@ -789,10 +810,10 @@ export const FeesCollection = () => {
                             </Select>
                         </div>
                         <div className="mt-6 flex gap-3">
+                            <button onClick={() => setPaymentTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black">منسوخ</button>
                             <Can permission="fees.create">
                                 <button onClick={handleSavePayment} className="flex-1 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">محفوظ کریں</button>
                             </Can>
-                            <button onClick={() => setPaymentTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black">منسوخ</button>
                         </div>
                     </div>
                 </div>
@@ -1401,5 +1422,3 @@ const FeeReceiptPrint = ({ voucher, madrassaProfile }) => {
         </>
     );
 };
-
-

@@ -82,8 +82,9 @@ export const updateClass = async (id, payload) => {
   return result?.data;
 };
 
-export const deleteClass = async (id) => {
-  const result = await apiRequest(`/classes/${id}`, withToken({ method: 'DELETE' }));
+export const deleteClass = async (id, branchId = null) => {
+  const query = branchId ? `?branchId=${encodeURIComponent(String(branchId))}` : '';
+  const result = await apiRequest(`/classes/${id}${query}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };
 

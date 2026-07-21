@@ -144,6 +144,17 @@ const shouldApplyBranchFilter = (endpoint, method = 'GET') => {
   ));
 };
 
+const shouldApplyBranchContext = (endpoint) => {
+  if (!endpoint || endpoint.includes('branchId=')) return false;
+
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return BRANCH_FILTERED_GET_PREFIXES.some((prefix) => (
+    normalizedEndpoint === prefix ||
+    normalizedEndpoint.startsWith(`${prefix}/`) ||
+    normalizedEndpoint.startsWith(`${prefix}?`)
+  ));
+};
+
 const appendSelectedBranchFilter = (endpoint, options = {}) => {
   const method = options.method || 'GET';
   const branchId = shouldApplyBranchFilter(endpoint, method) ? getSelectedTenantBranchId() : null;
@@ -154,6 +165,66 @@ const appendSelectedBranchFilter = (endpoint, options = {}) => {
 };
 
 export const appendApiBranchContext = (endpoint, options = {}) => appendSelectedBranchFilter(endpoint, options);
+
+const buildBranchScopedRequest = (endpoint, options = {}) => {
+  const method = String(options.method || 'GET').toUpperCase();
+  const branchId = shouldApplyBranchContext(endpoint) ? getSelectedTenantBranchId() : null;
+
+  if (!branchId) {
+    return {
+      endpoint: appendSelectedBranchFilter(endpoint, options),
+      options,
+    };
+  }
+
+  if (method === 'GET' || method === 'DELETE') {
+    const separator = endpoint.includes('?') ? '&' : '?';
+    return {
+      endpoint: `${endpoint}${separator}branchId=${encodeURIComponent(String(branchId))}`,
+      options,
+    };
+  }
+
+  if (!['POST', 'PUT', 'PATCH'].includes(method) || !options.body) {
+    return { endpoint, options };
+  }
+
+  if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
+    const nextBody = new FormData();
+    options.body.forEach((value, key) => {
+      if (key !== 'branchId') nextBody.append(key, value);
+    });
+    nextBody.append('branchId', String(branchId));
+
+    return {
+      endpoint,
+      options: {
+        ...options,
+        body: nextBody,
+      },
+    };
+  }
+
+  try {
+    const parsedBody = typeof options.body === 'string' ? JSON.parse(options.body) : null;
+    if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+      return { endpoint, options };
+    }
+
+    return {
+      endpoint,
+      options: {
+        ...options,
+        body: JSON.stringify({
+          ...parsedBody,
+          branchId,
+        }),
+      },
+    };
+  } catch {
+    return { endpoint, options };
+  }
+};
 
 const getStoredToken = () => {
   if (!canUseStorage) return '';
@@ -199,10 +270,10 @@ const buildHeaders = (headers = {}, token) => {
 export const apiRequest = async (endpoint, options = {}) => {
   const { token, headers, skipAuth = false, ...restOptions } = options;
   const authToken = token || (!skipAuth ? getStoredToken() : '');
-  const requestEndpoint = appendSelectedBranchFilter(endpoint, restOptions);
+  const scopedRequest = buildBranchScopedRequest(endpoint, restOptions);
 
-  const response = await fetch(`${API_BASE_URL}${requestEndpoint}`, {
-    ...restOptions,
+  const response = await fetch(`${API_BASE_URL}${scopedRequest.endpoint}`, {
+    ...scopedRequest.options,
     headers: buildHeaders(headers, authToken),
   });
 

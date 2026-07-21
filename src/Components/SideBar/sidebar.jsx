@@ -420,7 +420,7 @@ export const SideBar = () => {
             path: '/exams',
             subMenu: [
                 { id: 'exam_schedule', label: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644', path: '/exams/schedule' },
-                { id: 'exam_schedule_list', label: 'امتحانی شیڈول فہرست', path: '/exams/schedule-list' },
+                { id: 'exam_schedule_list', label: 'امتحان کی فہرست', path: '/exams/schedule-list' },
                 { id: 'exam_result', label: 'امتحانی رزلٹ', path: '/exams/result' },
                 { id: 'exam_result_list', label: 'رزلٹ فہرست', path: '/exams/result-list' }
             ]
@@ -460,7 +460,7 @@ export const SideBar = () => {
     //--------------------------------------------------------------------
     const profileMenuItems = [
         { id: 'settings', label: 'پروفائل سیٹنگ', path: '/Profile/setting', icon: Settings, permissions: ['settings.view', 'settings.update', 'profile.view'] },
-        // { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound },
+        { id: 'change_password', label: 'پاس ورڈ تبدیل کریں', path: '/Profile/change-password', icon: KeyRound, permissions: ['profile.change_password'] },
         { id: 'cities', label: 'شہر', path: '/Profile/cities', icon: UserCheck, permissions: ['settings.view', 'settings.update', 'settings.cities.view'] },
         { id: 'support', label: 'سپورٹ', path: '/Profile/support', icon: MessageSquare },
         { id: 'suggestions', label: 'تجاویز', path: '/Profile/suggestions', icon: Sparkles },
@@ -562,8 +562,8 @@ export const SideBar = () => {
         staff_salary_increment: 'تنخواہ انکریمنٹ',
         staff_salary: 'تنخواہ کی ادائیگی',
         exams: 'امتحان',
-        exam_schedule: 'امتحانی شیڈول',
-        exam_schedule_list: 'امتحانی شیڈول فہرست',
+        exam_schedule: 'امتحانی نظام الاوقات',
+        exam_schedule_list: 'امتحان کی فہرست',
         exam_result: 'امتحانی رزلٹ',
         exam_result_list: 'رزلٹ فہرست',
         store: 'اسٹور',

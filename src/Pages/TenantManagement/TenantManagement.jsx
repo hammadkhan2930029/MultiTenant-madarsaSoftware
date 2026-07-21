@@ -1,9 +1,10 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Building2, Edit2, Eye, Globe2, Plus, Save, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, Building2, Edit2, Eye, Globe2, Plus, Save, Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { DeleteConfirmationModal } from '../../Components/Common/DeleteConfirmationModal';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { getCities } from '../../Constant/CityApi';
 import { getUsers } from '../../Constant/UserManagementApi';
 import {
   createTenant,
@@ -27,9 +28,13 @@ const emptyForm = {
   branchEnabled: 'false',
   branchLimit: '',
   adminName: '',
+  adminPhone: '',
   adminEmail: '',
   adminUsername: '',
   adminPassword: '',
+  adminCity: '',
+  adminProvince: '',
+  profileName: '',
   profileEmail: '',
   phone1: '',
   phone2: '',
@@ -44,6 +49,16 @@ const statusOptions = [
   { value: 'inactive', label: 'غیر فعال' },
 ];
 
+const provinceOptions = [
+  { value: '', label: 'صوبہ منتخب کریں' },
+  { value: 'پنجاب', label: 'پنجاب' },
+  { value: 'سندھ', label: 'سندھ' },
+  { value: 'خیبر پختونخوا', label: 'خیبر پختونخوا' },
+  { value: 'بلوچستان', label: 'بلوچستان' },
+  { value: 'گلگت بلتستان', label: 'گلگت بلتستان' },
+  { value: 'آزاد کشمیر', label: 'آزاد کشمیر' },
+];
+
 const normalizeDomain = (value) => {
   let domain = String(value || '').trim().toLowerCase();
   domain = domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
@@ -56,28 +71,57 @@ const normalizeDomain = (value) => {
 };
 
 const buildPayload = (formData, mode) => {
-  const branchEnabled = formData.branchEnabled === 'true';
+  const branchLimit = formData.branchLimit === '' ? null : Number(formData.branchLimit);
+  const branchEnabled = formData.branchEnabled === 'true' || (Number.isInteger(branchLimit) && branchLimit >= 1);
   const payload = {
-    name: formData.name.trim(),
+    name: formData.profileName.trim(),
     subdomain: normalizeDomain(formData.subdomain) || null,
     customDomain: normalizeDomain(formData.customDomain) || null,
     ownerAdminId: formData.ownerAdminId ? Number(formData.ownerAdminId) : null,
     status: formData.status,
     branchEnabled,
-    branchLimit: formData.branchLimit === '' ? null : Number(formData.branchLimit),
+    branchLimit,
   };
 
   if (mode === 'create') {
     payload.tenantCode = normalizeDomain(formData.tenantCode);
     payload.admin = {
       name: formData.adminName.trim(),
+      phone: formData.adminPhone.trim(),
       email: formData.adminEmail.trim(),
       username: formData.adminUsername.trim(),
       password: formData.adminPassword,
+      city: formData.adminCity.trim(),
+      province: formData.adminProvince.trim(),
     };
     payload.profile = {
-      name: formData.name.trim(),
+      name: formData.profileName.trim(),
       email: formData.profileEmail.trim() || formData.adminEmail.trim(),
+      phone1: formData.phone1.trim(),
+      phone2: formData.phone2.trim(),
+      address: formData.address.trim(),
+      branch: formData.branch.trim(),
+      city: formData.city.trim(),
+      regNo: formData.regNo.trim(),
+    };
+  }
+
+  if (mode === 'edit' && formData.adminPassword) {
+    payload.adminPassword = formData.adminPassword;
+  }
+
+  if (mode === 'edit') {
+    payload.admin = {
+      name: formData.adminName.trim(),
+      phone: formData.adminPhone.trim(),
+      email: formData.adminEmail.trim(),
+      username: formData.adminUsername.trim(),
+      city: formData.adminCity.trim(),
+      province: formData.adminProvince.trim(),
+    };
+    payload.profile = {
+      name: formData.profileName.trim(),
+      email: formData.profileEmail.trim(),
       phone1: formData.phone1.trim(),
       phone2: formData.phone2.trim(),
       address: formData.address.trim(),
@@ -123,6 +167,7 @@ export const TenantManagement = () => {
 
   const [tenants, setTenants] = useState([]);
   const [owners, setOwners] = useState([]);
+  const [cities, setCities] = useState([]);
   const [currentTenant, setCurrentTenant] = useState(null);
   const [tenantBranches, setTenantBranches] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
@@ -130,6 +175,7 @@ export const TenantManagement = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [branchLimitInputs, setBranchLimitInputs] = useState({});
   const [branchAction, setBranchAction] = useState(null);
+  const [tenantDeleteAction, setTenantDeleteAction] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -154,10 +200,24 @@ export const TenantManagement = () => {
     })),
   ], [owners]);
 
+  const cityOptions = useMemo(() => [
+    { value: '', label: 'شہر منتخب کریں' },
+    ...cities.map((city) => ({
+      value: city.name,
+      label: city.name,
+    })),
+  ], [cities]);
+
   const loadOwners = useCallback(async () => {
     if (!isSuperAdmin) return;
     const result = await getUsers({ page: 1, limit: 100 });
     setOwners(result.items || []);
+  }, [isSuperAdmin]);
+
+  const loadCities = useCallback(async () => {
+    if (!isSuperAdmin) return;
+    const result = await getCities('page=1&limit=100&status=active');
+    setCities(result.items || []);
   }, [isSuperAdmin]);
 
   const loadTenants = useCallback(async () => {
@@ -196,6 +256,8 @@ export const TenantManagement = () => {
         : { items: [] };
       setCurrentTenant(tenant);
       setTenantBranches(branchesResult.items || []);
+      const tenantAdmin = tenant?.tenantAdmin || {};
+      const madrassaProfile = tenant?.madrassaProfile || {};
       setFormData({
         tenantCode: tenant?.tenantCode || '',
         name: tenant?.name || tenant?.tenantName || '',
@@ -205,6 +267,21 @@ export const TenantManagement = () => {
         status: tenant?.status || 'active',
         branchEnabled: tenant?.branchEnabled ? 'true' : 'false',
         branchLimit: tenant?.branchLimit ?? '',
+        adminName: tenantAdmin.name || '',
+        adminPhone: tenantAdmin.phone || '',
+        adminEmail: tenantAdmin.email || '',
+        adminUsername: tenantAdmin.username || '',
+        adminPassword: '',
+        adminCity: tenantAdmin.city || '',
+        adminProvince: tenantAdmin.province || '',
+        profileName: madrassaProfile.name || tenant?.name || tenant?.tenantName || '',
+        profileEmail: madrassaProfile.email || '',
+        phone1: madrassaProfile.phone1 || '',
+        phone2: madrassaProfile.phone2 || '',
+        address: madrassaProfile.address || '',
+        branch: madrassaProfile.branch || 'مرکزی کیمپس',
+        city: madrassaProfile.city || '',
+        regNo: madrassaProfile.regNo || '',
       });
     } catch (loadError) {
       setError(loadError.message || 'مدرسہ کی تفصیل لوڈ نہیں ہو سکی۔');
@@ -216,6 +293,10 @@ export const TenantManagement = () => {
   useEffect(() => {
     loadOwners().catch((ownerError) => setError(ownerError.message || 'مالکان کی فہرست لوڈ نہیں ہو سکی۔'));
   }, [loadOwners]);
+
+  useEffect(() => {
+    loadCities().catch((cityError) => setError(cityError.message || 'شہروں کی فہرست لوڈ نہیں ہو سکی۔'));
+  }, [loadCities]);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -244,12 +325,13 @@ export const TenantManagement = () => {
     if (isSaving) return undefined;
 
     const nextErrors = {};
-    if (!formData.name.trim()) return setError('مدرسہ کا نام ضروری ہے۔');
+    if (!formData.profileName.trim()) return setError('مدرسہ کا نام ضروری ہے۔');
     if (mode === 'create' && !formData.tenantCode.trim()) return setError('مدرسہ کوڈ ضروری ہے۔');
-    if (mode === 'create' && !formData.adminName.trim()) return setError('مدرسہ ایڈمن کا نام ضروری ہے۔');
-    if (mode === 'create' && !formData.adminEmail.trim()) return setError('مدرسہ ایڈمن کا ای میل ضروری ہے۔');
-    if (mode === 'create' && !formData.adminUsername.trim()) return setError('مدرسہ ایڈمن کا صارف نام ضروری ہے۔');
+    if (!formData.adminName.trim()) return setError('مدرسہ ایڈمن کا نام ضروری ہے۔');
+    if (!formData.adminEmail.trim()) return setError('مدرسہ ایڈمن کا ای میل ضروری ہے۔');
+    if (!formData.adminUsername.trim()) return setError('مدرسہ ایڈمن کا صارف نام ضروری ہے۔');
     if (mode === 'create' && formData.adminPassword.length < 8) return setError('مدرسہ ایڈمن کا پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔');
+    if (mode === 'edit' && formData.adminPassword && formData.adminPassword.length < 8) return setError('نیا ایڈمن پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے۔');
     if (formData.branchEnabled === 'true' && (!formData.branchLimit || Number(formData.branchLimit) < 1)) {
       nextErrors.branchLimit = 'برانچ سسٹم فعال ہو تو برانچ حد کم از کم 1 ہونا ضروری ہے۔';
     }
@@ -368,13 +450,42 @@ export const TenantManagement = () => {
     setSuccess('');
 
     try {
-      await updateTenantBranchLimit(targetTenantId, { branchLimit });
-      setSuccess('برانچ حد کامیابی سے اپ ڈیٹ ہو گئی۔');
+      if (!tenant.branchEnabled && Number.isInteger(branchLimit) && branchLimit >= 1) {
+        await updateTenantBranchSettings(targetTenantId, { branchEnabled: true, branchLimit });
+        setSuccess('برانچ سسٹم فعال ہو گیا اور برانچ حد کامیابی سے اپ ڈیٹ ہو گئی۔');
+      } else {
+        await updateTenantBranchLimit(targetTenantId, { branchLimit });
+        setSuccess('برانچ حد کامیابی سے اپ ڈیٹ ہو گئی۔');
+      }
       await refreshBranchData(targetTenantId);
     } catch (limitError) {
       setError(getBranchErrorMessage(limitError.message) || 'برانچ حد اپ ڈیٹ نہیں ہو سکی۔');
     } finally {
       setIsBranchSaving(false);
+    }
+  };
+
+  const handleConfirmTenantDelete = async () => {
+    if (!tenantDeleteAction?.tenant || isSaving) return;
+
+    const targetTenantId = tenantDeleteAction.tenant.tenantId || tenantDeleteAction.tenant.id;
+    setIsSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateTenant(targetTenantId, { status: 'inactive' });
+      setSuccess('مدرسہ غیر فعال کر دیا گیا۔');
+      setTenantDeleteAction(null);
+      if (mode === 'list') {
+        await loadTenants();
+      } else {
+        navigate('/tenant-management');
+      }
+    } catch (deleteError) {
+      setError(deleteError.message || 'مدرسہ غیر فعال نہیں ہو سکا۔');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -411,12 +522,8 @@ export const TenantManagement = () => {
     <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:p-8">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <InputField label="مدرسہ کوڈ" required={mode === 'create'} disabled={mode === 'edit'} placeholder="madarsa_001" value={formData.tenantCode} onChange={(event) => setFormData((prev) => ({ ...prev, tenantCode: event.target.value }))} />
-        <InputField label="مدرسہ کا نام" required placeholder="مدرسہ کا نام" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
         <InputField label="سب ڈومین" placeholder="demo" value={formData.subdomain} onChange={(event) => setFormData((prev) => ({ ...prev, subdomain: event.target.value }))} />
         <InputField label="کسٹم ڈومین" placeholder="school.example.com" value={formData.customDomain} onChange={(event) => setFormData((prev) => ({ ...prev, customDomain: event.target.value }))} />
-        {mode === 'edit' ? (
-          <SelectField label="مالک / ایڈمن" options={ownerOptions} value={formData.ownerAdminId} onChange={(event) => setFormData((prev) => ({ ...prev, ownerAdminId: event.target.value }))} />
-        ) : null}
         <SelectField label="حالت" options={statusOptions} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
       </div>
 
@@ -443,7 +550,12 @@ export const TenantManagement = () => {
             value={formData.branchLimit}
             error={formErrors.branchLimit}
             onChange={(event) => {
-              setFormData((prev) => ({ ...prev, branchLimit: event.target.value }));
+              const nextValue = event.target.value;
+              setFormData((prev) => ({
+                ...prev,
+                branchLimit: nextValue,
+                ...(Number(nextValue) >= 1 ? { branchEnabled: 'true' } : {}),
+              }));
               setFormErrors((prev) => {
                 if (!prev.branchLimit) return prev;
                 const nextErrors = { ...prev };
@@ -455,32 +567,31 @@ export const TenantManagement = () => {
         </div>
       </div>
 
-      {mode === 'create' ? (
-        <>
-          <div className="mt-8 border-t border-[var(--color-border)] pt-8">
+      <>
+        <div className="mt-8 border-t border-[var(--color-border)] pt-8">
             <h2 className="text-right text-lg font-black text-[var(--color-text-main)]">مدرسہ ایڈمن</h2>
             <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-2">
               <InputField label="ایڈمن کا نام" required placeholder="ایڈمن کا نام" value={formData.adminName} onChange={(event) => setFormData((prev) => ({ ...prev, adminName: event.target.value }))} />
+              <InputField label="ایڈمن فون نمبر" placeholder="0300-0000000" value={formData.adminPhone} onChange={(event) => setFormData((prev) => ({ ...prev, adminPhone: event.target.value }))} />
               <InputField label="ایڈمن ای میل" required type="email" placeholder="admin@example.com" value={formData.adminEmail} onChange={(event) => setFormData((prev) => ({ ...prev, adminEmail: event.target.value }))} />
               <InputField label="ایڈمن صارف نام" required placeholder="admin_username" value={formData.adminUsername} onChange={(event) => setFormData((prev) => ({ ...prev, adminUsername: event.target.value }))} />
-              <InputField label="ایڈمن پاس ورڈ" required type="password" placeholder="کم از کم 8 حروف" value={formData.adminPassword} onChange={(event) => setFormData((prev) => ({ ...prev, adminPassword: event.target.value }))} />
+              <InputField label={mode === 'edit' ? 'نیا ایڈمن پاس ورڈ' : 'ایڈمن پاس ورڈ'} required={mode === 'create'} type="password" placeholder="کم از کم 8 حروف" value={formData.adminPassword} onChange={(event) => setFormData((prev) => ({ ...prev, adminPassword: event.target.value }))} />
+              <SelectField label="صوبہ" options={provinceOptions} value={formData.adminProvince} onChange={(event) => setFormData((prev) => ({ ...prev, adminProvince: event.target.value }))} />
+              <SelectField label="شہر" options={cityOptions} value={formData.adminCity} onChange={(event) => setFormData((prev) => ({ ...prev, adminCity: event.target.value }))} />
             </div>
-          </div>
+        </div>
 
-          <div className="mt-8 border-t border-[var(--color-border)] pt-8">
+        <div className="mt-8 border-t border-[var(--color-border)] pt-8">
             <h2 className="text-right text-lg font-black text-[var(--color-text-main)]">ابتدائی مدرسہ پروفائل</h2>
             <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-2">
+              <InputField label="مدرسہ کا نام" required placeholder="مدرسہ کا نام" value={formData.profileName} onChange={(event) => setFormData((prev) => ({ ...prev, profileName: event.target.value, name: event.target.value }))} />
               <InputField label="پروفائل ای میل" type="email" placeholder="profile@example.com" value={formData.profileEmail} onChange={(event) => setFormData((prev) => ({ ...prev, profileEmail: event.target.value }))} />
               <InputField label="برانچ" placeholder="مرکزی کیمپس" value={formData.branch} onChange={(event) => setFormData((prev) => ({ ...prev, branch: event.target.value }))} />
-              <InputField label="فون 1" placeholder="0300-0000000" value={formData.phone1} onChange={(event) => setFormData((prev) => ({ ...prev, phone1: event.target.value }))} />
-              <InputField label="فون 2" placeholder="0321-0000000" value={formData.phone2} onChange={(event) => setFormData((prev) => ({ ...prev, phone2: event.target.value }))} />
-              <InputField label="شہر" placeholder="شہر" value={formData.city} onChange={(event) => setFormData((prev) => ({ ...prev, city: event.target.value }))} />
-              <InputField label="رجسٹریشن نمبر" placeholder="REG-001" value={formData.regNo} onChange={(event) => setFormData((prev) => ({ ...prev, regNo: event.target.value }))} />
-              <InputField label="پتہ" placeholder="پتہ" className="md:col-span-2" value={formData.address} onChange={(event) => setFormData((prev) => ({ ...prev, address: event.target.value }))} />
+              <InputField label="فون نمبر" placeholder="0300-0000000" value={formData.phone1} onChange={(event) => setFormData((prev) => ({ ...prev, phone1: event.target.value }))} />
+              <SelectField label="شہر" options={cityOptions} value={formData.city} onChange={(event) => setFormData((prev) => ({ ...prev, city: event.target.value }))} />
             </div>
-          </div>
-        </>
-      ) : null}
+        </div>
+      </>
 
       <div className="mt-8 flex flex-col gap-3 md:flex-row md:justify-end">
         <button type="button" onClick={() => navigate('/tenant-management')} className="rounded-2xl border border-[var(--color-border)] px-6 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">
@@ -505,6 +616,39 @@ export const TenantManagement = () => {
 
     const owner = currentTenant.tenantAdmin || owners.find((item) => Number(item.id) === Number(currentTenant.ownerAdminId));
     const currentTenantId = currentTenant.tenantId || currentTenant.id;
+    const profile = currentTenant.madrassaProfile || {};
+    const detailSections = [
+      {
+        title: 'مدرسہ معلومات',
+        rows: [
+          ['مدرسہ کوڈ', currentTenant.tenantCode],
+          ['سب ڈومین', currentTenant.subdomain || '-'],
+          ['کسٹم ڈومین', currentTenant.customDomain || '-'],
+          ['حالت', currentTenant.status === 'active' ? 'فعال' : 'غیر فعال'],
+        ],
+      },
+      {
+        title: 'مدرسہ ایڈمن',
+        rows: [
+          ['ایڈمن کا نام', owner?.name || '-'],
+          ['ایڈمن فون نمبر', owner?.phone || '-'],
+          ['ایڈمن ای میل', owner?.email || '-'],
+          ['ایڈمن صارف نام', owner?.username || '-'],
+          ['شہر', owner?.city || '-'],
+          ['صوبہ', owner?.province || '-'],
+        ],
+      },
+      {
+        title: 'ابتدائی مدرسہ پروفائل',
+        rows: [
+          ['مدرسہ کا نام', profile.name || currentTenant.tenantName || currentTenant.name || '-'],
+          ['پروفائل ای میل', profile.email || '-'],
+          ['برانچ', profile.branch || '-'],
+          ['فون نمبر', profile.phone1 || '-'],
+          ['شہر', profile.city || '-'],
+        ],
+      },
+    ];
 
     return (
       <div className="space-y-6">
@@ -523,11 +667,33 @@ export const TenantManagement = () => {
               </div>
             </div>
 
-            <button type="button" onClick={() => navigate(`/tenant-management/${currentTenantId}/edit`)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
-              <Edit2 size={16} />
-              ترمیم کریں
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => navigate(`/tenant-management/${currentTenantId}/edit`)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
+                <Edit2 size={16} />
+                ترمیم کریں
+              </button>
+              <button type="button" onClick={() => setTenantDeleteAction({ tenant: currentTenant })} className="flex items-center gap-2 rounded-xl bg-rose-500/10 px-4 py-3 text-sm font-black text-rose-500 transition-all hover:bg-rose-500 hover:text-white">
+                <Trash2 size={16} />
+                حذف کریں
+              </button>
+            </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          {detailSections.map((section) => (
+            <div key={section.title} className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+              <h3 className="text-right text-lg font-black text-[var(--color-text-main)]">{section.title}</h3>
+              <div className="mt-4 space-y-3">
+                {section.rows.map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-4 border-b border-[var(--color-border)]/50 pb-3 last:border-b-0 last:pb-0">
+                    <span className="text-sm font-black text-[var(--color-text-main)]">{value || '-'}</span>
+                    <span className="shrink-0 text-xs font-bold text-[var(--color-text-muted)]">{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -611,17 +777,17 @@ export const TenantManagement = () => {
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] table-fixed text-right">
+          <table className="w-full min-w-[1500px] table-fixed text-right">
             <colgroup>
-              <col className="w-[17%]" />
-              <col className="w-[25%]" />
-              <col className="w-[13%]" />
-              <col className="w-[9%]" />
-              <col className="w-[10%]" />
-              <col className="w-[12%]" />
-              <col className="w-[6%]" />
-              <col className="w-[6%]" />
-              <col className="w-[12%]" />
+              <col className="w-[210px]" />
+              <col className="w-[300px]" />
+              <col className="w-[180px]" />
+              <col className="w-[120px]" />
+              <col className="w-[130px]" />
+              <col className="w-[180px]" />
+              <col className="w-[95px]" />
+              <col className="w-[95px]" />
+              <col className="w-[190px]" />
             </colgroup>
             <thead>
               <tr className="text-[var(--color-text-muted)]">
@@ -645,30 +811,30 @@ export const TenantManagement = () => {
                   const owner = tenant.tenantAdmin || owners.find((item) => Number(item.id) === Number(tenant.ownerAdminId));
 
                   return (
-                    <tr key={tenantRowId} className="border-t border-[var(--color-border)]/60">
-                      <td className="px-6 py-4">
-                        <div className="font-black text-[var(--color-text-main)]">{tenant.tenantName || tenant.name}</div>
-                        <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{tenant.tenantCode}</div>
+                    <tr key={tenantRowId} className="border-t border-[var(--color-border)]/60 align-top">
+                      <td className="px-6 py-5">
+                        <div className="break-words font-black leading-7 text-[var(--color-text-main)]">{tenant.tenantName || tenant.name}</div>
+                        <div className="mt-1 break-all text-xs font-bold text-[var(--color-text-muted)]">{tenant.tenantCode}</div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">
+                      <td className="px-6 py-5 text-sm font-bold text-[var(--color-text-main)]">
                         <span className="flex min-w-0 items-start gap-2 break-words leading-7">
                           <Globe2 size={15} className="mt-1 shrink-0 text-[var(--color-text-muted)]" />
                           <span className="min-w-0 break-all">{tenant.link || tenant.customDomain || tenant.subdomain || '-'}</span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{owner ? getOwnerLabel(owner) : '-'}</td>
-                      <td className="px-6 py-4">
-                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${tenant.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
+                      <td className="px-6 py-5 text-sm font-bold leading-7 text-[var(--color-text-main)]">{owner ? getOwnerLabel(owner) : '-'}</td>
+                      <td className="px-6 py-5">
+                        <span className={`inline-flex min-w-[72px] justify-center rounded-xl px-3 py-1 text-xs font-black ${tenant.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
                           {tenant.status === 'active' ? 'فعال' : 'غیر فعال'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`rounded-xl px-3 py-1 text-xs font-black ${tenant.branchEnabled ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
+                      <td className="px-6 py-5">
+                        <span className={`inline-flex min-w-[72px] justify-center rounded-xl px-3 py-1 text-xs font-black ${tenant.branchEnabled ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
                           {tenant.branchEnabled ? 'فعال' : 'غیر فعال'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex min-w-0 items-center gap-2">
+                      <td className="px-6 py-5">
+                        <div className="flex min-w-[140px] items-center gap-2">
                           <input
                             aria-label={`${tenant.tenantName || tenant.name || 'مدرسہ'} کی برانچ حد`}
                             type="number"
@@ -689,15 +855,18 @@ export const TenantManagement = () => {
                           </button>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{tenant.branchesCreated ?? 0}</td>
-                      <td className="px-6 py-4 text-sm font-black text-[var(--color-text-main)]">{tenant.remainingBranches ?? 0}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-start gap-2 whitespace-nowrap">
+                      <td className="px-6 py-5 text-sm font-black text-[var(--color-text-main)]">{tenant.branchesCreated ?? 0}</td>
+                      <td className="px-6 py-5 text-sm font-black text-[var(--color-text-main)]">{tenant.remainingBranches ?? 0}</td>
+                      <td className="px-6 py-5">
+                        <div className="flex min-w-[170px] items-center justify-start gap-2 whitespace-nowrap">
                           <button type="button" onClick={() => navigate(`/tenant-management/${tenantRowId}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="دیکھیں">
                             <Eye size={16} />
                           </button>
                           <button type="button" onClick={() => navigate(`/tenant-management/${tenantRowId}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="ترمیم کریں">
                             <Edit2 size={16} />
+                          </button>
+                          <button type="button" onClick={() => setTenantDeleteAction({ tenant })} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white" title="حذف کریں">
+                            <Trash2 size={16} />
                           </button>
                           <button
                             type="button"
@@ -747,6 +916,18 @@ export const TenantManagement = () => {
           onClose={() => setBranchAction(null)}
           onConfirm={handleConfirmBranchToggle}
           confirmText={branchAction.type === 'enable' ? 'فعال کریں' : 'غیر فعال کریں'}
+          loadingText="محفوظ ہو رہا ہے..."
+        />
+      ) : null}
+      {tenantDeleteAction ? (
+        <DeleteConfirmationModal
+          title="مدرسہ غیر فعال کرنے کی تصدیق"
+          message="کیا آپ واقعی اس مدرسہ کو غیر فعال کرنا چاہتے ہیں؟ موجودہ ڈیٹا حذف نہیں ہو گا۔"
+          targetName={tenantDeleteAction.tenant?.tenantName || tenantDeleteAction.tenant?.name || ''}
+          isDeleting={isSaving}
+          onClose={() => setTenantDeleteAction(null)}
+          onConfirm={handleConfirmTenantDelete}
+          confirmText="غیر فعال کریں"
           loadingText="محفوظ ہو رہا ہے..."
         />
       ) : null}

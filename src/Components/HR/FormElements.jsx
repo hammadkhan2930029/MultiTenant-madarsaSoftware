@@ -120,7 +120,7 @@ export const BankSearchField = ({ label, value, onChange, options, isDark, onSel
 
 //---------------------------------------------------------------------------------------
 
-export const DateField = ({ label, value, onChange, name, placeholder, min, max, className = '', size = 'md', required = false }) => (
+export const DateField = ({ label, value, onChange, name, placeholder, min, max, className = '', size = 'md', required = false, error = '' }) => (
   <ThemedDatePicker
     label={label}
     value={value}
@@ -132,6 +132,7 @@ export const DateField = ({ label, value, onChange, name, placeholder, min, max,
     className={className}
     size={size}
     required={required}
+    error={error}
   />
 );
 //---------------------------------------------------------------------------------------

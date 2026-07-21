@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Building2,
     Edit2,
@@ -87,6 +88,7 @@ const getBranchErrorMessage = (error, fallback) => {
 };
 
 export const CreateBranch = () => {
+    const navigate = useNavigate();
     const [branches, setBranches] = useState([]);
     const [branchLimit, setBranchLimit] = useState(emptyLimitMeta);
     const [search, setSearch] = useState('');
@@ -505,6 +507,10 @@ export const CreateBranch = () => {
                     title="برانچ تفصیل"
                     branch={detailsTarget}
                     onClose={() => setDetailsTarget(null)}
+                    onEditUser={(userId) => {
+                        setDetailsTarget(null);
+                        navigate(`/role-management/users/${userId}/edit`);
+                    }}
                 />
             ) : null}
 
@@ -589,7 +595,7 @@ const SelectField = ({ id, label, value, onChange }) => (
     </div>
 );
 
-const BranchInfoModal = ({ title, branch, onClose, accessMode = false }) => (
+const BranchInfoModal = ({ title, branch, onClose, accessMode = false, onEditUser = null }) => (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
         <div className="w-full max-w-lg rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="branch-info-title">
             <div className="flex items-start justify-between gap-4">
@@ -624,6 +630,44 @@ const BranchInfoModal = ({ title, branch, onClose, accessMode = false }) => (
                         <p className="mt-2 text-xs leading-6 text-[var(--color-text-muted)]">
                             برانچ مخصوص رسائی اسائنمنٹ کے لئے بیک اینڈ ربط اگلے مرحلے میں درکار ہے۔
                         </p>
+                    </div>
+                ) : null}
+                {!accessMode ? (
+                    <div className="sm:col-span-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-right">
+                        <p className="text-xs font-black text-[var(--color-text-muted)]">لاگ اِن تفصیل</p>
+                        {branch?.assignedAdmins?.length ? (
+                            <div className="mt-3 space-y-3">
+                                {branch.assignedAdmins.map((admin) => (
+                                    <div key={admin.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-black text-[var(--color-text)]">{admin.name || '-'}</p>
+                                                <p className="text-xs font-bold text-[var(--color-text-muted)]">صارف نام: {admin.username || '-'}</p>
+                                                <p className="text-xs font-bold text-[var(--color-text-muted)]">ای میل: {admin.email || '-'}</p>
+                                                <p className="text-xs font-bold text-[var(--color-text-muted)]">فون: {admin.phone || '-'}</p>
+                                                <p className="text-xs font-bold text-[var(--color-text-muted)]">کردار: {admin.assignedRole?.roleName || admin.role || '-'}</p>
+                                                <p className="text-xs font-bold text-[var(--color-text-muted)]">حالت: {statusLabels[admin.status] || admin.status || '-'}</p>
+                                            </div>
+                                            {onEditUser ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onEditUser(admin.id)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500/10 px-4 py-2 text-xs font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white"
+                                                >
+                                                    <Edit2 size={14} />
+                                                    ترمیم کریں
+                                                </button>
+                                            ) : null}
+                                        </div>
+                                        <p className="mt-3 text-[11px] font-bold leading-5 text-[var(--color-text-muted)]">
+                                            پاس ورڈ محفوظ رکھا گیا ہے؛ تبدیل کرنے کے لئے ترمیم میں نیا پاس ورڈ درج کریں۔
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="mt-3 text-sm font-bold text-[var(--color-text-muted)]">اس برانچ کے ساتھ ابھی کوئی لاگ اِن صارف منسلک نہیں۔</p>
+                        )}
                     </div>
                 ) : null}
             </div>

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Briefcase, Camera, ChevronLeft, ChevronRight, GraduationCap, Save, User, UserPlus, Wallet } from 'lucide-react';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { createTeacher, getTeacherById, updateTeacher } from '../../Constant/TeachersApi';
@@ -7,6 +7,7 @@ import { getShifts } from '../../Constant/ShiftApi';
 import { getDepartments } from '../../Constant/DepartmentApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../Utils/cnicFormat';
 
 const INITIAL_VALUES = {
   staffType: 'teacher',
@@ -69,6 +70,7 @@ const getShiftDisplayLabel = (shift) => {
 };
 
 export const HRManagement = () => {
+  const tabsSectionRef = useRef(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const teacherId = searchParams.get('teacherId');
@@ -210,10 +212,7 @@ export const HRManagement = () => {
     }));
   };
 
-  const goToTab = (direction) => {
-    const nextIndex = Math.min(Math.max(activeTabIndex + direction, 0), tabs.length - 1);
-    setActiveTab(tabs[nextIndex].id);
-  };
+
 
   const handleSubmit = async () => {
     setError('');
@@ -234,6 +233,12 @@ export const HRManagement = () => {
     if (!formData.subject.trim()) {
       setActiveTab('education');
       setError('براہ کرم مضمون / ذمہ داری لازمی درج کریں۔');
+      return;
+    }
+
+    if (formData.cnic.trim() && !isCompleteCnic(formData.cnic)) {
+      setActiveTab('personal');
+      setError('شناختی کارڈ نمبر 00000-0000000-0 کے فارمیٹ میں درج کریں۔');
       return;
     }
 
@@ -304,6 +309,31 @@ export const HRManagement = () => {
     }
   };
 
+
+
+  const scrollToTabsTop = () => {
+    tabsSectionRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+
+    requestAnimationFrame(() => {
+      scrollToTabsTop();
+    });
+  };
+
+  const goToTab = (direction) => {
+    const nextIndex = Math.min(
+      Math.max(activeTabIndex + direction, 0),
+      tabs.length - 1
+    );
+
+    handleTabChange(tabs[nextIndex].id);
+  };
   return (
     <div className="min-h-screen bg-[var(--color-bg)] p-3 text-[var(--color-text-main)] transition-colors duration-300 md:p-5" dir="rtl">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -326,7 +356,10 @@ export const HRManagement = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-input)] p-2">
+        <div
+          ref={tabsSectionRef}
+          className="overflow-x-auto rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-input)] p-2"
+        >
           <div className="flex min-w-max gap-2">
             {tabs.map((tab, index) => {
               const Icon = tab.icon;
@@ -335,12 +368,12 @@ export const HRManagement = () => {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex min-w-44 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-md font-black transition-all ${
-                    isActive
-                      ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-emerald-900/10'
-                      : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-main)]'
-                  }`}
+                  // onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`inline-flex min-w-44 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-md font-black transition-all ${isActive
+                    ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-emerald-900/10'
+                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-main)]'
+                    }`}
                 >
                   <span className={`flex h-7 w-7 items-center justify-center rounded-xl ${isActive ? 'bg-white/15' : 'bg-[var(--color-surface)]'}`}>
                     <Icon size={16} />
@@ -364,9 +397,9 @@ export const HRManagement = () => {
                 onChange={handleChange}
                 onShiftChange={handleShiftChange}
                 onImageChange={(file, preview) => {
-                setImageFile(file);
-                setImagePreview(preview);
-              }} />
+                  setImageFile(file);
+                  setImagePreview(preview);
+                }} />
             ) : null}
 
             {activeTab === 'education' ? (
@@ -395,6 +428,8 @@ export const HRManagement = () => {
               <button
                 type="button"
                 onClick={() => goToTab(-1)}
+
+
                 disabled={activeTabIndex === 0}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-5 text-lg font-black disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -465,7 +500,16 @@ const PersonalStep = ({ formData, imagePreview, imageFile, shiftOptions, isLoadi
       <InputField label="نام" required value={formData.fullName} onChange={(event) => onChange('fullName', event.target.value)} />
       <InputField label="فون نمبر" required value={formData.phone} onChange={(event) => onChange('phone', event.target.value)} />
       <InputField label="ای میل" type="email" value={formData.email} onChange={(event) => onChange('email', event.target.value)} />
-      <InputField label="شناختی کارڈ نمبر" required value={formData.cnic} onChange={(event) => onChange('cnic', event.target.value)} />
+      <InputField
+        label="شناختی کارڈ نمبر"
+        required
+        value={formData.cnic}
+        onChange={(event) => onChange('cnic', formatCnicInput(event.target.value))}
+        maxLength={CNIC_INPUT_MAX_LENGTH}
+        inputMode="numeric"
+        dir="ltr"
+        className="text-right"
+      />
       <InputField label="پتہ" required value={formData.address} onChange={(event) => onChange('address', event.target.value)} />
       <SelectField
         label="شفٹ کا انتخاب"
@@ -533,7 +577,7 @@ const AccountStep = ({ formData, onChange }) => (
     <StepHeading title="تنخواہ اور اکاؤنٹ" description="بنیادی تنخواہ اور بینک اکاؤنٹ کی معلومات درج کریں۔" />
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <InputField label="بنیادی تنخواہ" required type="number" value={formData.basicSalary} onChange={(event) => onChange('basicSalary', event.target.value)} />
-      <InputField label="بینک کا نام"  value={formData.bankName} onChange={(event) => onChange('bankName', event.target.value)} />
+      <InputField label="بینک کا نام" value={formData.bankName} onChange={(event) => onChange('bankName', event.target.value)} />
       <InputField label="اکاؤنٹ ٹائٹل" value={formData.accountTitle} onChange={(event) => onChange('accountTitle', event.target.value)} />
       <InputField label="اکاؤنٹ نمبر" value={formData.accountNumber} onChange={(event) => onChange('accountNumber', event.target.value)} />
       <InputField label="IBAN" value={formData.iban} onChange={(event) => onChange('iban', event.target.value)} className="md:col-span-2" dir="ltr" />

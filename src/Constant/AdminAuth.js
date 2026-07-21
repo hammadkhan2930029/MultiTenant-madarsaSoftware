@@ -353,6 +353,26 @@ export const loginAdmin = async ({ username, password }) => {
   return { success: true, session };
 };
 
+export const requestForgotPassword = async ({ identity, contactEmail }) => {
+  const result = await apiRequest('/auth/forgot-password', {
+    method: 'POST',
+    skipAuth: true,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      identity: String(identity || '').trim(),
+      contactEmail: String(contactEmail || '').trim(),
+    }),
+  });
+
+  return {
+    success: Boolean(result?.success ?? true),
+    data: result?.data || null,
+    message: result?.message || 'Password reset request submitted successfully.',
+  };
+};
+
 export const validateCurrentTenantSession = async () => {
   const session = readSession();
   const tenantBranding = await fetchCurrentTenantBranding();

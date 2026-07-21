@@ -3,6 +3,7 @@ import { Users, CheckCircle, XCircle, Clock, Layers, BookOpen, Save, Search, Eye
 import { useNavigate } from 'react-router-dom';
 import { ThemedDatePicker } from '../../../Components/DatePicker/ThemedDatePicker';
 import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
+import { getAdminSession, getSelectedBranchContext } from '../../../Constant/AdminAuth';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getTeacherAssignments } from '../../../Constant/TeacherAssignmentApi';
 import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
@@ -46,6 +47,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     const entityPluralLabel = isStaffAttendance ? 'عملہ' : 'اساتذہ';
     const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
     const [selectedBranchId, setSelectedBranchId] = useState('');
+    const [defaultBranchId, setDefaultBranchId] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedSectionId, setSelectedSectionId] = useState('');
@@ -61,8 +63,9 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     const loadAttendance = useCallback(async () => {
         setError('');
         setSuccessMessage('');
+        const activeBranchId = selectedBranchId || defaultBranchId;
 
-        if (!selectedBranchId || !selectedDate) {
+        if (!activeBranchId || !selectedDate) {
             setError('حاضری کے لیے بنیادی سیٹ اپ دستیاب نہیں۔');
             return;
         }
@@ -72,7 +75,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         try {
             const [teacherResult, attendanceResult] = await Promise.all([
                 getTeachers(`page=1&limit=100&status=active&staffType=${staffType}`),
-                getTeacherAttendance(`page=1&limit=100&branchId=${selectedBranchId}&date=${selectedDate}`),
+                getTeacherAttendance(`page=1&limit=100&branchId=${activeBranchId}&date=${selectedDate}`),
             ]);
 
             const attendanceMap = new Map(
@@ -95,7 +98,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [entityPluralLabel, selectedBranchId, selectedDate, staffType]);
+    }, [defaultBranchId, entityPluralLabel, selectedBranchId, selectedDate, staffType]);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -106,7 +109,9 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                     isStaffAttendance ? Promise.resolve({ items: [] }) : getTeacherAssignments('page=1&limit=500&status=active').catch(() => ({ items: [] })),
                 ]);
 
-                setSelectedBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
+                const selectedContextBranchId = getSelectedBranchContext(getAdminSession()).branchId;
+                setDefaultBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
+                setSelectedBranchId(selectedContextBranchId ? String(selectedContextBranchId) : '');
                 setTeachers(
                     (teacherResult.items || []).map((teacher) => ({
                         ...teacher,
@@ -124,16 +129,18 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     }, [entityPluralLabel, isStaffAttendance, staffType]);
 
     useEffect(() => {
-        if (!selectedBranchId) return;
+        if (!selectedBranchId && !defaultBranchId) return;
         loadAttendance();
-    }, [loadAttendance, selectedBranchId]);
+    }, [defaultBranchId, loadAttendance, selectedBranchId]);
 
     const handleStatusChange = (id, newStatus) => {
         setTeachers((prev) => prev.map((teacher) => (teacher.id === id ? { ...teacher, status: newStatus } : teacher)));
     };
 
     const handleSave = async () => {
-        if (!selectedBranchId) {
+        const activeBranchId = selectedBranchId || defaultBranchId;
+
+        if (!activeBranchId) {
             setError('محفوظ کرنے سے پہلے بنیادی سیٹ اپ دستیاب ہونا چاہیے۔');
             return;
         }
@@ -147,7 +154,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                 teachers.map((teacher) =>
                     saveTeacherAttendance({
                         teacherId: Number(teacher.id),
-                        branchId: Number(selectedBranchId),
+                        branchId: Number(activeBranchId),
                         date: selectedDate,
                         status: teacher.status,
                         remarks: teacher.remarks || '',
@@ -327,7 +334,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                             <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`${staffType}-attendance-${selectedDate}`} className="w-full h-12" />
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || !selectedBranchId}
+                                disabled={isSaving || !(selectedBranchId || defaultBranchId)}
                                 className="w-full h-12 flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
                             >
                                 <Save size={18} /> {isSaving ? 'محفوظ...' : 'محفوظ کریں'}
@@ -369,7 +376,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                                     <td>
                                         <div className="flex items-center justify-center gap-2">
                                             <button
-                                                onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
+                                                onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId || defaultBranchId}`)}
                                                 className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
                                             >
                                                 <Eye size={16} />
@@ -385,7 +392,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                 <div className="lg:hidden p-4 space-y-4">
                     {filteredTeachers.map((teacher, index) => (
                         <div
-                            onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId}`)}
+                            onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId || defaultBranchId}`)}
                             key={teacher.id}
                             className="bg-[var(--color-bg)] p-5 rounded-3xl border border-[var(--color-border)]/10 shadow-sm space-y-4"
                         >

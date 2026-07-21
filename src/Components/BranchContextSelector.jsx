@@ -99,7 +99,7 @@ export const BranchContextSelector = () => {
           className="w-full appearance-none rounded-2xl border border-themeBorder bg-themeSurface py-3 pl-11 pr-12 text-right text-sm font-bold text-themeText outline-none transition-colors focus:border-themePrimary disabled:cursor-not-allowed disabled:opacity-70"
           aria-label="برانچ فلٹر"
         >
-          <option value="">{loading ? 'برانچز لوڈ ہو رہی ہیں...' : 'تمام برانچز'}</option>
+          <option value="">{loading ? 'برانچز لوڈ ہو رہی ہیں...' : 'مین ٹیننٹ'}</option>
           {sortedBranches.map((branch) => (
             <option key={branch.id} value={branch.id}>
               {isMainBranch(branch) ? `مرکزی برانچ - ${branch.name}` : branch.name}

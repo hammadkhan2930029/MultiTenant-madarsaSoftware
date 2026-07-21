@@ -5,6 +5,7 @@ import { InputField } from '../../../Components/HR/FormElements';
 import { createParent, deleteParent, getParents, updateParent } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
 
 const INITIAL_FORM = {
     fullName: '',
@@ -146,6 +147,11 @@ export const ParentsList = () => {
             return;
         }
 
+        if (formValues.cnic.trim() && !isCompleteCnic(formValues.cnic)) {
+            setError('شناختی کارڈ نمبر 00000-0000000-0 کے فارمیٹ میں درج کریں۔');
+            return;
+        }
+
         try {
             if (editingParentId) {
                 await updateParent(editingParentId, formValues);
@@ -276,7 +282,16 @@ export const ParentsList = () => {
                             className="min-h-[68px] py-3 leading-[2.5]"
                         />
                         <InputField label="ای میل" value={formValues.email} onChange={(event) => handleChange('email', event.target.value)} placeholder="example@email.com" />
-                        <InputField label="آئی ڈی" value={formValues.cnic} onChange={(event) => handleChange('cnic', event.target.value)} placeholder="42101-1234567-1" />
+                        <InputField
+                            label="آئی ڈی"
+                            value={formValues.cnic}
+                            onChange={(event) => handleChange('cnic', formatCnicInput(event.target.value))}
+                            placeholder="42101-1234567-1"
+                            maxLength={CNIC_INPUT_MAX_LENGTH}
+                            inputMode="numeric"
+                            dir="ltr"
+                            className="text-right"
+                        />
                     </div>
                 </form>
             </div>

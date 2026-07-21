@@ -18,6 +18,9 @@ const formatDate = (value) => {
 const getActiveAssignment = (student) =>
     student.assignments?.find((assignment) => assignment.status === 'active') || student.assignments?.[0] || null;
 
+const getStudentClassName = (student, assignment) => assignment?.class?.name || student.requiredClass || emptyValue;
+const getStudentSectionName = (student, assignment) => assignment?.section?.name || student.requiredJamaat || emptyValue;
+
 const getPrimaryParent = (student) =>
     student.parents?.find((parentItem) => parentItem.isPrimary)?.parent || student.parents?.[0]?.parent || null;
 
@@ -58,8 +61,8 @@ const mapStudentsForList = (items) =>
             idNo: student.admissionNumber,
             name: student.fullName,
             fatherName: student.fatherName,
-            className: activeAssignment?.class?.name || emptyValue,
-            section: activeAssignment?.section?.name || emptyValue,
+            className: getStudentClassName(student, activeAssignment),
+            section: getStudentSectionName(student, activeAssignment),
             familyNo:
                 primaryParent?.familyNumber ||
                 primaryParent?.phone ||
@@ -102,8 +105,8 @@ const mapStudentForExport = (student) => {
         monthlyFee: student.monthlyFee,
         reside: student.reside,
         status: student.status,
-        className: activeAssignment?.class?.name,
-        sectionName: activeAssignment?.section?.name,
+        className: getStudentClassName(student, activeAssignment),
+        sectionName: getStudentSectionName(student, activeAssignment),
         sessionName: activeAssignment?.session?.name,
         branchName: activeAssignment?.branch?.name,
         primaryParentName: primaryParent?.fullName,
@@ -128,6 +131,7 @@ export const StudentList = () => {
     const [studentMeta, setStudentMeta] = useState({ totalItems: 0 });
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSection, setSelectedSection] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -218,15 +222,29 @@ export const StudentList = () => {
         [students],
     );
 
+    const sectionOptions = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    students
+                        .filter((student) => !selectedClass || student.className === selectedClass)
+                        .map((student) => student.section)
+                        .filter((section) => section && section !== emptyValue),
+                ),
+            ).sort((firstSection, secondSection) => firstSection.localeCompare(secondSection)),
+        [selectedClass, students],
+    );
+
     const filteredStudents = useMemo(
         () =>
             students.filter((student) =>
                 (!selectedClass || student.className === selectedClass) &&
+                (!selectedSection || student.section === selectedSection) &&
                 [student.name, student.idNo, student.fatherName, student.familyNo]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
-        [searchTerm, selectedClass, students],
+        [searchTerm, selectedClass, selectedSection, students],
     );
 
     const exportRows = useMemo(() => {
@@ -236,9 +254,14 @@ export const StudentList = () => {
             .filter((student) => {
                 const activeAssignment = getActiveAssignment(student);
                 const primaryParent = getPrimaryParent(student);
-                const className = activeAssignment?.class?.name;
+                const className = getStudentClassName(student, activeAssignment);
+                const sectionName = getStudentSectionName(student, activeAssignment);
 
                 if (selectedClass && className !== selectedClass) {
+                    return false;
+                }
+
+                if (selectedSection && sectionName !== selectedSection) {
                     return false;
                 }
 
@@ -250,13 +273,13 @@ export const StudentList = () => {
                     primaryParent?.familyNumber,
                     primaryParent?.phone,
                     className,
-                    activeAssignment?.section?.name,
+                    sectionName,
                 ]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(query));
             })
             .map(mapStudentForExport);
-    }, [searchTerm, selectedClass, studentRecords]);
+    }, [searchTerm, selectedClass, selectedSection, studentRecords]);
 
     const exportColumns = useMemo(() => [
         { header: 'Student ID', accessor: 'id' },
@@ -306,7 +329,7 @@ export const StudentList = () => {
         { header: 'Updated At', accessor: 'updatedAt' },
     ], []);
 
-    const visibleTotal = selectedClass ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
+    const visibleTotal = selectedClass || selectedSection ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
@@ -348,13 +371,28 @@ export const StudentList = () => {
                         </div>
                         <select
                             value={selectedClass}
-                            onChange={(event) => setSelectedClass(event.target.value)}
+                            onChange={(event) => {
+                                setSelectedClass(event.target.value);
+                                setSelectedSection('');
+                            }}
                             className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
                         >
                             <option value="">تمام جماعتیں</option>
                             {classOptions.map((className) => (
                                 <option key={className} value={className}>
                                     {className}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            value={selectedSection}
+                            onChange={(event) => setSelectedSection(event.target.value)}
+                            className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
+                        >
+                            <option value="">تمام سیکشن</option>
+                            {sectionOptions.map((sectionName) => (
+                                <option key={sectionName} value={sectionName}>
+                                    {sectionName}
                                 </option>
                             ))}
                         </select>
@@ -373,9 +411,27 @@ export const StudentList = () => {
                                 <div className="w-14 h-14 bg-[var(--color-primary)]/10 rounded-2xl flex items-center justify-center text-[var(--color-primary)] font-black text-xs border border-[var(--color-primary)]/20">
                                     {student.idNo}
                                 </div>
-                                <div>
+                                <div >
                                     <h4 className="font-black text-[var(--color-text)] text-lg">{student.name}</h4>
-                                    <p className="text-[11px] text-[var(--color-text-muted)] font-bold mt-0.5">ولدیت: {student.fatherName}</p>
+                                    {/* <div dir="rtl" className=" mt-0.5 flex w-full min-w-44 flex-col gap-0.5 text-[11px] font-bold text-[var(--color-text-muted)]">
+                                        <div className="flex flex-row-reverse items-center justify-center ">
+                                            <span className="text-right">داخلہ نمبر</span>
+                                            <span dir="ltr" className="text-left">{student.idNo || emptyValue}</span>
+                                        </div>
+                                        <div className="flex flex-row-reverse items-center justify-between gap-4 ">
+                                            <span className="text-right">سرپرست کا نام</span>
+                                            <span className="text-left">{student.fatherName || emptyValue}</span>
+                                        </div>
+                                    </div> */}
+                                    <div>
+                                        <span> داخلہ نمبر : </span>
+                                        <span>{student.idNo || '---'}</span>
+                                    </div>
+                                    <div>
+                                        <span> سرپرست کا نام : </span>
+                                        <span>{student.fatherName || '---'}</span>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -422,6 +478,7 @@ export const StudentList = () => {
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">آئی ڈی</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">طالب علم کی تفصیلات</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">جماعت</th>
+                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">جماعت سیکشن</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">ایکشن</th>
                         </tr>
                     </thead>
@@ -438,11 +495,34 @@ export const StudentList = () => {
                                 </td>
                                 <td className="p-6">
                                     <div className="font-black text-[var(--color-text)] text-base">{student.name}</div>
-                                    <div className="text-[11px] text-[var(--color-text-muted)] font-bold mt-1">ولدیت: {student.fatherName} </div>
+                                    <div dir="rtl" className="mt-1 flex w-full max-w-xs flex-col gap-0.5 text-[11px] font-bold text-[var(--color-text-muted)]">
+                                        {/* <div className="flex flex-row-reverse items-center justify-between gap-4">
+                                            <span className="text-right">داخلہ نمبر</span>
+                                            <span dir="ltr" className="text-left">{student.idNo || emptyValue}</span>
+                                        </div>
+                                        <div className="flex flex-row-reverse items-center justify-between gap-4">
+                                            <span className="text-right">سرپرست کا نام</span>
+                                            <span className="text-left">{student.fatherName || emptyValue}</span>
+                                        </div> */}
+                                         <div>
+                                        <span> داخلہ نمبر : </span>
+                                        <span>{student.idNo || '---'}</span>
+                                    </div>
+                                    <div>
+                                        <span> سرپرست کا نام : </span>
+                                        <span>{student.fatherName || '---'}</span>
+                                    </div>
+                                      
+                                    </div>
                                 </td>
                                 <td className="p-6">
                                     <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
-                                        {student.className} ({student.section})
+                                        {student.className}
+                                    </span>
+                                </td>
+                                <td className="p-6">
+                                    <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
+                                        {student.section}
                                     </span>
                                 </td>
                                 <td className="p-6 text-center">

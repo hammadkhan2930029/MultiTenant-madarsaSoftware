@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
-import { createClassesBulk, deleteClass, getDefaultBranch, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+import { createClassesBulk, deleteClass, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+import { getAdminSession, getSelectedBranchContext } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
@@ -17,7 +18,6 @@ const createEmptyClassRow = () => ({
 });
 
 export const CreateClasses = () => {
-    const [defaultBranch, setDefaultBranch] = useState(null);
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
     const [formData, setFormData] = useState(emptyForm);
@@ -33,6 +33,26 @@ export const CreateClasses = () => {
     const formRef = useRef(null);
     useNotificationBridge({ error, success });
 
+    const getActiveBranchId = () => getSelectedBranchContext(getAdminSession()).branchId || null;
+
+    const buildClassesQuery = () => {
+        const selectedBranchId = getActiveBranchId();
+        const params = new URLSearchParams({ page: '1', limit: '100' });
+        if (selectedBranchId) params.set('branchId', String(selectedBranchId));
+        return params.toString();
+    };
+
+    const onlyActiveBranchClasses = (items = []) => {
+        const activeBranchId = getActiveBranchId();
+        return items.filter((item) => {
+            const itemBranchId = item.branchId === null || item.branchId === undefined || item.branchId === ''
+                ? null
+                : Number(item.branchId);
+
+            return activeBranchId ? itemBranchId === Number(activeBranchId) : itemBranchId === null;
+        });
+    };
+
     const scrollToForm = () => {
         window.setTimeout(() => {
             formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -44,13 +64,9 @@ export const CreateClasses = () => {
         setError('');
 
         try {
-            const [defaultBranchResult, classesResult] = await Promise.all([
-                getDefaultBranch(),
-                getClasses('page=1&limit=100'),
-            ]);
+            const classesResult = await getClasses(buildClassesQuery());
 
-            setDefaultBranch(defaultBranchResult);
-            setClasses(classesResult.items || []);
+            setClasses(onlyActiveBranchClasses(classesResult.items || []));
         } catch (loadError) {
             setError(loadError.message || 'جماعتوں کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
@@ -147,9 +163,10 @@ export const CreateClasses = () => {
     };
 
     const handleSubmit = async () => {
-        const branchId = formData.branchId || defaultBranch?.id;
+        const selectedBranchId = getActiveBranchId();
+        const branchId = selectedBranchId || formData.branchId || null;
 
-        if (editMode && (!formData.name.trim() || !branchId)) {
+        if (editMode && !formData.name.trim()) {
             setError('جماعت کا نام درج کریں۔');
             return;
         }
@@ -158,8 +175,8 @@ export const CreateClasses = () => {
             const validation = validateClassRows(branchId);
             setClassRows(validation.rows);
 
-            if (validation.hasError || !branchId) {
-                setError(!branchId ? 'برانچ منتخب نہیں ہو سکی۔' : 'درج کردہ جماعتوں کی معلومات درست کریں۔');
+            if (validation.hasError) {
+                setError('درج کردہ جماعتوں کی معلومات درست کریں۔');
                 return;
             }
         }
@@ -171,7 +188,7 @@ export const CreateClasses = () => {
         try {
             const payload = {
                 name: formData.name.trim(),
-                branchId: Number(branchId),
+                ...(branchId ? { branchId: Number(branchId) } : {}),
             };
 
             if (editMode) {
@@ -180,7 +197,7 @@ export const CreateClasses = () => {
             } else {
                 const validation = validateClassRows(branchId);
                 const result = await createClassesBulk({
-                    branchId: Number(branchId),
+                    ...(branchId ? { branchId: Number(branchId) } : {}),
                     classes: validation.validRows.map((row) => ({ name: row.name })),
                 });
                 setSuccess(`${result?.createdCount || validation.validRows.length} جماعتیں کامیابی سے شامل ہو گئیں۔`);
@@ -210,7 +227,7 @@ export const CreateClasses = () => {
         setIsDeleting(true);
 
         try {
-            await deleteClass(deleteTarget.id);
+            await deleteClass(deleteTarget.id, getActiveBranchId());
             setSuccess('جماعت کامیابی سے حذف کر دی گئی۔');
             if (editMode === deleteTarget.id) {
                 resetForm();
