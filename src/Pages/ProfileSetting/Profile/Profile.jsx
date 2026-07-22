@@ -351,7 +351,7 @@ export const Profile = () => {
                                 isEditing ? 'bg-[#00d094] text-white hover:bg-[#00b07d]' : 'bg-[#00d094] text-white hover:bg-[#00b07d] shadow-[#00d094]/30'
                             } ${(isSaving || isLoading) ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                            {isEditing ? <><Save size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</> : <><Edit3 size={20} /> ایڈٹ کریں</>}
+                            {isEditing ? <><Save size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</> : <><Edit3 size={20} /> تبدیل کریں</>}
                         </button>
                     </div>
                     ) : null}

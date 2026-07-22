@@ -6,7 +6,7 @@ import { useNotificationBridge } from '../../Components/Notifications/useNotific
 import { SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { getRoles } from '../../Constant/RoleManagementApi';
 import { assignUserRole, createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
-import { getAdminSession, getSessionBranchId, isBranchScopedSession, refreshPermissions } from '../../Constant/AdminAuth';
+import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession, refreshPermissions } from '../../Constant/AdminAuth';
 import { getBranches } from '../../Constant/AcademicSetupApi';
 import { usePermissions } from '../../Hooks/usePermissions';
 
@@ -161,6 +161,8 @@ export const UserManagement = () => {
   const adminSession = getAdminSession();
   const branchScopedSession = isBranchScopedSession(adminSession);
   const sessionBranchId = getSessionBranchId(adminSession);
+  const selectedBranchContext = getSelectedBranchContext(adminSession);
+  const selectedTenantBranchId = selectedBranchContext.branchId ? String(selectedBranchContext.branchId) : '';
   const sessionBranchName = adminSession?.admin?.branch?.name || adminSession?.user?.branch?.name || adminSession?.admin?.branch?.code || adminSession?.user?.branch?.code || '';
 
   const [users, setUsers] = useState([]);
@@ -180,6 +182,11 @@ export const UserManagement = () => {
 
   useNotificationBridge({ error, success });
 
+  const formBranchId = formData.branchId ? String(formData.branchId) : '';
+  const assignmentBranchId = branchScopedSession
+    ? String(sessionBranchId || '')
+    : formBranchId || selectedTenantBranchId;
+
   const mode = useMemo(() => {
     if (location.pathname.endsWith('/create')) return 'create';
     if (location.pathname.endsWith('/edit')) return 'edit';
@@ -193,12 +200,18 @@ export const UserManagement = () => {
       const roleName = getRoleRecordName(role);
       const isCurrentRole = currentUser?.roleId && Number(currentUser.roleId) === Number(role.id);
       const active = getRoleStatus(role) === 'active';
+      const roleBranchId = role.branchId ?? role.branch_id;
+      const roleScopeKey = role.roleScopeKey ?? role.role_scope_key;
       if (branchScopedSession) {
-        const roleBranchId = role.branchId ?? role.branch_id;
-        const roleScopeKey = role.roleScopeKey ?? role.role_scope_key;
         if (Number(roleBranchId) !== Number(sessionBranchId) || Number(roleScopeKey) !== Number(sessionBranchId)) {
           return false;
         }
+      } else if (assignmentBranchId) {
+        if (Number(roleBranchId) !== Number(assignmentBranchId) || Number(roleScopeKey) !== Number(assignmentBranchId)) {
+          return false;
+        }
+      } else if (roleBranchId) {
+        return false;
       }
       return (active || (lockSuperAdminRole && isCurrentRole)) && (roleName !== SUPER_ADMIN_ROLE || lockSuperAdminRole);
     });
@@ -207,19 +220,24 @@ export const UserManagement = () => {
       { value: '', label: 'کردار منتخب کریں' },
       ...visibleRoles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
     ];
-  }, [branchScopedSession, currentUser, mode, roles, sessionBranchId]);
+  }, [assignmentBranchId, branchScopedSession, currentUser, mode, roles, sessionBranchId]);
 
   const roleFilterOptions = useMemo(() => [
     { value: '', label: 'تمام کردار' },
     ...roles
       .filter((role) => {
-        if (!branchScopedSession) return true;
         const roleBranchId = role.branchId ?? role.branch_id;
         const roleScopeKey = role.roleScopeKey ?? role.role_scope_key;
-        return Number(roleBranchId) === Number(sessionBranchId) && Number(roleScopeKey) === Number(sessionBranchId);
+        if (branchScopedSession) {
+          return Number(roleBranchId) === Number(sessionBranchId) && Number(roleScopeKey) === Number(sessionBranchId);
+        }
+        if (selectedTenantBranchId) {
+          return Number(roleBranchId) === Number(selectedTenantBranchId) && Number(roleScopeKey) === Number(selectedTenantBranchId);
+        }
+        return !roleBranchId;
       })
       .map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
-  ], [branchScopedSession, roles, sessionBranchId]);
+  ], [branchScopedSession, roles, selectedTenantBranchId, sessionBranchId]);
 
   const branchOptions = useMemo(() => [
     { value: '', label: 'برانچ منتخب کریں' },
@@ -301,7 +319,7 @@ export const UserManagement = () => {
       setCurrentUser(null);
       setFormData({
         ...emptyForm,
-        branchId: branchScopedSession && sessionBranchId ? String(sessionBranchId) : '',
+        branchId: branchScopedSession && sessionBranchId ? String(sessionBranchId) : selectedTenantBranchId,
       });
       setIsLoading(false);
       return undefined;
@@ -309,7 +327,7 @@ export const UserManagement = () => {
 
     loadUser();
     return undefined;
-  }, [branchScopedSession, loadUser, loadUsers, mode, sessionBranchId]);
+  }, [branchScopedSession, loadUser, loadUsers, mode, selectedTenantBranchId, sessionBranchId]);
 
   const handleSubmit = async () => {
     if (isSaving) return undefined;
@@ -338,7 +356,7 @@ export const UserManagement = () => {
       };
 
       if (!branchScopedSession) {
-        payload.branchId = formData.branchId ? Number(formData.branchId) : null;
+        payload.branchId = assignmentBranchId ? Number(assignmentBranchId) : null;
       }
 
       if (mode === 'create' && !isSuperAdminUser(currentUser)) {
@@ -444,7 +462,7 @@ export const UserManagement = () => {
               readOnly
             />
           ) : (
-            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))} />
+            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, roleId: '' }))} />
           )}
           <SelectField id="user-status" label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
         </div>

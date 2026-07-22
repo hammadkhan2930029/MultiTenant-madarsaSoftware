@@ -1,7 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Award, BookOpen, Calculator, Plus, Save, Search, Trash2, UserRound } from 'lucide-react';
-import { getSubjects } from '../../Constant/AcademicSetupApi';
+import { Award, BookOpen, Calculator, Save, Search, UserRound } from 'lucide-react';
 import { getStudents } from '../../Constant/StudentsApi';
 import { getStudentExamResult, saveExamResult, updateExamResult } from '../../Constant/ExamResultsApi';
 import { getExamSchedules } from '../../Constant/ExamSchedulesApi';
@@ -9,10 +8,9 @@ import { defaultResultGrades, getResultGradeLabel } from '../../Constant/ResultG
 import { getResultGrades } from '../../Constant/ResultGradesApi';
 import { useNotifier } from '../../Components/Notifications/useNotifier';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
-import { createClientId } from '../../Utils/createClientId';
 
 const emptySubjectRow = () => ({
-    id: createClientId(),
+    id: 'schedule-empty',
     subjectId: '',
     subjectName: '',
     totalMarks: '',
@@ -36,11 +34,12 @@ const getResultErrorMessage = (message, fallback) => {
     return message || fallback;
 };
 
-const buildResultQuery = (assignment) => {
+const buildScheduleResultQuery = (scheduleGroup) => {
     const params = new URLSearchParams();
-    if (assignment?.session?.id) params.set('sessionId', assignment.session.id);
-    if (assignment?.class?.id) params.set('classId', assignment.class.id);
-    if (assignment?.section?.id) params.set('sectionId', assignment.section.id);
+    if (scheduleGroup?.examName) params.set('examName', scheduleGroup.examName);
+    if (scheduleGroup?.sessionId) params.set('sessionId', scheduleGroup.sessionId);
+    if (scheduleGroup?.classId) params.set('classId', scheduleGroup.classId);
+    if (scheduleGroup?.sectionId) params.set('sectionId', scheduleGroup.sectionId);
     return params.toString();
 };
 
@@ -52,27 +51,67 @@ const rowsFromResult = (result) => (result?.subjects || []).map((subjectRow) => 
     obtainedMarks: String(subjectRow.obtainedMarks ?? ''),
 }));
 
-const getScheduledTotalMarks = (schedules, subjectId) => {
-    const schedule = (schedules || []).find((item) => String(item.subject?.id || '') === String(subjectId));
-    return schedule?.totalMarks ? String(schedule.totalMarks) : '';
+const scheduleGroupKey = (schedule) => [
+    schedule.examName || '',
+    schedule.session?.id || '',
+    schedule.class?.id || '',
+    schedule.section?.id || '',
+].join('|');
+
+const buildScheduleGroups = (schedules = []) => {
+    const groups = new Map();
+    schedules.forEach((schedule) => {
+        const key = scheduleGroupKey(schedule);
+        if (!groups.has(key)) {
+            groups.set(key, {
+                id: key,
+                examName: schedule.examName || 'امتحانی نظام الاوقات',
+                sessionId: String(schedule.session?.id || ''),
+                sessionName: schedule.session?.name || '',
+                classId: String(schedule.class?.id || ''),
+                className: schedule.class?.name || '',
+                sectionId: String(schedule.section?.id || ''),
+                sectionName: schedule.section?.name || '',
+                schedules: [],
+            });
+        }
+        groups.get(key).schedules.push(schedule);
+    });
+
+    return Array.from(groups.values()).map((group) => ({
+        ...group,
+        schedules: group.schedules
+            .slice()
+            .sort((a, b) => String(a.subject?.name || '').localeCompare(String(b.subject?.name || ''), 'ur')),
+    }));
 };
 
-const applyScheduleMarksToRows = (rows, schedules) => rows.map((row) => ({
-    ...row,
-    totalMarks: row.subjectId ? getScheduledTotalMarks(schedules, row.subjectId) || row.totalMarks : '',
-}));
+const rowsFromScheduleGroup = (scheduleGroup, resultRows = []) => {
+    const resultBySubjectId = new Map(resultRows.map((row) => [String(row.subjectId), row]));
+    return (scheduleGroup?.schedules || []).map((schedule) => {
+        const subjectId = String(schedule.subject?.id || '');
+        const savedRow = resultBySubjectId.get(subjectId);
+        return {
+            id: `schedule-${schedule.id}`,
+            subjectId,
+            subjectName: schedule.subject?.name || '',
+            totalMarks: String(schedule.totalMarks || ''),
+            obtainedMarks: savedRow?.obtainedMarks || '',
+        };
+    });
+};
 
 export const ExamResult = () => {
     const notify = useNotifier();
     const location = useLocation();
     const editResult = location.state?.editResult || null;
     const [students, setStudents] = useState([]);
-    const [subjects, setSubjects] = useState([]);
+    const [scheduleSearch, setScheduleSearch] = useState('');
     const [search, setSearch] = useState('');
+    const [selectedScheduleGroup, setSelectedScheduleGroup] = useState(null);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [savedResultId, setSavedResultId] = useState(null);
     const [rows, setRows] = useState([emptySubjectRow()]);
-    const [deleteRowTarget, setDeleteRowTarget] = useState(null);
     const [examSchedules, setExamSchedules] = useState([]);
     const [gradeScale, setGradeScale] = useState(defaultResultGrades);
     const [isLoading, setIsLoading] = useState(true);
@@ -91,12 +130,10 @@ export const ExamResult = () => {
             setIsLoading(true);
             setError('');
             try {
-                const [studentsResult, subjectsResult] = await Promise.all([
-                    getStudents('page=1&limit=100&status=active'),
-                    getSubjects('page=1&limit=100&status=active'),
+                const [schedulesResult] = await Promise.all([
+                    getExamSchedules('page=1&limit=100&status=active'),
                 ]);
-                setStudents(studentsResult.items || []);
-                setSubjects(activeOnly(subjectsResult.items));
+                setExamSchedules(schedulesResult.items || []);
                 try {
                     const gradesResult = await getResultGrades('page=1&limit=100&status=active');
                     setGradeScale((gradesResult.items || []).length ? gradesResult.items : defaultResultGrades);
@@ -113,8 +150,21 @@ export const ExamResult = () => {
         loadData();
     }, []);
 
+    const scheduleGroups = useMemo(() => buildScheduleGroups(examSchedules), [examSchedules]);
+    const filteredScheduleGroups = useMemo(() => {
+        const query = scheduleSearch.trim().toLowerCase();
+        if (!query) return scheduleGroups;
+        return scheduleGroups.filter((group) => [
+            group.examName,
+            group.sessionName,
+            group.className,
+            group.sectionName,
+            ...group.schedules.map((schedule) => schedule.subject?.name),
+        ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query)));
+    }, [scheduleGroups, scheduleSearch]);
+
     useEffect(() => {
-        if (!editResult) return;
+        if (!editResult || !scheduleGroups.length) return;
 
         setSelectedStudent({
             ...(editResult.student || {}),
@@ -130,23 +180,22 @@ export const ExamResult = () => {
         setSavedResultId(editResult.id);
         setSuccess('رزلٹ ترمیم کے لیے لوڈ ہو گیا۔');
 
-        const loadEditSchedules = async () => {
-            try {
-                const schedulesResult = await getExamSchedules(`page=1&limit=100&status=active&sessionId=${editResult.session?.id || ''}&classId=${editResult.class?.id || ''}`);
-                const schedules = schedulesResult.items || [];
-                setExamSchedules(schedules);
-                const resultRows = rowsFromResult(editResult);
-                setRows(resultRows.length ? applyScheduleMarksToRows(resultRows, schedules) : [emptySubjectRow()]);
-            } catch {
-                setExamSchedules([]);
-                setRows(rowsFromResult(editResult).length ? rowsFromResult(editResult) : [emptySubjectRow()]);
-            }
-        };
-
-        loadEditSchedules();
-    }, [editResult]);
+        const matchedGroup = scheduleGroups.find((group) =>
+            group.examName === (editResult.examName || 'امتحانی رزلٹ') &&
+            String(group.sessionId) === String(editResult.session?.id || '') &&
+            String(group.classId) === String(editResult.class?.id || '') &&
+            String(group.sectionId || '') === String(editResult.section?.id || ''),
+        );
+        if (matchedGroup) {
+            setSelectedScheduleGroup(matchedGroup);
+            setRows(rowsFromScheduleGroup(matchedGroup, rowsFromResult(editResult)));
+        } else {
+            setRows(rowsFromResult(editResult).length ? rowsFromResult(editResult) : [emptySubjectRow()]);
+        }
+    }, [editResult, scheduleGroups]);
 
     const filteredStudents = useMemo(() => {
+        if (!selectedScheduleGroup) return [];
         const query = search.trim().toLowerCase();
         if (!query) return students.slice(0, 8);
 
@@ -155,9 +204,15 @@ export const ExamResult = () => {
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(query)),
         ).slice(0, 10);
-    }, [search, students]);
+    }, [search, selectedScheduleGroup, students]);
 
-    const assignment = getActiveAssignment(selectedStudent);
+    const assignment = selectedScheduleGroup
+        ? {
+            session: { id: selectedScheduleGroup.sessionId, name: selectedScheduleGroup.sessionName },
+            class: { id: selectedScheduleGroup.classId, name: selectedScheduleGroup.className },
+            section: selectedScheduleGroup.sectionId ? { id: selectedScheduleGroup.sectionId, name: selectedScheduleGroup.sectionName } : null,
+        }
+        : getActiveAssignment(selectedStudent);
     const totals = useMemo(() => {
         const totalMarks = rows.reduce((sum, row) => sum + toNumber(row.totalMarks), 0);
         const obtainedMarks = rows.reduce((sum, row) => sum + toNumber(row.obtainedMarks), 0);
@@ -170,24 +225,42 @@ export const ExamResult = () => {
         };
     }, [gradeScale, rows]);
 
-    const loadSchedulesForAssignment = async (studentAssignment) => {
-        if (!studentAssignment?.session?.id || !studentAssignment?.class?.id) {
-            setExamSchedules([]);
-            return [];
+    const selectScheduleGroup = async (scheduleGroup) => {
+        setSelectedScheduleGroup(scheduleGroup);
+        setSelectedStudent(null);
+        setSavedResultId(null);
+        setSearch('');
+        setRows(rowsFromScheduleGroup(scheduleGroup));
+        setStudents([]);
+        setError('');
+        setSuccess('');
+        setIsResultLoading(true);
+        try {
+            const params = new URLSearchParams();
+            params.set('page', '1');
+            params.set('limit', '100');
+            params.set('status', 'active');
+            params.set('sessionId', scheduleGroup.sessionId);
+            params.set('classId', scheduleGroup.classId);
+            if (scheduleGroup.sectionId) params.set('sectionId', scheduleGroup.sectionId);
+            const studentsResult = await getStudents(params.toString());
+            setStudents(studentsResult.items || []);
+        } catch (loadError) {
+            setError(getResultErrorMessage(loadError.message, 'منتخب امتحانی نظام الاوقات کے طلبہ لوڈ نہیں ہو سکے۔'));
+        } finally {
+            setIsResultLoading(false);
         }
-
-        const schedulesResult = await getExamSchedules(`page=1&limit=100&status=active&sessionId=${studentAssignment.session.id}&classId=${studentAssignment.class.id}`);
-        const schedules = schedulesResult.items || [];
-        setExamSchedules(schedules);
-        return schedules;
     };
 
     const selectStudent = async (student) => {
+        if (!selectedScheduleGroup) {
+            setError('براہ کرم پہلے امتحانی نظام الاوقات منتخب کریں۔');
+            return;
+        }
         setSelectedStudent(student);
         setSearch(`${student.fullName || ''} ${student.admissionNumber ? `(${student.admissionNumber})` : ''}`.trim());
         setSavedResultId(null);
-        setRows([emptySubjectRow()]);
-        setExamSchedules([]);
+        setRows(rowsFromScheduleGroup(selectedScheduleGroup));
         setError('');
         setSuccess('');
 
@@ -199,14 +272,11 @@ export const ExamResult = () => {
 
         setIsResultLoading(true);
         try {
-            const [result, schedules] = await Promise.all([
-                getStudentExamResult(student.id, buildResultQuery(studentAssignment)),
-                loadSchedulesForAssignment(studentAssignment),
-            ]);
+            const result = await getStudentExamResult(student.id, buildScheduleResultQuery(selectedScheduleGroup));
             if (result) {
                 setSavedResultId(result.id);
                 const resultRows = rowsFromResult(result);
-                setRows(resultRows.length ? applyScheduleMarksToRows(resultRows, schedules) : [emptySubjectRow()]);
+                setRows(rowsFromScheduleGroup(selectedScheduleGroup, resultRows));
                 setSuccess('محفوظ شدہ رزلٹ لوڈ ہو گیا۔');
             }
         } catch (loadError) {
@@ -219,31 +289,18 @@ export const ExamResult = () => {
     const updateRow = (rowId, field, value) => {
         setRows((current) => current.map((row) => {
             if (row.id !== rowId) return row;
-
-            if (field === 'subjectId') {
-                const subject = subjects.find((item) => String(item.id) === String(value));
-                return {
-                    ...row,
-                    subjectId: value,
-                    subjectName: subject?.name || '',
-                    totalMarks: getScheduledTotalMarks(examSchedules, value),
-                };
-            }
-
             return { ...row, [field]: value };
         }));
-    };
-
-    const addRow = () => setRows((current) => [...current, emptySubjectRow()]);
-    const deleteRow = () => {
-        if (!deleteRowTarget) return;
-        setRows((current) => (current.length > 1 ? current.filter((row) => row.id !== deleteRowTarget.id) : current));
-        setDeleteRowTarget(null);
     };
 
     const handleSave = async () => {
         setError('');
         setSuccess('');
+
+        if (!selectedScheduleGroup) {
+            setError('براہ کرم پہلے امتحانی نظام الاوقات منتخب کریں۔');
+            return;
+        }
 
         if (!selectedStudent) {
             setError('براہ کرم پہلے طالب علم منتخب کریں۔');
@@ -266,11 +323,6 @@ export const ExamResult = () => {
             return;
         }
 
-        if (rows.some((row) => row.subjectId && !getScheduledTotalMarks(examSchedules, row.subjectId))) {
-            setError('منتخب مضمون کے لیے امتحانی شیڈول میں کل نمبر موجود نہیں۔ پہلے شیڈول میں کل نمبر شامل کریں۔');
-            return;
-        }
-
         if (new Set(validRows.map((row) => row.subjectId)).size !== validRows.length) {
             setError('ایک ہی مضمون دوبارہ شامل نہیں کیا جا سکتا۔');
             return;
@@ -288,6 +340,7 @@ export const ExamResult = () => {
                 sessionId: assignment.session.id,
                 classId: assignment.class.id,
                 sectionId: assignment.section?.id || null,
+                examName: selectedScheduleGroup.examName,
                 subjects: validRows,
             };
             await (savedResultId
@@ -297,7 +350,7 @@ export const ExamResult = () => {
             setSelectedStudent(null);
             setSearch('');
             setSavedResultId(null);
-            setRows([emptySubjectRow()]);
+            setRows(rowsFromScheduleGroup(selectedScheduleGroup));
             setSuccess(successMessage);
             notify.success(successMessage, savedResultId ? 'رزلٹ اپڈیٹ' : 'رزلٹ محفوظ');
         } catch (saveError) {
@@ -317,7 +370,7 @@ export const ExamResult = () => {
                         </div>
                         <div>
                             <h1 className="text-2xl font-black text-[var(--color-primary)] md:text-3xl">امتحانی رزلٹ</h1>
-                            <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">طالب علم منتخب کریں، مضامین اور نمبر درج کریں، فیصد اور گریڈ خود حساب ہو جائیں گے۔</p>
+                            <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">امتحانی نظام الاوقات منتخب کریں، پھر متعلقہ جماعت کے طالب علم کے نمبر درج کریں۔</p>
                         </div>
                     </div>
                 </div>
@@ -326,46 +379,93 @@ export const ExamResult = () => {
                 {success ? <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-bold text-emerald-400">{success}</div> : null}
 
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-                    <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xl xl:col-span-4">
-                        <div className="mb-4 flex items-center gap-2 text-lg font-black">
-                            <Search size={20} className="text-[var(--color-primary)]" />
-                            طالب علم تلاش کریں <span className="text-red-500">*</span>
-                        </div>
-                        <div className="relative">
-                            <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                            <input
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder={isLoading ? 'طلبہ لوڈ ہو رہے ہیں...' : 'نام، والد کا نام یا داخلہ نمبر'}
-                                className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] pr-11 pl-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
-                            />
+                    <div className="space-y-5 xl:col-span-4">
+                        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xl">
+                            <div className="mb-4 flex items-center gap-2 text-lg font-black">
+                                <Search size={20} className="text-[var(--color-primary)]" />
+                                امتحانی نظام الاوقات تلاش کریں <span className="text-red-500">*</span>
+                            </div>
+                            <div className="relative">
+                                <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                <input
+                                    value={scheduleSearch}
+                                    onChange={(event) => setScheduleSearch(event.target.value)}
+                                    placeholder={isLoading ? 'نظام الاوقات لوڈ ہو رہا ہے...' : 'امتحان، جماعت، سیکشن یا مضمون'}
+                                    className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] pr-11 pl-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                                />
+                            </div>
+
+                            <div className="mt-4 max-h-72 space-y-2 overflow-auto">
+                                {filteredScheduleGroups.length ? filteredScheduleGroups.map((group) => {
+                                    const isSelected = selectedScheduleGroup?.id === group.id;
+                                    return (
+                                        <button
+                                            key={group.id}
+                                            type="button"
+                                            onClick={() => selectScheduleGroup(group)}
+                                            className={`w-full rounded-2xl border p-3 text-right transition-all ${isSelected ? 'border-[var(--color-primary)] bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg)] hover:border-[var(--color-primary)]'}`}
+                                        >
+                                            <div className="text-sm font-black text-[var(--color-primary)]">{group.examName}</div>
+                                            <div className="mt-2 text-xs font-bold leading-6 text-[var(--color-text-muted)]">
+                                                {group.sessionName || '---'} / {group.className || '---'} / {group.sectionName || '---'}
+                                            </div>
+                                            <div className="mt-1 text-xs font-black text-[var(--color-text-main)]">مضامین: {group.schedules.length}</div>
+                                        </button>
+                                    );
+                                }) : (
+                                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-center text-xs font-black text-[var(--color-text-muted)]">
+                                        کوئی امتحانی نظام الاوقات نہیں ملا۔
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="mt-4 max-h-[470px] space-y-2 overflow-auto">
-                            {filteredStudents.map((student) => {
-                                const studentAssignment = getActiveAssignment(student);
-                                const isSelected = selectedStudent?.id === student.id;
-                                return (
-                                    <button
-                                        key={student.id}
-                                        type="button"
-                                        onClick={() => selectStudent(student)}
-                                        className={`w-full rounded-2xl border p-3 text-right transition-all ${isSelected ? 'border-[var(--color-primary)] bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg)] hover:border-[var(--color-primary)]'}`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-surface)] text-[var(--color-primary)]">
-                                                <UserRound size={18} />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="truncate text-sm font-black">{student.fullName}</div>
-                                                <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">
-                                                    {student.admissionNumber || '---'} / {studentAssignment?.class?.name || 'کلاس نہیں'}
+                        <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xl">
+                            <div className="mb-4 flex items-center gap-2 text-lg font-black">
+                                <Search size={20} className="text-[var(--color-primary)]" />
+                                طالب علم تلاش کریں <span className="text-red-500">*</span>
+                            </div>
+                            <div className="relative">
+                                <Search size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                <input
+                                    value={search}
+                                    onChange={(event) => setSearch(event.target.value)}
+                                    disabled={!selectedScheduleGroup}
+                                    placeholder={!selectedScheduleGroup ? 'پہلے امتحانی نظام الاوقات منتخب کریں' : isResultLoading ? 'طلبہ لوڈ ہو رہے ہیں...' : 'نام، والد کا نام یا داخلہ نمبر'}
+                                    className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] pr-11 pl-4 text-sm font-bold outline-none focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-70"
+                                />
+                            </div>
+
+                            <div className="mt-4 max-h-[360px] space-y-2 overflow-auto">
+                                {filteredStudents.length ? filteredStudents.map((student) => {
+                                    const studentAssignment = getActiveAssignment(student);
+                                    const isSelected = selectedStudent?.id === student.id;
+                                    return (
+                                        <button
+                                            key={student.id}
+                                            type="button"
+                                            onClick={() => selectStudent(student)}
+                                            className={`w-full rounded-2xl border p-3 text-right transition-all ${isSelected ? 'border-[var(--color-primary)] bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-bg)] hover:border-[var(--color-primary)]'}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-surface)] text-[var(--color-primary)]">
+                                                    <UserRound size={18} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-sm font-black">{student.fullName}</div>
+                                                    <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">
+                                                        {student.admissionNumber || '---'} / {studentAssignment?.class?.name || selectedScheduleGroup?.className || 'کلاس نہیں'}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                                        </button>
+                                    );
+                                }) : (
+                                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-center text-xs font-black text-[var(--color-text-muted)]">
+                                        {selectedScheduleGroup ? 'اس جماعت/سیکشن میں کوئی طالب علم نہیں ملا۔' : 'پہلے امتحانی نظام الاوقات منتخب کریں۔'}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -376,6 +476,7 @@ export const ExamResult = () => {
                                 طالب علم کی تفصیل
                             </div>
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                                <InfoBox label="امتحان" value={selectedScheduleGroup?.examName || '---'} />
                                 <InfoBox label="نام" value={selectedStudent?.fullName || '---'} />
                                 <InfoBox label="والد کا نام" value={selectedStudent?.fatherName || '---'} />
                                 <InfoBox label="کلاس" value={assignment?.class?.name || '---'} />
@@ -394,9 +495,6 @@ export const ExamResult = () => {
                                     مضامین اور نمبر
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                    <button type="button" onClick={addRow} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-bg)] px-4 text-xs font-black text-[var(--color-text-main)]">
-                                        <Plus size={16} /> مضمون شامل کریں
-                                    </button>
                                     <button type="button" onClick={handleSave} disabled={isSaving || isResultLoading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-xs font-black text-[#0b1120] disabled:cursor-not-allowed disabled:opacity-70">
                                         <Save size={16} /> {isSaving ? 'محفوظ ہو رہا ہے...' : savedResultId ? 'رزلٹ تبدیل کریں' : 'رزلٹ محفوظ کریں'}
                                     </button>
@@ -411,13 +509,12 @@ export const ExamResult = () => {
                                             <th className="p-4">کل نمبر <span className="text-red-500">*</span></th>
                                             <th className="p-4">حاصل کردہ نمبر <span className="text-red-500">*</span></th>
                                             <th className="p-4">فیصد</th>
-                                            <th className="p-4 text-center">ایکشن</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)]">
                                         {isResultLoading ? (
                                             <tr>
-                                                <td colSpan="5" className="p-8 text-center font-black text-[var(--color-text-muted)]">محفوظ شدہ رزلٹ لوڈ ہو رہا ہے...</td>
+                                                <td colSpan="4" className="p-8 text-center font-black text-[var(--color-text-muted)]">محفوظ شدہ رزلٹ لوڈ ہو رہا ہے...</td>
                                             </tr>
                                         ) : rows.map((row) => {
                                             const rowTotal = toNumber(row.totalMarks);
@@ -426,10 +523,9 @@ export const ExamResult = () => {
                                             return (
                                                 <tr key={row.id}>
                                                     <td className="p-3">
-                                                        <select value={row.subjectId} onChange={(event) => updateRow(row.id, 'subjectId', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 font-bold outline-none focus:border-[var(--color-primary)]">
-                                                            <option value="">مضمون منتخب کریں</option>
-                                                            {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
-                                                        </select>
+                                                        <div className="flex h-11 w-full items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 font-black text-[var(--color-text-main)]">
+                                                            {row.subjectName || '---'}
+                                                        </div>
                                                     </td>
                                                     <td className="p-3">
                                                         <input type="number" min="1" value={row.totalMarks} readOnly required className="h-11 w-full cursor-not-allowed rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
@@ -438,11 +534,6 @@ export const ExamResult = () => {
                                                         <input type="number" min="0" max={row.totalMarks || undefined} value={row.obtainedMarks} onChange={(event) => updateRow(row.id, 'obtainedMarks', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
                                                     </td>
                                                     <td className="p-3 font-sans font-black">{rowPercentage ? `${rowPercentage.toFixed(2)}%` : '---'}</td>
-                                                    <td className="p-3 text-center">
-                                                        <button type="button" onClick={() => setDeleteRowTarget(row)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </td>
                                                 </tr>
                                             );
                                         })}
@@ -460,25 +551,6 @@ export const ExamResult = () => {
                 </div>
             </div>
 
-            {deleteRowTarget ? (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
-                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
-                        <div className="flex items-center justify-between gap-4">
-                            <div>
-                                <h3 className="text-xl font-black text-[var(--color-text-main)]">مضمون حذف کرنے کی تصدیق</h3>
-                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">کیا آپ واقعی یہ مضمون حذف کرنا چاہتے ہیں؟</p>
-                            </div>
-                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-500/10 text-rose-500">
-                                <Trash2 size={22} />
-                            </div>
-                        </div>
-                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
-                            <button type="button" onClick={() => setDeleteRowTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">منسوخ</button>
-                            <button type="button" onClick={deleteRow} className="flex-1 rounded-2xl bg-rose-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-rose-600">تصدیق کریں</button>
-                        </div>
-                    </div>
-                </div>
-            ) : null}
         </div>
     );
 };

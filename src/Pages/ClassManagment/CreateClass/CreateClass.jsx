@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createClassesBulk, deleteClass, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
-import { getAdminSession, getSelectedBranchContext } from '../../../Constant/AdminAuth';
+import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
@@ -33,7 +33,13 @@ export const CreateClasses = () => {
     const formRef = useRef(null);
     useNotificationBridge({ error, success });
 
-    const getActiveBranchId = () => getSelectedBranchContext(getAdminSession()).branchId || null;
+    const getActiveBranchId = () => {
+        const session = getAdminSession();
+        if (isBranchScopedSession(session)) {
+            return getSessionBranchId(session) || null;
+        }
+        return getSelectedBranchContext(session).branchId || null;
+    };
 
     const buildClassesQuery = () => {
         const selectedBranchId = getActiveBranchId();

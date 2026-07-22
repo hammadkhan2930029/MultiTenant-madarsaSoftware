@@ -47,6 +47,8 @@ const canUseStorage = typeof window !== 'undefined' && typeof window.localStorag
 const BRANCH_FILTERED_GET_PREFIXES = [
   '/students',
   '/parents',
+  '/roles',
+  '/users',
   '/teachers',
   '/attendance',
   '/hifz',

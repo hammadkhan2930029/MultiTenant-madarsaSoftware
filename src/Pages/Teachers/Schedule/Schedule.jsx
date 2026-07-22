@@ -77,6 +77,7 @@ export const TeachersScheduleManager = () => {
     const [formData, setFormData] = useState(emptyForm);
     const [subjSearch, setSubjSearch] = useState('');
     const [expandedClass, setExpandedClass] = useState(null);
+    const [expandedDay, setExpandedDay] = useState(null);
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
@@ -265,6 +266,10 @@ export const TeachersScheduleManager = () => {
 
     const toggleClass = (className) => {
         setExpandedClass(expandedClass === className ? null : className);
+    };
+
+    const toggleDay = (dayName) => {
+        setExpandedDay(expandedDay === dayName ? null : dayName);
     };
 
     return (
@@ -476,14 +481,28 @@ export const TeachersScheduleManager = () => {
                     {daysList.map((dayName) => {
                         const periodsForDay = schedules.filter((item) => item.days.includes(dayName));
                         if (!periodsForDay.length) return null;
+                        const isExpanded = expandedDay === dayName;
 
                         return (
-                            <div key={dayName} className="bg-[var(--color-surface)] rounded-[2rem] md:rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-2xl overflow-hidden p-5">
-                                <h4 className="text-xl font-black text-[var(--color-primary)] mb-5 flex items-center gap-2">
-                                    <Calendar size={24} />
-                                    {dayName}
-                                </h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div key={dayName} className="bg-[var(--color-surface)] rounded-[2rem] md:rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-2xl overflow-hidden flex flex-col">
+                                <div onClick={() => toggleDay(dayName)} className={`p-4 md:p-5 flex justify-between items-center cursor-pointer transition-colors ${isExpanded ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface)] text-[var(--color-text)]'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-xl ${isExpanded ? 'bg-white/20' : 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'}`}>
+                                            <Calendar size={20} />
+                                        </div>
+                                        <div className="space-y-2 py-1">
+                                            <h3 className="text-xl md:text-2xl font-black leading-[1.8]">دن: {dayName}</h3>
+                                            <p className={`block text-lg font-bold leading-[1.8] ${isExpanded ? 'opacity-80' : 'opacity-50'}`}>
+                                                کل پیریڈز: {periodsForDay.length}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
+                                        <ChevronDown size={24} className={isExpanded ? 'text-white' : 'text-[var(--color-primary)]'} />
+                                    </div>
+                                </div>
+
+                                <div className={`grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-5 transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 !p-0'}`}>
                                     {periodsForDay.map((period) => (
                                         <div key={period.id} className="bg-[var(--color-bg)] border border-[var(--color-border)]/5 p-4 rounded-2xl flex flex-col justify-between hover:border-[var(--color-primary)]/30 transition-all group shadow-sm">
                                             <div className="flex justify-between items-start mb-2">

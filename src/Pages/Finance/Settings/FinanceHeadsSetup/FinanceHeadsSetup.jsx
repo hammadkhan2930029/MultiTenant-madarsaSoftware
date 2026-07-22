@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, Save, Wallet, Receipt, AlertCircle, Edit2, X } from 'lucide-react';
+import { Plus, Trash2, Save, Wallet, Receipt, AlertCircle, Edit2, X, ChevronDown } from 'lucide-react';
 import { createFinanceHead, deactivateFinanceHead, getFinanceHeads, updateFinanceHead } from '../../../../Constant/FinanceHeadsApi';
+import {
+    createFinanceExpenseCategory,
+    deactivateFinanceExpenseCategory,
+    getFinanceExpenseCategories,
+    updateFinanceExpenseCategory,
+} from '../../../../Constant/FinanceExpenseCategoriesApi';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { createClientId } from '../../../../Utils/createClientId';
 
+const DEFAULT_EXPENSE_CATEGORIES = ['عام اخراجات', 'انتظامی اخراجات', 'مستقل اثاثے', 'عملے کے متعلق'];
 const createIncomeHead = () => ({ id: createClientId(), title: '', description: '' });
-const createExpenseHead = () => ({ id: createClientId(), title: '', category: 'عام اخراجات', budgetLimit: '' });
+const createExpenseHead = (category = DEFAULT_EXPENSE_CATEGORIES[0]) => ({ id: createClientId(), title: '', category, budgetLimit: '' });
+const createExpenseCategoryForm = () => ({ id: null, name: '' });
 
 const buildExpenseDescription = (item) => {
     const parts = [`کیٹیگری: ${item.category || 'عام اخراجات'}`];
@@ -29,6 +37,9 @@ export const FinanceHeadsSetup = () => {
     const [expenseHeads, setExpenseHeads] = useState(() => [createExpenseHead()]);
     const [existingIncome, setExistingIncome] = useState([]);
     const [existingExpenses, setExistingExpenses] = useState([]);
+    const [expenseCategories, setExpenseCategories] = useState([]);
+    const [categoryForm, setCategoryForm] = useState(createExpenseCategoryForm);
+    const [categoryDeleteTarget, setCategoryDeleteTarget] = useState(null);
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -45,9 +56,10 @@ export const FinanceHeadsSetup = () => {
         setError('');
 
         try {
-            const [incomeResult, expenseResult] = await Promise.all([
+            const [incomeResult, expenseResult, categoryResult] = await Promise.all([
                 getFinanceHeads('page=1&limit=100&type=income&status=active'),
                 getFinanceHeads('page=1&limit=100&type=expense&status=active'),
+                getFinanceExpenseCategories('page=1&limit=100&status=active').catch(() => ({ items: DEFAULT_EXPENSE_CATEGORIES.map((name) => ({ id: name, name })) })),
             ]);
 
             setExistingIncome((incomeResult.items || []).map((item) => ({
@@ -62,6 +74,14 @@ export const FinanceHeadsSetup = () => {
                 category: readCategory(item.description),
                 budgetLimit: readBudgetLimit(item.description),
                 description: item.description || '',
+            })));
+            const nextCategories = categoryResult.items?.length
+                ? categoryResult.items
+                : DEFAULT_EXPENSE_CATEGORIES.map((name) => ({ id: name, name }));
+            setExpenseCategories(nextCategories);
+            setExpenseHeads((prev) => prev.map((row) => ({
+                ...row,
+                category: row.category || nextCategories[0]?.name || DEFAULT_EXPENSE_CATEGORIES[0],
             })));
         } catch (loadError) {
             setError(loadError.message || 'مالیاتی اقسام لوڈ نہیں ہو سکیں۔');
@@ -104,6 +124,58 @@ export const FinanceHeadsSetup = () => {
     const resetMessages = () => {
         setError('');
         setSuccess('');
+    };
+
+    const saveExpenseCategory = async () => {
+        const name = categoryForm.name.trim();
+        resetMessages();
+
+        if (!name) {
+            setError('خرچ کی قسم کا نام درج کریں۔');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            if (categoryForm.id) {
+                await updateFinanceExpenseCategory(categoryForm.id, { name, status: 'active' });
+                setSuccess('خرچ کی قسم کامیابی سے تبدیل ہو گئی۔');
+            } else {
+                await createFinanceExpenseCategory({ name, status: 'active' });
+                setSuccess('خرچ کی قسم کامیابی سے شامل ہو گئی۔');
+            }
+            setCategoryForm(createExpenseCategoryForm());
+            await loadHeads();
+        } catch (saveError) {
+            setError(saveError.message || 'خرچ کی قسم محفوظ نہیں ہو سکی۔');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const startCategoryEdit = (category) => {
+        resetMessages();
+        setCategoryForm({ id: category.id, name: category.name || '' });
+    };
+
+    const cancelCategoryEdit = () => {
+        setCategoryForm(createExpenseCategoryForm());
+    };
+
+    const confirmCategoryDelete = async () => {
+        if (!categoryDeleteTarget) return;
+        resetMessages();
+        setIsDeleting(true);
+        try {
+            await deactivateFinanceExpenseCategory(categoryDeleteTarget.id);
+            setSuccess('خرچ کی قسم کامیابی سے ختم کر دی گئی۔');
+            setCategoryDeleteTarget(null);
+            await loadHeads();
+        } catch (deleteError) {
+            setError(deleteError.message || 'خرچ کی قسم ختم نہیں ہو سکی۔');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const handleSave = async () => {
@@ -224,6 +296,59 @@ export const FinanceHeadsSetup = () => {
                 </button>
             </div>
 
+            {activeTab === 'expense' ? (
+                <div className="max-w-6xl mx-auto mb-8 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+                    <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                        <div className="text-right">
+                            <h2 className="text-lg font-black text-[var(--color-primary)]">خرچ کی کیٹیگریز</h2>
+                            <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">یہ فہرست نیچے خرچ کی قسم والے ڈراپ ڈاؤن میں استعمال ہو گی۔</p>
+                        </div>
+                        <div className="flex flex-col gap-3 md:w-[520px] md:flex-row-reverse">
+                            <input
+                                dir="rtl"
+                                value={categoryForm.name}
+                                onChange={(event) => setCategoryForm((prev) => ({ ...prev, name: event.target.value }))}
+                                placeholder="مثلاً انتظامی اخراجات"
+                                className="h-[52px] flex-1 rounded-xl border border-white/10 bg-black/20 px-4 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                            />
+                            <button
+                                type="button"
+                                onClick={saveExpenseCategory}
+                                disabled={isSaving}
+                                className="flex h-[52px] items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-bg)] disabled:opacity-60"
+                            >
+                                <Save size={16} />
+                                {categoryForm.id ? 'تبدیل کریں' : 'محفوظ کریں'}
+                            </button>
+                            {categoryForm.id ? (
+                                <button
+                                    type="button"
+                                    onClick={cancelCategoryEdit}
+                                    className="h-[52px] rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text-muted)]"
+                                >
+                                    منسوخ
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {expenseCategories.map((category) => (
+                            <div key={category.id || category.name} className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-black/10 p-4">
+                                <div className="flex items-center gap-2">
+                                    <button type="button" onClick={() => setCategoryDeleteTarget(category)} className="rounded-xl bg-rose-500/10 p-2 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
+                                        <Trash2 size={15} />
+                                    </button>
+                                    <button type="button" onClick={() => startCategoryEdit(category)} className="rounded-xl bg-blue-500/10 p-2 text-blue-400 transition-all hover:bg-blue-500 hover:text-white" aria-label="تبدیل کریں">
+                                        <Edit2 size={15} />
+                                    </button>
+                                </div>
+                                <span className="text-right text-sm font-black text-[var(--color-text-main)]">{category.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : null}
+
             <div className="max-w-6xl mx-auto space-y-4 mb-12">
                 <h2 className="text-lg font-semibold mb-4 text-right border-r-4 border-[var(--color-primary)] pr-3">
                     نئی {activeTab === 'income' ? 'آمدنی' : 'اخراجات'} شامل کریں <span className="text-red-500">*</span>
@@ -245,13 +370,11 @@ export const FinanceHeadsSetup = () => {
 
                             {activeTab === 'expense' ? (
                                 <>
-                                    <select dir="rtl" value={item.category} onChange={(e) => handleInputChange(item.id, 'category', e.target.value)}
-                                        className="border bg-black/20 rounded-xl p-3 text-sm outline-none bg-black text-right focus:border-[var(--color-primary)] border-white/10">
-                                        <option value="عام اخراجات">عام اخراجات</option>
-                                        <option value="انتظامی اخراجات">انتظامی اخراجات</option>
-                                        <option value="مستقل اثاثے">مستقل اثاثے</option>
-                                        <option value="عملے کے متعلق">عملے کے متعلق</option>
-                                    </select>
+                                    <CategoryDropdown
+                                        value={item.category}
+                                        categories={expenseCategories}
+                                        onChange={(value) => handleInputChange(item.id, 'category', value)}
+                                    />
                                     <input dir="rtl" type="number" placeholder="بجٹ لمٹ" value={item.budgetLimit}
                                         onChange={(e) => handleInputChange(item.id, 'budgetLimit', e.target.value)}
                                         className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
@@ -305,12 +428,12 @@ export const FinanceHeadsSetup = () => {
                                         {activeTab === 'expense' ? (
                                             editingId === item.id ? (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                    <select dir="rtl" className="border bg-black rounded-xl p-2 text-sm outline-none text-right border-white/10" value={editForm.category} onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}>
-                                                        <option value="عام اخراجات">عام اخراجات</option>
-                                                        <option value="انتظامی اخراجات">انتظامی اخراجات</option>
-                                                        <option value="مستقل اثاثے">مستقل اثاثے</option>
-                                                        <option value="عملے کے متعلق">عملے کے متعلق</option>
-                                                    </select>
+                                                    <CategoryDropdown
+                                                        value={editForm.category}
+                                                        categories={expenseCategories}
+                                                        onChange={(value) => setEditForm((prev) => ({ ...prev, category: value }))}
+                                                        compact
+                                                    />
                                                     <input dir="rtl" type="number" className="border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.budgetLimit} onChange={(e) => setEditForm((prev) => ({ ...prev, budgetLimit: e.target.value }))} />
                                                 </div>
                                             ) : (
@@ -355,6 +478,37 @@ export const FinanceHeadsSetup = () => {
                     <span className="font-bold text-[var(--color-primary)]">پیشہ ورانہ مشورہ:</span> آمدنی اور اخراجات کو صحیح طرح کیٹیگریز میں تقسیم کرنے سے ماہانہ مالیاتی رپورٹ سمجھنا آسان ہو جاتا ہے۔
                 </p>
             </div>
+
+            {categoryDeleteTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="text-right">
+                                <h3 className="text-xl font-black text-[var(--color-text-main)]">خرچ کی قسم حذف کریں؟</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    کیا آپ واقعی <span className="text-rose-500">{categoryDeleteTarget.name}</span> کو حذف کرنا چاہتے ہیں؟
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => !isDeleting && setCategoryDeleteTarget(null)}
+                                className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                                aria-label="بند کریں"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button type="button" onClick={() => setCategoryDeleteTarget(null)} disabled={isDeleting} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:opacity-60">
+                                منسوخ کریں
+                            </button>
+                            <button type="button" onClick={confirmCategoryDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-70">
+                                {isDeleting ? 'حذف ہو رہی ہے...' : 'حذف کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {newRowDeleteTarget ? (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
@@ -423,3 +577,57 @@ export const FinanceHeadsSetup = () => {
         </div>
     );
 };
+
+function CategoryDropdown({ value, categories, onChange, compact = false }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const selected = categories.find((category) => category.name === value);
+    const displayValue = selected?.name || value || categories[0]?.name || '';
+    const hasOptions = categories.length > 0;
+
+    return (
+        <div
+            className="relative"
+            dir="rtl"
+            onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setIsOpen(false);
+                }
+            }}
+        >
+            <button
+                type="button"
+                disabled={!hasOptions}
+                onClick={() => hasOptions && setIsOpen((prev) => !prev)}
+                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${compact ? 'min-h-[42px] py-2' : 'min-h-[50px] py-3'}`}
+            >
+                <ChevronDown size={16} className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <span className="min-w-0 flex-1 truncate">{displayValue}</span>
+            </button>
+
+            {isOpen ? (
+                <div className="absolute right-0 top-[calc(100%+0.5rem)] z-[80] max-h-60 w-full overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-2xl">
+                    {categories.map((category) => {
+                        const isSelected = category.name === value;
+                        return (
+                            <button
+                                key={category.id || category.name}
+                                type="button"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                    onChange(category.name);
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full rounded-lg px-3 py-3 text-right text-sm font-bold transition-colors ${isSelected
+                                    ? 'bg-[var(--color-primary)] text-[var(--color-bg)]'
+                                    : 'text-[var(--color-text-main)] hover:bg-[var(--color-bg)]'
+                                    }`}
+                            >
+                                {category.name}
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : null}
+        </div>
+    );
+}

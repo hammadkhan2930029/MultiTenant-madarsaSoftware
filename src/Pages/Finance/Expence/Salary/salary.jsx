@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X } from 'lucide-react';
+import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X, Eye } from 'lucide-react';
 import { DateField } from '../../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { getTeachers } from '../../../../Constant/TeachersApi';
@@ -33,16 +33,44 @@ const readMonthParts = (value) => {
 };
 const paymentMethods = ['Cash', 'Online', 'Cheque', 'Bank Transfer'];
 
+const parseDateOnly = (value) => {
+    if (!value) return null;
+    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+    const date = year && month && day ? new Date(year, month - 1, day) : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+
+const getTeacherStartDate = (teacher) => parseDateOnly(teacher?.joiningDate || teacher?.appointmentDate || teacher?.createdAt);
+
+const getMonthStartDate = (value) => {
+    const [year, month] = String(value || '').split('-').map(Number);
+    if (!year || !month) return null;
+    return new Date(year, month - 1, 1);
+};
+
+const canTeacherReceiveSalary = (teacher, salaryMonth, paymentDate) => {
+    const startDate = getTeacherStartDate(teacher);
+    const monthDate = getMonthStartDate(salaryMonth);
+    const paidDate = parseDateOnly(paymentDate);
+    if (!startDate || !monthDate || !paidDate) return true;
+
+    const startMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    return monthDate >= startMonth && paidDate >= startDate;
+};
+
 const toUrduSalaryError = (message, fallback) => {
     if (!message) return fallback;
     if (/already exists|duplicate|another salary/i.test(message)) {
         return 'اس عملہ / استاد کی اس مہینے کی تنخواہ پہلے سے محفوظ ہے۔';
     }
     if (/teacher not found/i.test(message)) return 'منتخب استاد نہیں ملا۔';
-    if (/finance head not found/i.test(message)) return 'منتخب خرچ کی مد نہیں ملی۔';
+    if (/finance head not found/i.test(message)) return 'تنخواہ محفوظ کرنے کے لیے پہلے مالیات میں تنخواہ یا خرچ کی مد شامل کریں۔';
     if (/expense head/i.test(message)) return 'منتخب مد خرچ کی مد ہونی چاہیے۔';
     if (/payment date/i.test(message)) return 'ادائیگی کی تاریخ ضروری ہے۔';
     if (/amount/i.test(message)) return 'رقم درست درج کریں۔';
+    if (/not joined|not available|ابھی شامل/i.test(message)) return 'اس تاریخ یا مہینے میں منتخب استاد/عملہ ابھی شامل نہیں ہوا تھا۔';
     return message;
 };
 
@@ -52,6 +80,8 @@ export const SalaryEntry = ({ staffType = '' }) => {
     const [formData, setFormData] = useState(createEmptyForm());
     const [editingEntry, setEditingEntry] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [viewTarget, setViewTarget] = useState(null);
+    const [filterMonth, setFilterMonth] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -67,18 +97,24 @@ export const SalaryEntry = ({ staffType = '' }) => {
         [teachers, formData.teacherId]
     );
 
+    const filteredEntries = useMemo(
+        () => entries.filter((entry) => !filterMonth || toMonthInputValue(entry.salaryMonth, entry.salaryYear) === filterMonth),
+        [entries, filterMonth]
+    );
+
     const totalPaid = useMemo(
-        () => entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0),
-        [entries]
+        () => filteredEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0),
+        [filteredEntries]
     );
 
     const filteredTeachers = useMemo(
         () => teachers.filter((teacher) =>
+            canTeacherReceiveSalary(teacher, formData.salaryMonth, formData.paymentDate) &&
             [teacher.fullName, teacher.subject, teacher.phone]
                 .filter(Boolean)
                 .some((value) => value.toLowerCase().includes(searchQuery.toLowerCase()))
         ),
-        [teachers, searchQuery]
+        [teachers, searchQuery, formData.salaryMonth, formData.paymentDate]
     );
 
     const refreshEntries = async () => {
@@ -93,11 +129,11 @@ export const SalaryEntry = ({ staffType = '' }) => {
         setError('');
 
         try {
-            const [teacherResult, headsResult, salaryResult] = await Promise.all([
+            const [teacherResult, salaryResult] = await Promise.all([
                 getTeachers(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
-                getFinanceHeads('page=1&limit=100&type=expense&status=active'),
                 getSalaryEntries(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
             ]);
+            const headsResult = await getFinanceHeads('page=1&limit=100&type=expense&status=active').catch(() => ({ items: [] }));
 
             const heads = headsResult.items || [];
             const salaryHead = heads.find((head) => /salary|تنخواہ|payroll/i.test(head.name || '')) || heads[0];
@@ -137,9 +173,8 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
     const buildPayload = () => {
         const monthParts = readMonthParts(formData.salaryMonth);
-        return {
+        const payload = {
             teacherId: Number(formData.teacherId),
-            financeHeadId: Number(formData.financeHeadId),
             amount: Number(formData.amount),
             salaryMonth: monthParts.salaryMonth,
             salaryYear: monthParts.salaryYear,
@@ -148,6 +183,10 @@ export const SalaryEntry = ({ staffType = '' }) => {
             remarks: formData.remarks,
             status: 'active',
         };
+        if (formData.financeHeadId) {
+            payload.financeHeadId = Number(formData.financeHeadId);
+        }
+        return payload;
     };
 
     const handleSave = async (event) => {
@@ -155,8 +194,13 @@ export const SalaryEntry = ({ staffType = '' }) => {
         setError('');
         setSuccess('');
 
-        if (!formData.teacherId || !formData.financeHeadId || !formData.amount || !formData.salaryMonth || !formData.paymentDate || !formData.paymentMethod) {
+        if (!formData.teacherId || !formData.amount || !formData.salaryMonth || !formData.paymentDate || !formData.paymentMethod) {
             setError('براہ کرم استاد، طریقہ ادائیگی، رقم، مہینہ اور ادائیگی کی تاریخ مکمل کریں۔');
+            return;
+        }
+
+        if (selectedTeacher && !canTeacherReceiveSalary(selectedTeacher, formData.salaryMonth, formData.paymentDate)) {
+            setError('اس تاریخ یا مہینے میں منتخب استاد/عملہ ابھی شامل نہیں ہوا تھا۔');
             return;
         }
 
@@ -322,10 +366,10 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 </div>
                             </div>
 
-                            <div className="[&_label]:!mb-2 [&_label]:!mr-2 [&_label]:!block [&_label]:!text-md [&_label]:!font-bold [&_button]:!py-2.5 [&_input]:!py-2.5">
-                               <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">ادائیگی کی تاریخ<span className="text-red-500"> *</span></label>
+                            <div className="[&_button]:!py-2.5 [&_input]:!py-2.5">
+                                <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">ادائیگی کی تاریخ<span className="text-red-500"> *</span></label>
                                 <DateField
-                                    // label="ادائیگی کی تاریخ"
+                                    className="space-y-0"
                                     required
                                     value={formData.paymentDate}
                                     onChange={(nextValue) => setFormData({ ...formData, paymentDate: nextValue })}
@@ -352,25 +396,46 @@ export const SalaryEntry = ({ staffType = '' }) => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 bg-[var(--color-surface)] p-4 rounded-[1.2rem] border border-[var(--color-border)]">
                         <div>
                             <h2 className="text-2xl font-bold">حالیہ تنخواہ ریکارڈز</h2>
-                            <p className="text-base text-[var(--color-text-muted)] mt-1">کل رقم: {formatAmount(totalPaid)}/-</p>
+                            <p className="text-base text-[var(--color-text-muted)] mt-1">کل رقم: {formatAmount(totalPaid)}</p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={loadData}
-                            disabled={isLoading}
-                            className="flex items-center justify-center gap-2 text-base bg-[var(--color-surface)] px-4 py-2 rounded-full border border-[var(--color-border)] disabled:opacity-60"
-                        >
-                            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-                            {entries.length} انٹریز
-                        </button>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                            <div>
+                                <label className="mb-2 mr-2 block text-base font-bold text-[var(--color-text-muted)]">مہینہ فلٹر</label>
+                                <input
+                                    type="month"
+                                    value={filterMonth}
+                                    onChange={(event) => setFilterMonth(event.target.value)}
+                                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2.5 text-base font-bold [color-scheme:dark] focus:outline-none sm:w-48"
+                                />
+                            </div>
+                            {filterMonth ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterMonth('')}
+                                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-base font-bold text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                                >
+                                    فلٹر صاف کریں
+                                </button>
+                            ) : null}
+                            <button
+                                type="button"
+                                onClick={loadData}
+                                disabled={isLoading}
+                                className="flex items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-base disabled:opacity-60"
+                            >
+                                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+                                {filteredEntries.length} انٹریز
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="mb-2 hidden grid-cols-[1.4fr_0.8fr_1fr_0.9fr_120px] gap-3 rounded-[1rem] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-base font-black text-[var(--color-text-muted)] sm:grid">
-                        <span className="text-right">نام</span>
+                    <div className="mb-2 hidden grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_120px] gap-3 rounded-[1rem] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-base font-black text-[var(--color-text-muted)] sm:grid">
+                        <span className="text-center">نام</span>
                         <span className="text-center">مہینہ</span>
                         <span className="text-center">ادائیگی کی تاریخ</span>
                         <span className="text-center">تنخواہ</span>
-                        <span className="text-center">کارروائی</span>
+                        <span className="text-center">اسٹیٹس</span>
+                        <span className="text-center">ایکشن</span>
                     </div>
 
                     <div className="space-y-3">
@@ -378,13 +443,13 @@ export const SalaryEntry = ({ staffType = '' }) => {
                             <div className="p-8 text-center rounded-[1.2rem] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)]">
                                 تنخواہ ریکارڈز لوڈ ہو رہے ہیں...
                             </div>
-                        ) : entries.length ? entries.map((entry) => (
-                            <div key={entry.id} className="grid grid-cols-1 gap-4 rounded-[1.2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all hover:border-[var(--color-primary)]/50 sm:grid-cols-[1.4fr_0.8fr_1fr_0.9fr_120px] sm:items-center sm:gap-3">
-                                <div className="flex items-center gap-4 min-w-0">
+                        ) : filteredEntries.length ? filteredEntries.map((entry) => (
+                            <div key={entry.id} className="grid grid-cols-1 gap-4 rounded-[1.2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all hover:border-[var(--color-primary)]/50 sm:grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_120px] sm:items-center sm:gap-3">
+                                <div className="flex min-w-0 items-center gap-4 sm:justify-center">
                                     <div className="p-3 rounded-xl bg-emerald-500/10 text-[var(--color-primary)]">
                                         <User size={20} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 text-right">
                                         <p className="mb-1 text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">نام</p>
                                         <h3 className="truncate text-xl font-bold">{entry.teacher?.fullName || '---'}</h3>
                                         <p className="truncate text-base text-[var(--color-text-muted)]">{entry.teacher?.subject || entry.financeHead?.name || '---'}</p>
@@ -406,14 +471,25 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 </div>
                                 <div className="rounded-xl bg-[var(--color-bg)]/60 p-3 text-right sm:bg-transparent sm:p-0 sm:text-center">
                                     <p className="mb-1 text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">تنخواہ</p>
-                                    <div className="whitespace-nowrap text-[var(--color-primary)] font-extrabold text-xl">{formatAmount(entry.amount)}/-</div>
+                                    <div className="whitespace-nowrap text-[var(--color-primary)] font-extrabold text-xl">{formatAmount(entry.amount)}</div>
                                 </div>
-                                <div className="flex items-center justify-end gap-2 sm:justify-center">
-                                    <p className="ml-auto text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">کارروائی</p>
-                                    <span className="px-4 py-1 rounded-full text-sm font-bold bg-[var(--color-primary)] text-[#0b1120] flex items-center gap-1">
+                                <div className="rounded-xl bg-[var(--color-bg)]/60 p-3 text-right sm:bg-transparent sm:p-0 sm:text-center">
+                                    <p className="mb-1 text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">اسٹیٹس</p>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)] px-4 py-1 text-sm font-bold text-[#0b1120]">
                                         <Wallet size={12} />
                                         جاری
                                     </span>
+                                </div>
+                                <div className="flex items-center justify-end gap-2 sm:justify-center">
+                                    <p className="ml-auto text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">ایکشن</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewTarget(entry)}
+                                        className="p-2 rounded-xl bg-emerald-500/10 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[#0b1120] transition-all"
+                                        aria-label="دیکھیں"
+                                    >
+                                        <Eye size={16} />
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={() => startEdit(entry)}
@@ -440,6 +516,54 @@ export const SalaryEntry = ({ staffType = '' }) => {
                     </div>
                 </div>
             </div>
+
+            {viewTarget ? (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-lg rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl" dir="rtl">
+                        <div className="mb-6 flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="text-2xl font-black text-[var(--color-text-main)]">تنخواہ کی تفصیل</h3>
+                                <p className="mt-1 text-base font-bold text-[var(--color-text-muted)]">{viewTarget.teacher?.fullName || '---'}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setViewTarget(null)}
+                                className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"
+                                aria-label="بند کریں"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">نام</p>
+                                <p className="mt-1 text-lg font-bold">{viewTarget.teacher?.fullName || '---'}</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">مضمون / مد</p>
+                                <p className="mt-1 text-lg font-bold">{viewTarget.teacher?.subject || viewTarget.financeHead?.name || '---'}</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">مہینہ</p>
+                                <p className="mt-1 text-lg font-bold">{formatMonth(viewTarget.salaryMonth, viewTarget.salaryYear)}</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">ادائیگی کی تاریخ</p>
+                                <p className="mt-1 text-lg font-bold">{formatDate(viewTarget.paymentDate)}</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">طریقہ ادائیگی</p>
+                                <p className="mt-1 text-lg font-bold">{viewTarget.paymentMethod || 'Cash'}</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <p className="text-sm font-black text-[var(--color-text-muted)]">رقم</p>
+                                <p className="mt-1 text-lg font-black text-[var(--color-primary)]">{formatAmount(viewTarget.amount)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {deleteTarget ? (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">

@@ -1,20 +1,21 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Clock, Edit3, FileText, Layers, Plus, Printer, Search, Trash2, Users, X } from 'lucide-react';
 import { DateField } from '../../Components/HR/FormElements';
-import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
+import { getClasses, getSections, getSessions, getSubjects } from '../../Constant/AcademicSetupApi';
 import { createExamSchedule, deleteExamSchedule, getExamSchedules, updateExamSchedule } from '../../Constant/ExamSchedulesApi';
 import { getAdminSession } from '../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 
 const text = {
-    title: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644',
+    title: 'امتحانی نظام الاوقات',
     subtitle: '\u06a9\u0644\u0627\u0633\u060c \u0645\u0636\u0645\u0648\u0646 \u0627\u0648\u0631 \u0648\u0642\u062a \u06a9\u06d2 \u0633\u0627\u062a\u06be \u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u067e\u0631\u0686\u06d2 \u0634\u06cc\u0688\u0648\u0644 \u06a9\u0631\u06cc\u06ba',
-    formTitle: '\u0646\u06cc\u0627 \u0634\u06cc\u0688\u0648\u0644',
-    listTitle: '\u0628\u0646\u0627\u06cc\u0627 \u06af\u06cc\u0627 \u0634\u06cc\u0688\u0648\u0644',
+    formTitle: 'نیا امتحان',
+    listTitle: 'بنایا گیا امتحان',
     examName: '\u0627\u0645\u062a\u062d\u0627\u0646 \u06a9\u0627 \u0646\u0627\u0645',
     examNamePlaceholder: '\u0645\u062b\u0644\u0627\u064b \u0633\u0627\u0644\u0627\u0646\u06c1 \u0627\u0645\u062a\u062d\u0627\u0646',
     session: '\u0633\u06cc\u0634\u0646',
     class: '\u06a9\u0644\u0627\u0633',
+    section: 'جماعت سیکشن',
     subject: '\u0645\u0636\u0645\u0648\u0646',
     date: '\u062a\u0627\u0631\u06cc\u062e',
     startTime: '\u0634\u0631\u0648\u0639 \u0648\u0642\u062a',
@@ -24,26 +25,26 @@ const text = {
     invigilator: '\u0646\u06af\u0631\u0627\u0646',
     notes: '\u0646\u0648\u0679',
     select: '\u0645\u0646\u062a\u062e\u0628 \u06a9\u0631\u06cc\u06ba',
-    save: '\u0634\u06cc\u0688\u0648\u0644 \u0645\u062d\u0641\u0648\u0638 \u06a9\u0631\u06cc\u06ba',
+    save: 'محفوظ کریں',
     update: 'تبدیلی محفوظ کریں',
-    updated: 'امتحانی شیڈول اپڈیٹ ہو گیا۔',
+    updated: 'امتحانی نظام الاوقات اپڈیٹ ہو گیا۔',
     cancelEdit: 'ترمیم منسوخ کریں',
     saving: '\u0645\u062d\u0641\u0648\u0638 \u06c1\u0648 \u0631\u06c1\u0627 \u06c1\u06d2...',
     print: 'پرنٹ',
-    required: '\u0628\u0631\u0627\u06c1 \u06a9\u0631\u0645 \u0627\u0645\u062a\u062d\u0627\u0646\u060c \u0633\u06cc\u0634\u0646\u060c \u06a9\u0644\u0627\u0633\u060c \u0645\u0636\u0645\u0648\u0646\u060c \u062a\u0627\u0631\u06cc\u062e \u0627\u0648\u0631 \u0648\u0642\u062a \u0645\u06a9\u0645\u0644 \u06a9\u0631\u06cc\u06ba\u06d4',
-    saved: '\u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644 \u0645\u062d\u0641\u0648\u0638 \u06c1\u0648 \u06af\u06cc\u0627\u06d4',
-    deleted: '\u0634\u06cc\u0688\u0648\u0644 \u062d\u0630\u0641 \u06a9\u0631 \u062f\u06cc\u0627 \u06af\u06cc\u0627\u06d4',
+    required: 'براہ کرم امتحان، سیشن، کلاس، جماعت سیکشن، مضمون، تاریخ، وقت اور کل نمبر مکمل کریں۔',
+    saved: 'امتحانی نظام الاوقات محفوظ ہو گیا۔',
+    deleted: 'امتحان حذف کر دیا گیا۔',
     loadError: '\u0628\u0646\u06cc\u0627\u062f\u06cc \u0688\u06cc\u0679\u0627 \u0644\u0648\u0688 \u0646\u06c1\u06cc\u06ba \u06c1\u0648 \u0633\u06a9\u0627\u06d4',
-    loading: '\u0634\u06cc\u0688\u0648\u0644 \u0644\u0648\u0688 \u06c1\u0648 \u0631\u06c1\u0627 \u06c1\u06d2...',
-    total: '\u06a9\u0644 \u0634\u06cc\u0688\u0648\u0644',
+    loading: 'امتحانی نظام الاوقات لوڈ ہو رہا ہے...',
+    total: 'کل نظام الاوقات',
     today: '\u0622\u062c \u06a9\u06d2 \u067e\u0631\u0686\u06d2',
     classes: '\u06a9\u0644\u0627\u0633\u06cc\u06ba',
     search: '\u062a\u0644\u0627\u0634',
     searchPlaceholder: '\u0627\u0645\u062a\u062d\u0627\u0646\u060c \u0645\u0636\u0645\u0648\u0646 \u06cc\u0627 \u06a9\u0644\u0627\u0633...',
     allClasses: '\u062a\u0645\u0627\u0645 \u06a9\u0644\u0627\u0633\u06cc\u06ba',
     allSessions: '\u062a\u0645\u0627\u0645 \u0633\u06cc\u0634\u0646',
-    emptyTitle: '\u0627\u0628\u06be\u06cc \u06a9\u0648\u0626\u06cc \u0634\u06cc\u0688\u0648\u0644 \u0646\u06c1\u06cc\u06ba',
-    emptyText: '\u0627\u0648\u067e\u0631 \u0641\u0627\u0631\u0645 \u0633\u06d2 \u067e\u06c1\u0644\u0627 \u0627\u0645\u062a\u062d\u0627\u0646\u06cc \u0634\u06cc\u0688\u0648\u0644 \u0628\u0646\u0627\u0626\u06cc\u06ba\u06d4',
+    emptyTitle: 'ابھی کوئی امتحان نہیں',
+    emptyText: 'اوپر فارم سے پہلا امتحان بنائیں۔',
 };
 
 const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
@@ -51,15 +52,16 @@ const today = () => new Date().toISOString().split('T')[0];
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ur-PK') : '---');
 const toDateInputValue = (value) => (value ? new Date(value).toISOString().split('T')[0] : '');
 const getFieldValue = (valueOrEvent) => valueOrEvent?.target?.value ?? valueOrEvent ?? '';
-const compactDateFieldClass = '[&>label]:!mb-3 [&>label]:!flex [&>label]:h-[36px] [&>label]:items-center [&>label]:leading-[2] [&_button]:h-[64px] [&_button]:min-h-[64px] [&_button]:rounded-xl [&_button]:border-[var(--color-border)] [&_button]:py-0 [&_button]:px-4 [&_button]:gap-3 [&_button_span]:overflow-visible [&_button_span]:text-clip [&_button_span]:whitespace-nowrap [&_button_span]:leading-[1.5] [&_button_span]:text-center [&_button_svg]:shrink-0';
-const timeControlClass = 'exam-native-time h-[64px] w-full min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-left font-sans text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]';
+const compactDateFieldClass = '[&>label]:!mb-3 [&>label]:!flex [&>label]:h-[36px] [&>label]:items-center [&>label]:leading-[2] [&_button]:h-[64px] [&_button]:min-h-[64px] [&_button]:rounded-xl [&_button]:border-[var(--color-border)] [&_button]:py-0 [&_button]:px-4 [&_button]:gap-3 [&_button_span]:overflow-visible [&_button_span]:text-clip [&_button_span]:whitespace-nowrap [&_button_span]:leading-[1.5] [&_button_span]:text-center [&_button_span]:text-base [&_button_span]:font-black [&_button_svg]:shrink-0';
+const timeControlClass = 'exam-native-time h-[64px] w-full min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-left font-sans text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)] [&::-webkit-calendar-picker-indicator]:brightness-0';
 
 const createEmptyForm = () => ({
     examName: '',
     sessionId: '',
     classId: '',
+    sectionId: '',
     subjectId: '',
-    examDate: today(),
+    examDate: '',
     startTime: '',
     endTime: '',
     totalMarks: '',
@@ -73,6 +75,7 @@ const mapScheduleFromApi = (schedule) => ({
     examName: schedule.examName || '',
     sessionId: String(schedule.session?.id || ''),
     classId: String(schedule.class?.id || ''),
+    sectionId: String(schedule.section?.id || ''),
     subjectId: String(schedule.subject?.id || ''),
     examDate: toDateInputValue(schedule.examDate),
     startTime: schedule.startTime || '',
@@ -83,6 +86,7 @@ const mapScheduleFromApi = (schedule) => ({
     notes: schedule.notes || '',
     sessionName: schedule.session?.name || '',
     className: schedule.class?.name || '',
+    sectionName: schedule.section?.name || '',
     subjectName: schedule.subject?.name || '',
 });
 
@@ -90,6 +94,7 @@ export const ExamSchedule = () => {
     const [formData, setFormData] = useState(createEmptyForm);
     const [schedules, setSchedules] = useState([]);
     const [classOptions, setClassOptions] = useState([]);
+    const [sectionOptions, setSectionOptions] = useState([]);
     const [sessionOptions, setSessionOptions] = useState([]);
     const [subjectOptions, setSubjectOptions] = useState([]);
     const [filters, setFilters] = useState({ search: '', classId: '', sessionId: '' });
@@ -123,6 +128,11 @@ export const ExamSchedule = () => {
         });
     }, [filters, schedules]);
 
+    const availableSections = useMemo(
+        () => sectionOptions.filter((section) => !formData.classId || String(section.classId) === String(formData.classId)),
+        [formData.classId, sectionOptions],
+    );
+
     const stats = useMemo(() => {
         const todayValue = today();
         return {
@@ -137,14 +147,16 @@ export const ExamSchedule = () => {
             setIsLoading(true);
             setError('');
             try {
-                const [classesResult, sessionsResult, subjectsResult, schedulesResult] = await Promise.all([
+                const [classesResult, sectionsResult, sessionsResult, subjectsResult, schedulesResult] = await Promise.all([
                     getClasses('page=1&limit=100&status=active'),
+                    getSections('page=1&limit=100&status=active'),
                     getSessions('page=1&limit=100&status=active'),
                     getSubjects('page=1&limit=100&status=active'),
                     getExamSchedules('page=1&limit=100&status=active'),
                 ]);
 
                 setClassOptions(activeOnly(classesResult.items));
+                setSectionOptions(activeOnly(sectionsResult.items));
                 setSessionOptions(activeOnly(sessionsResult.items));
                 setSubjectOptions(activeOnly(subjectsResult.items));
                 setSchedules((schedulesResult.items || []).map(mapScheduleFromApi));
@@ -168,7 +180,7 @@ export const ExamSchedule = () => {
         setMessage('');
         setError('');
 
-        if (!formData.examName.trim() || !formData.sessionId || !formData.classId || !formData.subjectId || !formData.examDate || !formData.startTime || !formData.endTime) {
+        if (!formData.examName.trim() || !formData.sessionId || !formData.classId || !formData.sectionId || !formData.subjectId || !formData.examDate || !formData.startTime || !formData.endTime || !formData.totalMarks) {
             setError(text.required);
             return;
         }
@@ -179,11 +191,12 @@ export const ExamSchedule = () => {
                 examName: formData.examName.trim(),
                 sessionId: Number(formData.sessionId),
                 classId: Number(formData.classId),
+                sectionId: Number(formData.sectionId),
                 subjectId: Number(formData.subjectId),
                 examDate: formData.examDate,
                 startTime: formData.startTime.trim(),
                 endTime: formData.endTime.trim(),
-                totalMarks: formData.totalMarks ? Number(formData.totalMarks) : undefined,
+                totalMarks: Number(formData.totalMarks),
                 room: formData.room.trim() || undefined,
                 invigilator: formData.invigilator.trim() || undefined,
                 notes: formData.notes.trim() || undefined,
@@ -203,6 +216,7 @@ export const ExamSchedule = () => {
                 ...createEmptyForm(),
                 sessionId: prev.sessionId,
                 classId: prev.classId,
+                sectionId: prev.sectionId,
             }));
             setMessage(editingId ? text.updated : text.saved);
             setEditingId(null);
@@ -219,6 +233,7 @@ export const ExamSchedule = () => {
             examName: schedule.examName,
             sessionId: schedule.sessionId,
             classId: schedule.classId,
+            sectionId: schedule.sectionId,
             subjectId: schedule.subjectId,
             examDate: schedule.examDate,
             startTime: schedule.startTime,
@@ -308,7 +323,7 @@ export const ExamSchedule = () => {
                 </head>
                 <body>
                     <div class="header">
-                        <h1>${profile.name || 'امتحانی شیڈول'}</h1>
+                        <h1>${profile.name || 'امتحانی نظام الاوقات'}</h1>
                         <p>${profile.address || ''}</p>
                         <p>کلاس وائز امتحانی ٹائم ٹیبل</p>
                     </div>
@@ -331,7 +346,7 @@ export const ExamSchedule = () => {
                                 <th>نوٹ</th>
                             </tr>
                         </thead>
-                        <tbody>${rows || '<tr><td colspan="9">کوئی شیڈول موجود نہیں</td></tr>'}</tbody>
+                        <tbody>${rows || '<tr><td colspan="9">کوئی امتحان موجود نہیں</td></tr>'}</tbody>
                     </table>
                 </body>
             </html>
@@ -359,12 +374,12 @@ export const ExamSchedule = () => {
                 </div>
 
                 <div className="space-y-6">
-                    <form onSubmit={handleSubmit} className="w-full rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:p-5 shadow-xl space-y-4">
+                    <form noValidate onSubmit={handleSubmit} className="w-full rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:p-5 shadow-xl space-y-4">
                         <div className="flex items-center gap-3 border-b border-[var(--color-border)] pb-4">
                             <div className="rounded-xl bg-[var(--color-primary)] p-3 text-[#0b1120]">
                                 <Plus size={20} />
                             </div>
-                            <h2 className="text-2xl font-black">{editingId ? 'شیڈول ترمیم کریں' : text.formTitle}</h2>
+                            <h2 className="text-2xl font-black">{editingId ? 'امتحان ترمیم کریں' : text.formTitle}</h2>
                             {editingId ? (
                                 <button type="button" onClick={cancelEdit} className="mr-auto rounded-lg bg-rose-500/10 p-2 text-rose-400" title={text.cancelEdit} aria-label={text.cancelEdit}>
                                     <X size={18} />
@@ -391,9 +406,19 @@ export const ExamSchedule = () => {
                                 <option value="">{text.select}</option>
                                 {sessionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                             </SelectField>
-                            <SelectField required label={text.class} value={formData.classId} onChange={(value) => updateForm('classId', value)} disabled={isLoading}>
+                            <SelectField
+                                required
+                                label={text.class}
+                                value={formData.classId}
+                                onChange={(value) => setFormData((prev) => ({ ...prev, classId: value, sectionId: '' }))}
+                                disabled={isLoading}
+                            >
                                 <option value="">{text.select}</option>
                                 {classOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                            </SelectField>
+                            <SelectField required label={text.section} value={formData.sectionId} onChange={(value) => updateForm('sectionId', value)} disabled={isLoading || !formData.classId}>
+                                <option value="">{formData.classId ? text.select : 'پہلے کلاس منتخب کریں'}</option>
+                                {availableSections.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                             </SelectField>
                             <SelectField required label={text.subject} value={formData.subjectId} onChange={(value) => updateForm('subjectId', value)} disabled={isLoading}>
                                 <option value="">{text.select}</option>
@@ -404,12 +429,13 @@ export const ExamSchedule = () => {
                                 required
                                 value={formData.examDate}
                                 onChange={(nextValue) => updateForm('examDate', getFieldValue(nextValue))}
+                                placeholder="تاریخ منتخب کریں"
                                 size="sm"
                                 className={compactDateFieldClass}
                             />
                             <TimeInput required label={text.startTime} value={formData.startTime} onChange={(value) => updateForm('startTime', value)} />
                             <TimeInput required label={text.endTime} value={formData.endTime} onChange={(value) => updateForm('endTime', value)} />
-                            <TextInput label={text.marks} value={formData.totalMarks} onChange={(value) => updateForm('totalMarks', value)} type="number" />
+                            <TextInput required label={text.marks} value={formData.totalMarks} onChange={(value) => updateForm('totalMarks', value)} type="number" />
                             <TextInput label={text.room} value={formData.room} onChange={(value) => updateForm('room', value)} />
                             <TextInput label={text.invigilator} value={formData.invigilator} onChange={(value) => updateForm('invigilator', value)} />
                         </div>
@@ -523,7 +549,7 @@ const DeleteScheduleModal = ({ schedule, isDeleting, onClose, onConfirm }) => (
         <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <h3 className="text-xl font-black text-[var(--color-text-main)]">شیڈول حذف کرنے کی تصدیق</h3>
+                    <h3 className="text-xl font-black text-[var(--color-text-main)]">امتحان حذف کرنے کی تصدیق</h3>
                     <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
                         کیا آپ واقعی <span className="text-rose-500">{schedule.examName || 'یہ شیڈول'}</span> کو حذف کرنا چاہتے ہیں؟
                     </p>
@@ -555,10 +581,11 @@ const SelectField = ({ label, value, onChange, children, disabled, required = fa
     </div>
 );
 
-const TextInput = ({ label, value, onChange, type = 'text' }) => (
+const TextInput = ({ label, value, onChange, type = 'text', required = false }) => (
     <div className="w-full">
-        <FieldLabel>{label}</FieldLabel>
+        <FieldLabel required={required}>{label}</FieldLabel>
         <input
+            required={required}
             type={type}
             value={value}
             onChange={(event) => onChange(event.target.value)}
@@ -606,6 +633,7 @@ const ScheduleRow = ({ schedule, deletingId, onDelete, onEdit, onPrint }) => (
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs font-bold text-[var(--color-text-muted)]">
                     <span>{schedule.sessionName || '---'}</span>
                     <span>{schedule.className || '---'}</span>
+                    <span>{schedule.sectionName || '---'}</span>
                     <span>{schedule.room || '---'}</span>
                     <span>{schedule.invigilator || '---'}</span>
                 </div>

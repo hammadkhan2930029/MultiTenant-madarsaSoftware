@@ -1,9 +1,9 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Plus, Search, Trash2, MapPin, X, ArrowRight, Check, ChevronDown, Map
+    Plus, Search, Trash2, MapPin, X, ArrowRight, Check, ChevronDown, Map, Edit3
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { createCity, deactivateCity, getCities } from '../../../Constant/CityApi';
+import { createCity, deactivateCity, getCities, updateCity } from '../../../Constant/CityApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 
 const suggestedCities = [
@@ -40,7 +40,10 @@ export const CreateCities = () => {
     const [cities, setCities] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [editTarget, setEditTarget] = useState(null);
+    const [editName, setEditName] = useState('');
     const [deleteTarget, setDeleteTarget] = useState(null);
     const dropdownRef = useRef(null);
     const notify = useNotifier();
@@ -115,6 +118,29 @@ export const CreateCities = () => {
             notify.error(error?.message || 'شہر حذف نہیں ہو سکا۔', 'حذف کرنے میں مسئلہ پیش آیا');
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    const openEditCity = (city) => {
+        setEditTarget(city);
+        setEditName(city.name || '');
+    };
+
+    const handleUpdateCity = async () => {
+        const nextName = editName.trim();
+        if (!editTarget || !nextName) return;
+
+        try {
+            setIsUpdating(true);
+            const updatedCity = await updateCity(editTarget.id, { name: nextName, status: editTarget.status || 'active' });
+            setCities((prev) => prev.map((city) => (city.id === updatedCity.id ? updatedCity : city)));
+            setEditTarget(null);
+            setEditName('');
+            notify.success(`${updatedCity.name} اپڈیٹ ہو گیا۔`, 'شہر اپڈیٹ');
+        } catch (error) {
+            notify.error(error?.message || 'شہر اپڈیٹ نہیں ہو سکا۔', 'اپڈیٹ کرنے میں مسئلہ');
+        } finally {
+            setIsUpdating(false);
         }
     };
 
@@ -260,13 +286,22 @@ export const CreateCities = () => {
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 last:rounded-l-[1.5rem] text-center">
-                                            <button
-                                                onClick={() => setDeleteTarget(city)}
-                                                className="p-3 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-90 hover:rotate-12"
-                                                title="حذف کریں"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => openEditCity(city)}
+                                                    className="p-3 bg-emerald-500/10 text-[#00d094] rounded-xl hover:bg-[#00d094] hover:text-white transition-all shadow-sm active:scale-90"
+                                                    title="ترمیم کریں"
+                                                >
+                                                    <Edit3 size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteTarget(city)}
+                                                    className="p-3 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm active:scale-90 hover:rotate-12"
+                                                    title="حذف کریں"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -294,6 +329,57 @@ export const CreateCities = () => {
                     <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" /> واپس جائیں
                 </button>
             </div>
+
+            {editTarget ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">
+                    <div className="w-full max-w-md rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl font-black text-[var(--color-text)]">شہر تبدیل کریں</h3>
+                                <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
+                                    شہر کا نام درست کر کے محفوظ کریں۔
+                                </p>
+                            </div>
+                            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/10 text-[#00d094]">
+                                <Edit3 size={22} />
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            <label className="mb-2 block text-[11px] font-black text-[var(--color-text-muted)]">شہر کا نام <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                value={editName}
+                                onChange={(event) => setEditName(event.target.value)}
+                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-right text-base font-black text-[var(--color-text)] outline-none focus:border-[#00d094]"
+                                placeholder="شہر کا نام درج کریں"
+                            />
+                        </div>
+
+                        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditTarget(null);
+                                    setEditName('');
+                                }}
+                                disabled={isUpdating}
+                                className="flex-1 rounded-2xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                منسوخ
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleUpdateCity}
+                                disabled={!editName.trim() || isUpdating}
+                                className="flex-1 rounded-2xl bg-[#00d094] px-5 py-3 text-sm font-black text-white transition-all hover:bg-[#00b07d] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {isUpdating ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
 
             {deleteTarget ? (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm" dir="rtl">

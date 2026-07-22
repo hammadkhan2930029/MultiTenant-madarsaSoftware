@@ -41,6 +41,22 @@ const joinLabels = (values) => {
     return labels.length ? labels.join('، ') : '---';
 };
 
+const parseDateOnly = (value) => {
+    if (!value) return null;
+    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+    const date = year && month && day ? new Date(year, month - 1, day) : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+
+const isTeacherAvailableOnDate = (teacher, dateValue) => {
+    const selected = parseDateOnly(dateValue);
+    const start = parseDateOnly(teacher?.joiningDate || teacher?.appointmentDate || teacher?.createdAt);
+    if (!selected || !start) return true;
+    return selected >= start;
+};
+
 export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     const navigate = useNavigate();
     const isStaffAttendance = staffType === 'staff';
@@ -83,7 +99,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
             );
 
             setTeachers(
-                (teacherResult.items || []).map((teacher) => {
+                (teacherResult.items || []).filter((teacher) => isTeacherAvailableOnDate(teacher, selectedDate)).map((teacher) => {
                     const existingAttendance = attendanceMap.get(String(teacher.id));
 
                     return {
@@ -113,7 +129,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                 setDefaultBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
                 setSelectedBranchId(selectedContextBranchId ? String(selectedContextBranchId) : '');
                 setTeachers(
-                    (teacherResult.items || []).map((teacher) => ({
+                    (teacherResult.items || []).filter((teacher) => isTeacherAvailableOnDate(teacher, selectedDate)).map((teacher) => ({
                         ...teacher,
                         status: 'Present',
                         remarks: '',

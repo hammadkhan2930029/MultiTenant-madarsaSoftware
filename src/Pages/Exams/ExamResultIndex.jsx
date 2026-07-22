@@ -3,6 +3,7 @@ import { Award, BookOpen, ChevronLeft, ChevronRight, Edit3, Eye, FileText, Print
 import { useNavigate } from 'react-router-dom';
 import { getClasses, getSessions } from '../../Constant/AcademicSetupApi';
 import { deleteExamResult, getExamResults } from '../../Constant/ExamResultsApi';
+import { getExamSchedules } from '../../Constant/ExamSchedulesApi';
 import { AppImages } from '../../Constant/AppImages';
 import { getAdminSession, getApiAssetUrl } from '../../Constant/AdminAuth';
 import { useNotifier } from '../../Components/Notifications/useNotifier';
@@ -14,6 +15,7 @@ const text = {
     allClasses: 'تمام کلاسیں',
     allSessions: 'تمام سیشن',
     allResults: 'تمام نتائج',
+    allSchedules: 'تمام امتحانی نظام الاوقات',
     loading: 'رزلٹ لوڈ ہو رہے ہیں...',
     empty: 'ابھی کوئی رزلٹ موجود نہیں',
     refresh: 'ریفریش',
@@ -351,7 +353,34 @@ const buildQuery = (filters, page) => {
     if (filters.search.trim()) params.set('search', filters.search.trim());
     if (filters.classId) params.set('classId', filters.classId);
     if (filters.sessionId) params.set('sessionId', filters.sessionId);
+    if (filters.sectionId) params.set('sectionId', filters.sectionId);
+    if (filters.examName) params.set('examName', filters.examName);
     return params.toString();
+};
+
+const getScheduleKey = (schedule) => [
+    schedule.examName || '',
+    schedule.session?.id || '',
+    schedule.class?.id || '',
+    schedule.section?.id || '',
+].join('|');
+
+const buildScheduleOptions = (schedules = []) => {
+    const groups = new Map();
+    schedules.forEach((schedule) => {
+        const key = getScheduleKey(schedule);
+        if (!groups.has(key)) {
+            groups.set(key, {
+                id: key,
+                examName: schedule.examName || '',
+                sessionId: String(schedule.session?.id || ''),
+                classId: String(schedule.class?.id || ''),
+                sectionId: String(schedule.section?.id || ''),
+                label: `${schedule.examName || 'امتحانی نظام الاوقات'} / ${schedule.session?.name || '---'} / ${schedule.class?.name || '---'} / ${schedule.section?.name || '---'}`,
+            });
+        }
+    });
+    return Array.from(groups.values());
 };
 
 export const ExamResultIndex = () => {
@@ -360,7 +389,8 @@ export const ExamResultIndex = () => {
     const [results, setResults] = useState([]);
     const [classOptions, setClassOptions] = useState([]);
     const [sessionOptions, setSessionOptions] = useState([]);
-    const [filters, setFilters] = useState({ search: '', classId: '', sessionId: '', examName: '' });
+    const [scheduleOptions, setScheduleOptions] = useState([]);
+    const [filters, setFilters] = useState({ search: '', classId: '', sessionId: '', sectionId: '', examName: '', scheduleKey: '' });
     const [page, setPage] = useState(1);
     const [meta, setMeta] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -377,13 +407,15 @@ export const ExamResultIndex = () => {
         setIsLoading(true);
         setError('');
         try {
-            const [classesResult, sessionsResult, resultsResult] = await Promise.all([
+            const [classesResult, sessionsResult, schedulesResult, resultsResult] = await Promise.all([
                 getClasses('page=1&limit=100&status=active'),
                 getSessions('page=1&limit=100&status=active'),
+                getExamSchedules('page=1&limit=100&status=active'),
                 getExamResults(buildQuery(filters, page)),
             ]);
             setClassOptions(activeOnly(classesResult.items));
             setSessionOptions(activeOnly(sessionsResult.items));
+            setScheduleOptions(buildScheduleOptions(schedulesResult.items || []));
             setResults(resultsResult.items || []);
             setMeta(resultsResult.meta || null);
         } catch (loadError) {
@@ -397,14 +429,7 @@ export const ExamResultIndex = () => {
         loadData();
     }, [loadData]);
 
-    const examNames = useMemo(() => (
-        [...new Set(results.map(getExamName).filter(Boolean))]
-    ), [results]);
-
-    const filteredResults = useMemo(() => {
-        if (!filters.examName) return results;
-        return results.filter((result) => getExamName(result) === filters.examName);
-    }, [filters.examName, results]);
+    const filteredResults = results;
 
     const stats = useMemo(() => ({
         total: meta?.totalItems ?? results.length,
@@ -413,7 +438,26 @@ export const ExamResultIndex = () => {
     }), [filteredResults, meta, results.length]);
 
     const updateFilter = (field, value) => {
-        setFilters((current) => ({ ...current, [field]: value }));
+        setFilters((current) => ({
+            ...current,
+            [field]: value,
+            ...(field === 'classId' || field === 'sessionId'
+                ? { scheduleKey: '', examName: '', sectionId: '' }
+                : {}),
+        }));
+        setPage(1);
+    };
+
+    const updateScheduleFilter = (value) => {
+        const schedule = scheduleOptions.find((item) => item.id === value);
+        setFilters((current) => ({
+            ...current,
+            scheduleKey: value,
+            examName: schedule?.examName || '',
+            sessionId: schedule?.sessionId || '',
+            classId: schedule?.classId || '',
+            sectionId: schedule?.sectionId || '',
+        }));
         setPage(1);
     };
 
@@ -488,8 +532,8 @@ export const ExamResultIndex = () => {
                 {error ? <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm font-bold text-rose-400">{error}</div> : null}
 
                 <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
-                    <div className="flex items-center grid grid-cols-1 gap-3 lg:grid-cols-12">
-                        <div className="relative lg:col-span-5">
+                    <div className="grid grid-cols-1 items-center gap-3 lg:grid-cols-12">
+                        <div className="relative lg:col-span-4">
                             <Search size={17} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                             <input
                                 value={filters.search}
@@ -498,6 +542,10 @@ export const ExamResultIndex = () => {
                                 className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] pr-11 pl-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                             />
                         </div>
+                        <select value={filters.scheduleKey} onChange={(event) => updateScheduleFilter(event.target.value)} className="h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none lg:col-span-4">
+                            <option value="">{text.allSchedules}</option>
+                            {scheduleOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                        </select>
                         <select value={filters.classId} onChange={(event) => updateFilter('classId', event.target.value)} className="h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none lg:col-span-2">
                             <option value="">{text.allClasses}</option>
                             {classOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -505,10 +553,6 @@ export const ExamResultIndex = () => {
                         <select value={filters.sessionId} onChange={(event) => updateFilter('sessionId', event.target.value)} className="h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none lg:col-span-2">
                             <option value="">{text.allSessions}</option>
                             {sessionOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                        </select>
-                        <select value={filters.examName} onChange={(event) => updateFilter('examName', event.target.value)} className="h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none lg:col-span-3">
-                            <option value="">{text.allResults}</option>
-                            {examNames.map((name) => <option key={name} value={name}>{name}</option>)}
                         </select>
                     </div>
                 </div>

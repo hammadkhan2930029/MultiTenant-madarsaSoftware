@@ -436,9 +436,13 @@ export const RoleManagement = () => {
 
   const selectedSet = useMemo(() => new Set(selectedPermissions), [selectedPermissions]);
   const savedSet = useMemo(() => new Set(savedPermissions), [savedPermissions]);
+  const permissionScopeKey = useMemo(
+    () => [...permissions].sort().join('|'),
+    [permissions.length, permissions.join('|')],
+  );
   const allowedBranchPermissionSet = useMemo(() => (
     branchScopedSession ? new Set(permissions) : null
-  ), [branchScopedSession, permissions]);
+  ), [branchScopedSession, permissionScopeKey]);
   const totalPermissions = useMemo(
     () => permissionModules.reduce((count, module) => count + module.permissions.length, 0),
     [permissionModules],
@@ -556,7 +560,7 @@ export const RoleManagement = () => {
         setExpandedModules((current) => (current.length ? current : modules.map((module) => module.id)));
       }
     }
-  }, [branchScopedSession, permissions]);
+  }, [branchScopedSession, permissionScopeKey]);
 
   useEffect(() => { loadPermissions(); }, [loadPermissions]);
 
