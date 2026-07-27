@@ -32,7 +32,8 @@ const readSession = () => {
 const hasFixedBranchContext = (session) => {
   const value = session?.admin?.branchId ?? session?.user?.branchId ?? null;
   const branchId = value === null || value === undefined || value === '' ? null : Number(value);
-  return Number.isFinite(branchId) && branchId > 0;
+  const roleName = String(getRoleNameFromSession(session)).trim().toLowerCase();
+  return Number.isFinite(branchId) && branchId > 0 && roleName !== 'admin';
 };
 
 const clearBranchContextForFixedBranchSession = (session) => {
@@ -178,6 +179,13 @@ const assertSessionMatchesTenant = (session, tenantBranding) => {
   }
 };
 
+const isSuperAdminSession = (session) => {
+  const roleName = String(getRoleNameFromSession(session)).trim().toLowerCase();
+  const sessionTenantId = getSessionTenantId(session);
+
+  return roleName === SUPER_ADMIN_ROLE && !sessionTenantId;
+};
+
 export const getAdminCredentials = () => defaultAdminCredentials;
 
 export const getAdminSession = () => readSession();
@@ -206,8 +214,6 @@ export const isSuperAdmin = () => {
 
 export const isTenantAdmin = () => {
   const session = readSession();
-  if (getSessionBranchId(session)) return false;
-
   const role = getAdminRole();
   const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
   const legacyRoleName = session?.admin?.role;
@@ -229,13 +235,18 @@ export const isBranchSystemEnabled = (session = readSession()) => Boolean(
   getTenantBranchSettings(session)?.branchEnabled,
 );
 
+export const isBranchSystemExplicitlyDisabled = (session = readSession()) => (
+  session?.tenantBranding?.settings?.branchEnabled === false ||
+  session?.currentTenant?.branchEnabled === false
+);
+
 export const isBranchScopedSession = (session = readSession()) => {
   const branchId = getSessionBranchId(session);
   if (!branchId || isSuperAdmin()) return false;
 
   const role = normalizeRole(session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || null);
   const roleName = String(role?.roleName || session?.admin?.role || session?.user?.role || '').trim().toLowerCase();
-  return roleName !== 'super_admin';
+  return roleName !== 'super_admin' && roleName !== 'admin';
 };
 
 export const canAccessBranchManagement = (session = readSession()) => (
@@ -246,7 +257,7 @@ export const canAccessBranchManagement = (session = readSession()) => (
 );
 
 export const canUseTenantBranchContext = (session = readSession()) => (
-  isBranchSystemEnabled(session) &&
+  !isBranchSystemExplicitlyDisabled(session) &&
   isTenantAdmin() &&
   !isSuperAdmin() &&
   !isBranchScopedSession(session)
@@ -254,7 +265,9 @@ export const canUseTenantBranchContext = (session = readSession()) => (
 
 export const getSelectedBranchContext = (session = readSession()) => {
   const tenantId = getSessionTenantId(session);
-  const fallback = { tenantId, branchId: null, mode: 'all' };
+  const sessionBranchId = getSessionBranchId(session);
+  const fallbackBranchId = canUseTenantBranchContext(session) && sessionBranchId ? sessionBranchId : null;
+  const fallback = { tenantId, branchId: fallbackBranchId, mode: fallbackBranchId ? 'branch' : 'all' };
 
   if (!canUseStorage || !canUseTenantBranchContext(session) || !tenantId) return fallback;
 
@@ -327,7 +340,7 @@ export const canAny = (permissions = []) => hasAnyPermission(permissions);
 export const canAll = (permissions = []) => hasAllPermissions(permissions);
 
 export const loginAdmin = async ({ username, password }) => {
-  const tenantBranding = await fetchCurrentTenantBranding();
+  const tenantBranding = await fetchCurrentTenantBranding().catch(() => null);
   const result = await apiRequest('/auth/login', {
     method: 'POST',
     skipAuth: true,
@@ -375,6 +388,11 @@ export const requestForgotPassword = async ({ identity, contactEmail }) => {
 
 export const validateCurrentTenantSession = async () => {
   const session = readSession();
+
+  if (session?.token && isSuperAdminSession(session)) {
+    return session?.tenantBranding || null;
+  }
+
   const tenantBranding = await fetchCurrentTenantBranding();
 
   if (session?.token) {

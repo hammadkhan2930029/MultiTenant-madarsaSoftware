@@ -288,9 +288,9 @@ export const AttendancePage = () => {
         <div className="p-4 md:p-6 space-y-6 bg-[var(--color-bg)] min-h-screen font-urdu text-right" dir="rtl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-surface)] p-6 rounded-[2rem] shadow-sm border border-[var(--color-border)]">
                 <div>
-                    <h2 className="text-3xl font-black text-[var(--color-text)]">طلباء کی حاضری</h2>
-                    <p className="text-sm text-[var(--color-text-muted)] font-bold mt-4">طلباء کی روزانہ حاضری کا اندراج کریں یا پرانی حاضری دیکھیں</p>
-                    <p className="mt-2 text-sm font-bold text-[var(--color-primary)]">
+                    <h2 className="text-4xl font-black text-[var(--color-text)]">طلباء کی حاضری</h2>
+                    <p className="text-base text-[var(--color-text-muted)] font-bold mt-4">طلباء کی روزانہ حاضری کا اندراج کریں یا پرانی حاضری دیکھیں</p>
+                    <p className="mt-2 text-base font-bold text-[var(--color-primary)]">
                         پچھلی حاضری دیکھنے کے لیے تاریخ، سیشن، جماعت اور سیکشن منتخب کر کے حاضری کی فہرست دیکھیں۔
                     </p>
                 </div>

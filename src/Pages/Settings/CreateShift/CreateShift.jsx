@@ -354,48 +354,114 @@ export const ShiftManagement = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 {isLoading ? (
                     <div className="col-span-full rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                         شفٹس لوڈ ہو رہی ہیں...
                     </div>
                 ) : shifts.length > 0 ? (
-                    shifts.map((shift) => (
-                        <div
-                            key={shift.id}
-                            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-                            className="group border rounded-[2rem] p-5 flex items-center justify-between hover:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
-                        >
-                            <div className="flex items-center gap-5">
-                                <div style={{ backgroundColor: 'var(--color-input)' }} className="w-14 h-14 rounded-2xl flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform">
-                                    {getShiftIcon(shift.type)}
-                                </div>
-                                <div>
-                                    <h3 style={{ color: 'var(--color-text-main)' }} className="font-bold text-lg">{shift.name}</h3>
-                                    <div className="flex items-center gap-3 mt-1">
-                                        <span style={{ color: 'var(--color-text-muted)', unicodeBidi: 'isolate' }} dir="ltr" className="flex items-center gap-2 text-base font-bold md:text-lg">
-                                            <Clock size={17} /> {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div
+                        style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+                        className="border rounded-[2rem] overflow-hidden shadow-sm"
+                    >
+                        <div className="overflow-x-auto">
+                            <table dir="rtl" className="w-full min-w-[560px] table-fixed">
+                                <thead>
+                                    <tr
+                                        style={{ borderColor: 'var(--color-border)' }}
+                                        className="border-b bg-[var(--color-bg)]"
+                                    >
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[40%] text-right px-6 py-4 text-sm font-semibold"
+                                        >
+                                            شفٹ
+                                        </th>
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => handleEdit(shift)}
-                                    className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
-                                >
-                                    <Edit2 size={18} />
-                                </button>
-                                <button
-                                    onClick={() => setDeleteTarget(shift)}
-                                    className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[35%] text-right px-6 py-4 text-sm font-semibold"
+                                        >
+                                            اوقات
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[25%] text-right px-6 py-4 text-sm font-semibold"
+                                        >
+                                            ایکشنز
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {shifts.map((shift) => (
+                                        <tr
+                                            key={shift.id}
+                                            style={{ borderColor: 'var(--color-border)' }}
+                                            className="group border-b last:border-b-0 hover:bg-[var(--color-input)] transition-all"
+                                        >
+                                            <td className="px-6 py-4 align-middle">
+                                                <div className="flex items-center justify-start gap-4">
+                                                    <div
+                                                        style={{ backgroundColor: 'var(--color-input)' }}
+                                                        className="w-11 h-11 rounded-xl flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform shrink-0"
+                                                    >
+                                                        {getShiftIcon(shift.type)}
+                                                    </div>
+
+                                                    <h3
+                                                        style={{ color: 'var(--color-text-main)' }}
+                                                        className="font-bold text-base text-right"
+                                                    >
+                                                        {shift.name}
+                                                    </h3>
+                                                </div>
+                                            </td>
+
+                                            <td className="px-6 py-4 align-middle">
+                                                <div className="flex items-center justify-start">
+                                                    <span
+                                                        dir="ltr"
+                                                        style={{
+                                                            color: 'var(--color-text-muted)',
+                                                            unicodeBidi: 'isolate',
+                                                        }}
+                                                        className="inline-flex items-center gap-2 text-base font-bold whitespace-nowrap"
+                                                    >
+                                                        <Clock size={17} />
+
+                                                        {formatTime(shift.startTime)} -{' '}
+                                                        {formatTime(shift.endTime)}
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            <td className="px-6 py-4 align-middle">
+                                                <div className="flex items-center justify-start gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleEdit(shift)}
+                                                        className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeleteTarget(shift)}
+                                                        className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ))
+                    </div>
                 ) : (
                     <div className="col-span-full rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                         ابھی تک کوئی شفٹ شامل نہیں کی گئی۔

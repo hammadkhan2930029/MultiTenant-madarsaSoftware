@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X, Eye } from 'lucide-react';
 import { DateField } from '../../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
-import { getTeachers } from '../../../../Constant/TeachersApi';
 import { getFinanceHeads } from '../../../../Constant/FinanceHeadsApi';
-import { createSalaryEntry, deactivateSalaryEntry, getSalaryEntries, updateSalaryEntry } from '../../../../Constant/SalariesApi';
+import { createSalaryEntry, deactivateSalaryEntry, getSalaryEntries, getSalaryTeachers, updateSalaryEntry } from '../../../../Constant/SalariesApi';
 
 const today = () => new Date().toISOString().split('T')[0];
 const currentMonth = () => {
@@ -130,7 +129,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
         try {
             const [teacherResult, salaryResult] = await Promise.all([
-                getTeachers(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
+                getSalaryTeachers(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
                 getSalaryEntries(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
             ]);
             const headsResult = await getFinanceHeads('page=1&limit=100&type=expense&status=active').catch(() => ({ items: [] }));
@@ -271,7 +270,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                     {editingEntry ? <Edit2 size={20} /> : <Plus size={20} />}
                                 </div>
                                 <h2 className="text-2xl font-bold text-[var(--color-primary)]">
-                                    {editingEntry ? 'تنخواہ تبدیل کریں' : 'تنخواہ کی انٹری'}
+                                    {editingEntry ? 'تنخواہ تبدیل کریں' : "تنخواہ کا اندراج"}
                                 </h2>
                             </div>
                             {editingEntry ? (
@@ -303,7 +302,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 />
                             </div>
 
-                            {showSuggestions && searchQuery ? (
+                            {showSuggestions ? (
                                 <div className="absolute z-20 w-full mt-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl max-h-48 overflow-y-auto">
                                     {filteredTeachers.length ? filteredTeachers.map((teacher) => (
                                         <button
@@ -324,7 +323,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
                         <form onSubmit={handleSave} noValidate className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-dashed border-[var(--color-border)]">
-                                <p className="text-sm font-bold text-[var(--color-text-muted)] mb-1">منتخب عملہ / استاد:</p>
+                                <p className="text-lg font-bold text-[var(--color-text-muted)] mb-1">منتخب عملہ / استاد:</p>
                                 <p className="text-lg font-bold text-[var(--color-primary)]">{selectedTeacher?.fullName || searchQuery || '---'}</p>
                                 <p className="text-sm text-[var(--color-text-muted)] mt-1">{selectedTeacher?.subject || '---'}</p>
                             </div>

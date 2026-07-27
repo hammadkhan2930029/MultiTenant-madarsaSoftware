@@ -546,7 +546,7 @@ const EducationStep = ({ formData, qualificationOptions, isLoadingQualifications
     <StepHeading title="تعلیمی معلومات" description="تعلیمی قابلیت، مضمون یا ذمہ داری اور تخصص درج کریں۔" />
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <InputField
-        label="مضمون / ذمہ داری"
+        label="مضمون "
         required
         value={formData.subject}
         onChange={(event) => onChange('subject', event.target.value)}

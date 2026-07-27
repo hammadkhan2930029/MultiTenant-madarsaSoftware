@@ -324,7 +324,7 @@ export const ParentsList = () => {
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پیشہ</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پتہ</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">منسلک طلباء</th>
-                                <th className="p-5 text-center text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ایکشن</th>
+                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">

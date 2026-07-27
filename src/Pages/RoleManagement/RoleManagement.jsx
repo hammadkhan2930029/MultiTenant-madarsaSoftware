@@ -3,14 +3,21 @@ import { ArrowRight, CheckSquare, ChevronDown, Edit2, Eye, Plus, Save, Search, S
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { getBranches } from '../../Constant/AcademicSetupApi';
 import { ROLE_PERMISSION_MODULES, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { assignRolePermissions, createRole, deleteRole, getGroupedPermissions, getRoleAssignedPermissions, getRoleById, getRolePermissions, getRoles, updateRole } from '../../Constant/RoleManagementApi';
-import { getAdminSession, getSessionBranchId, refreshPermissions } from '../../Constant/AdminAuth';
+import { canUseTenantBranchContext, getAdminSession, getSelectedBranchContext, getSessionBranchId, refreshPermissions } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
 
-const emptyForm = { roleName: '', description: '', status: 'active' };
+const emptyForm = { roleName: '', description: '', status: 'active', branchId: '' };
 const BRANCH_RESTRICTED_PERMISSION_MODULES = new Set(['tenant_management', 'branches']);
 const BRANCH_RESTRICTED_PERMISSION_PREFIXES = ['tenant_management.', 'branches.'];
+
+const isMainBranch = (branch) => {
+  const name = String(branch?.name || '').trim().toLowerCase();
+  const code = String(branch?.code || '').trim().toLowerCase();
+  return name === 'main branch' || name === 'main campus' || code === 'main' || code === 'mc-01';
+};
 
 const roleDisplayNames = {
   super_admin: 'سپر ایڈمن',
@@ -196,8 +203,17 @@ const permissionDisplayNames = {
   'store.units.view': 'یونٹس دیکھیں',
   'store.reports': 'اسٹور رپورٹس دیکھیں',
   'settings.shifts.view': 'شفٹ دیکھیں',
+  'settings.shifts.create': 'شفٹ محفوظ کریں',
+  'settings.shifts.update': 'شفٹ تبدیل کریں',
+  'settings.shifts.delete': 'شفٹ حذف کریں',
   'settings.departments.view': 'شعبہ جات دیکھیں',
+  'settings.departments.create': 'شعبہ محفوظ کریں',
+  'settings.departments.update': 'شعبہ تبدیل کریں',
+  'settings.departments.delete': 'شعبہ حذف کریں',
   'settings.degrees.view': 'ڈگری نام دیکھیں',
+  'settings.degrees.create': 'ڈگری نام محفوظ کریں',
+  'settings.degrees.update': 'ڈگری نام تبدیل کریں',
+  'settings.degrees.delete': 'ڈگری نام حذف کریں',
   'settings.cities.view': 'شہر دیکھیں',
   'profile.view': 'پروفائل دیکھیں',
   'profile.change_password': 'پاس ورڈ تبدیل کریں',
@@ -406,8 +422,11 @@ export const RoleManagement = () => {
   const adminSession = getAdminSession();
   const sessionBranchId = getSessionBranchId(adminSession);
   const branchScopedSession = Boolean(sessionBranchId);
+  const canAssignRoleBranch = canUseTenantBranchContext(adminSession) && !branchScopedSession;
+  const selectedTenantBranchId = getSelectedBranchContext(adminSession).branchId || '';
 
   const [roles, setRoles] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [permissionModules, setPermissionModules] = useState(ROLE_PERMISSION_MODULES);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -497,19 +516,66 @@ export const RoleManagement = () => {
       )),
     [branchScopedSession, roles, sessionBranchId, statusFilter],
   );
+  const branchOptions = useMemo(() => {
+    const mainBranch = branches.find(isMainBranch);
+    const orderedBranches = mainBranch
+      ? [mainBranch, ...branches.filter((branch) => Number(branch.id) !== Number(mainBranch.id))]
+      : branches;
+
+    return orderedBranches.map((branch) => ({
+      value: String(branch.id),
+      label: isMainBranch(branch) ? `مرکزی برانچ - ${branch.name}` : branch.name,
+    }));
+  }, [branches]);
+
+  const getDefaultRoleBranchId = useCallback((items = []) => {
+    if (selectedTenantBranchId && items.some((branch) => Number(branch.id) === Number(selectedTenantBranchId))) {
+      return String(selectedTenantBranchId);
+    }
+
+    const mainBranch = items.find(isMainBranch);
+    return mainBranch?.id ? String(mainBranch.id) : '';
+  }, [selectedTenantBranchId]);
+
+  const loadBranches = useCallback(async () => {
+    if (!canAssignRoleBranch) return;
+
+    try {
+      const result = await getBranches('page=1&limit=100&status=active');
+      const items = Array.isArray(result?.items) ? result.items : [];
+      setBranches(items);
+
+      if (mode === 'create') {
+        const defaultBranchId = getDefaultRoleBranchId(items);
+        setFormData((current) => ({
+          ...current,
+          branchId: current.branchId || defaultBranchId,
+        }));
+      }
+    } catch (loadError) {
+      setBranches([]);
+      setError(loadError.message || 'برانچز لوڈ نہیں ہو سکیں۔');
+    }
+  }, [canAssignRoleBranch, getDefaultRoleBranchId, mode]);
 
   const loadRoles = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await getRoles({ page: 1, limit: 100, search, status: statusFilter });
+      const result = await getRoles({
+        page: 1,
+        limit: 100,
+        search,
+        status: statusFilter,
+        branchId: canAssignRoleBranch ? selectedTenantBranchId || undefined : undefined,
+      });
       setRoles(result.items || []);
     } catch (loadError) {
       setError(loadError.message || 'کردار لوڈ نہیں ہو سکے۔');
     } finally {
       setIsLoading(false);
     }
-  }, [search, statusFilter]);
+  }, [canAssignRoleBranch, search, selectedTenantBranchId, statusFilter]);
 
   const loadRole = useCallback(async () => {
     if (!roleId || mode === 'create' || mode === 'list') return;
@@ -563,6 +629,7 @@ export const RoleManagement = () => {
   }, [branchScopedSession, permissionScopeKey]);
 
   useEffect(() => { loadPermissions(); }, [loadPermissions]);
+  useEffect(() => { loadBranches(); }, [loadBranches]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -571,7 +638,7 @@ export const RoleManagement = () => {
     }
 
     if (mode === 'create') {
-      setFormData(emptyForm);
+      setFormData({ ...emptyForm, branchId: getDefaultRoleBranchId(branches) });
       setSelectedPermissions([]);
       setSavedPermissions([]);
       setCurrentRole(null);
@@ -651,6 +718,11 @@ export const RoleManagement = () => {
       return;
     }
 
+    if (canAssignRoleBranch && !formData.branchId) {
+      setError('برانچ منتخب کریں۔');
+      return;
+    }
+
     setIsSaving(true);
     setError('');
     setSuccess('');
@@ -664,6 +736,10 @@ export const RoleManagement = () => {
           ? selectedPermissions.filter((permissionKey) => availablePermissionKeys.has(permissionKey))
           : selectedPermissions,
       };
+
+      if (mode === 'create' && canAssignRoleBranch) {
+        payload.branchId = Number(formData.branchId);
+      }
 
       if (mode === 'edit') {
         const updatedRole = await updateRole(roleId, payload);
@@ -918,6 +994,16 @@ export const RoleManagement = () => {
             onChange={(event) => setFormData((prev) => ({ ...prev, roleName: event.target.value }))}
             disabled={mode === 'edit' && isProtectedRole(currentRole)}
           />
+
+          {mode === 'create' && canAssignRoleBranch ? (
+            <SelectField
+              label="برانچ"
+              required
+              options={branchOptions}
+              value={formData.branchId}
+              onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))}
+            />
+          ) : null}
 
           <div className="space-y-2">
             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تفصیل</label>

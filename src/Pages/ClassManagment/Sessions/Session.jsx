@@ -3,6 +3,7 @@ import { Calendar, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSession, deleteSession, getSessions, updateSession } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
 
 const emptyForm = {
     name: '',
@@ -54,6 +55,19 @@ export const CreateSessions = () => {
 
     useEffect(() => {
         loadSessions();
+    }, []);
+
+    useEffect(() => {
+        const handleBranchContextUpdated = () => {
+            resetForm();
+            loadSessions();
+        };
+
+        window.addEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
+
+        return () => {
+            window.removeEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
+        };
     }, []);
 
     const resetForm = () => {

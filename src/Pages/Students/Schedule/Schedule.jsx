@@ -288,7 +288,7 @@ export const StudentScheduleManager = () => {
             <div className="bg-[var(--color-surface)] flex justify-between items-center border border-[var(--color-border)] pr-4 py-4 rounded-[2.5rem] shadow-xl">
                 <div>
                     <h1 className="text-3xl font-black text-[var(--color-text)]">نظام الاوقات</h1>
-                    <p className="text-sm opacity-60 mt-5">مخصوص جماعت کے لئے مضامین، دن اور ان کے اوقات کا تعین کریں</p>
+                    <p className="text-md opacity-60 mt-5">مخصوص جماعت کے لئے مضامین، دن اور ان کے اوقات کا تعین کریں</p>
                 </div>
                 <div className="hidden md:block bg-[var(--color-surface)] p-3 rounded-2xl border border-[var(--color-border)]/10">
                     <Calendar className="text-[var(--color-primary)]" size={24} />
@@ -314,9 +314,9 @@ export const StudentScheduleManager = () => {
                         <h4 className="text-xl font-black text-[var(--color-primary)] uppercase tracking-widest border-b border-[var(--color-border)]/10 pb-2">بنیادی معلومات</h4>
 
                         <div>
-                            <label className="text-xl font-bold opacity-70 block mb-2">تعلیمی سیشن</label>
+                            <label className="text-base font-bold opacity-60 block mb-2">تعلیمی سیشن</label>
                             <select
-                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none appearance-none cursor-pointer"
+                                className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none appearance-none cursor-pointer"
                                 value={formData.sessionId}
                                 disabled={isLoadingOptions}
                                 onChange={e => {
@@ -331,9 +331,9 @@ export const StudentScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-xl font-bold opacity-70 block mb-2">کلاس منتخب کریں</label>
+                                <label className="text-base font-bold opacity-60 block mb-2">کلاس منتخب کریں</label>
                                 <select
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                     value={formData.classId}
                                     disabled={isLoadingOptions}
                                     onChange={e => {
@@ -352,9 +352,9 @@ export const StudentScheduleManager = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="text-xl font-bold opacity-70 block mb-2">سیکشن</label>
+                                <label className="text-base font-bold opacity-60 block mb-2">سیکشن</label>
                                 <select
-                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-sm outline-none cursor-pointer"
+                                    className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                     value={formData.sectionId}
                                     disabled={isLoadingOptions || !formData.classId}
                                     onChange={e => {
@@ -411,11 +411,11 @@ export const StudentScheduleManager = () => {
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
                             <div>
-                                <label className="text-lg opacity-70 block mb-1">کلاس شروع</label>
+                                <label className="text-base opacity-50 block mb-1">کلاس شروع</label>
                                 <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} />
                             </div>
                             <div>
-                                <label className="text-lg opacity-70 block mb-1">کلاس ختم</label>
+                                <label className="text-base opacity-50 block mb-1">کلاس ختم</label>
                                 <input type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} />
                             </div>
                         </div>
@@ -454,10 +454,10 @@ export const StudentScheduleManager = () => {
             {/* ----------------------------------------------------Select Data Layout----------------------------------------------- */}
             {schedules.length > 0 && (
                 <div className='flex flex-row justify-start items-center'>
-                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-base lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
                         <LayoutDashboard size={20} /> دنوں کے حساب سے
                     </button>
-                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-base lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
                         <LayoutPanelTop size={20} /> مضمون کے حساب سے
                     </button>
                 </div>

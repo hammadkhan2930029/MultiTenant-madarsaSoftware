@@ -146,9 +146,16 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                             <TrendingUp size={18} />
                             تنخواہ انکریمنٹ
                         </div>
-                        <h1 className="text-3xl font-black text-[var(--color-text-main)]">{fixedStaffType === 'staff' ? 'عملہ انکریمنٹ' : fixedStaffType === 'teacher' ? 'اساتذہ انکریمنٹ' : 'اساتذہ / عملہ انکریمنٹ'}</h1>
+                        <h1 className="text-3xl font-black text-[var(--color-text-main)]">{fixedStaffType === 'staff' ? 'عملے کی تنخواہ میں اضافہ' : fixedStaffType === 'teacher' ? 'اساتذہ کی تنخواہ میں اضافہ' : 'اساتذہ / عملہ انکریمنٹ'}</h1>
                         <p className="mt-3 text-base font-bold leading-8 text-[var(--color-text-muted)]">
-                            تمام اساتذہ اور عملہ کی تنخواہ میں اضافہ یہاں سے درج اور ٹریک کریں۔
+                            {fixedStaffType === 'staff' ?
+                                "عملے کی تنخواہوں میں اضافے کی تفصیلات کا اندراج اور ریکارڈ یہاں سے دیکھیں۔"
+                                :
+                                fixedStaffType === 'teacher' ?
+                                    "اساتذہ کی تنخواہوں میں اضافے کی تفصیلات کا اندراج اور ریکارڈ یہاں سے دیکھیں۔"
+                                    : null}
+
+
                         </p>
                     </div>
                     <div className="grid h-20 w-20 place-items-center rounded-[2rem] bg-[var(--color-primary)]/10 text-[var(--color-primary)]">

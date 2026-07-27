@@ -233,6 +233,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(220px,auto)_1fr] xl:items-center">
                     <div className="space-y-2">
                         <h2 className="text-2xl md:text-3xl font-black text-[var(--text-color)]">{config.title}</h2>
+                         <p className="text-[var(--color-text-muted)] text-sm font-bold mt-2 "> {config.totalLabel}: {visibleTotal}</p>
                         <div className="flex items-center gap-3 mt-5">
                             <span className="bg-[var(--color-bg)]/20 text-[var(--color-primary)] text-[10px] font-bold px-3 py-1 rounded-full border border-[#00d094]/30 uppercase tracking-wider">
                                 {config.totalLabel}: {visibleTotal}
@@ -274,10 +275,9 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         <Can permission={`${permissionPrefix}.create`}>
                             <button
                                 onClick={() => navigate(config.addPath)}
-                                className="flex h-[72px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-[#00d094] px-5 font-bold text-[#002a33] shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95"
+                                className="bg-[var(--color-primary)] w-15 text-white mr-6 p-4 rounded-[1.5rem] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[var(--color-primary)]/20 group"
                             >
-                                <UserPlus size={18} />
-                                <span>نیا اندراج</span>
+                                <UserPlus size={24} className="group-hover:rotate-12 transition-transform"/>
                             </button>
                         </Can>
                     </div>

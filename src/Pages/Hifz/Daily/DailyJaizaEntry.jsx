@@ -267,7 +267,7 @@ export const DailyJaizaEntry = () => {
                             <ClipboardCheck size={30} />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black text-[var(--color-text-main)]">یومیہ جائزہ اندراج</h1>
+                            <h1 className="text-3xl font-black text-[var(--color-text-main)]">یومیہ جائزہ کا اندراج</h1>
                             <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">طالب علم کی روزانہ کی کارکردگی درج کریں</p>
                         </div>
                     </div>
@@ -369,14 +369,14 @@ export const DailyJaizaEntry = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] p-6 space-y-4">
                             <h3 className="text-lg font-black text-[var(--color-primary)] flex items-center gap-2 mb-4">
-                                <BookOpen size={20} /> سبق (Sabaq)
+                                <BookOpen size={20} /> سبق 
                             </h3>
                             <ReviewDetailFields section="sabaq" entryId={entry.id} values={entry.sabaq} onChange={(field, value) => handleEntryChange(entry.id, 'sabaq', field, value)} teacherOptions={teacherOptions} showTeacher />
                         </div>
 
                         <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] p-6 space-y-4">
                             <h3 className="text-lg font-black text-blue-400 flex items-center gap-2 mb-4">
-                                <ClipboardCheck size={20} /> سبقی (Sabqi)
+                                <ClipboardCheck size={20} /> سبقی 
                             </h3>
                             <ReviewDetailFields section="sabqi" entryId={entry.id} values={entry.sabqi} onChange={(field, value) => handleEntryChange(entry.id, 'sabqi', field, value)} />
                         </div>

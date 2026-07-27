@@ -269,7 +269,7 @@ export const CreateIdCard = () => {
                     <CreditCard className="text-[var(--color-primary)]" /> آئی ڈی کارڈ جنریٹر
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5 items-end ">
                     <FilterSelect
                         label="سیشن"
                         value={filters.sessionId}
@@ -363,6 +363,9 @@ export const CreateIdCard = () => {
                         </div>
                     </div>
 
+
+                </div>
+                <div className="mt-4 flex justify-end gap-3">
                     <button
                         type="button"
                         onClick={handleSearch}
@@ -374,7 +377,7 @@ export const CreateIdCard = () => {
                 </div>
 
                 <div className="mt-8 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)]">
-                    <div className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] gap-3 border-b border-[var(--color-border)] px-4 py-4 text-xs font-black text-[var(--color-text-muted)]">
+                    <div className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] gap-3 border-b border-[var(--color-border)] px-4 py-4 text-md font-black text-[var(--color-text-muted)]">
                         <span>داخلہ نمبر</span>
                         <span>نام</span>
                         <span>سیشن</span>
@@ -386,7 +389,7 @@ export const CreateIdCard = () => {
                         <div className="px-4 py-6 text-center text-sm font-bold text-[var(--color-text-muted)]">طلبہ لوڈ ہو رہے ہیں...</div>
                     ) : tableStudents.length > 0 ? (
                         tableStudents.map((student) => (
-                            <div key={student.id} className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 text-sm font-bold last:border-b-0">
+                            <div key={student.id} className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 text-md font-bold last:border-b-0">
                                 <span className="text-[var(--color-text-muted)]">{student.admissionNumber || '---'}</span>
                                 <span className="text-[var(--color-text-main)]">{student.fullName || '---'}</span>
                                 <span className="text-[var(--color-text-muted)]">{getStudentSessionName(student)}</span>

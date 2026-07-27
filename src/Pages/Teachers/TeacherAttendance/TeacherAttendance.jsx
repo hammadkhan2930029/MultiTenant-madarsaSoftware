@@ -285,7 +285,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                 <div className="relative z-[90] p-6 border-b border-[var(--color-border)]/10 flex flex-col gap-4">
                     <div className="flex flex-col gap-5">
                         <div className="flex w-full flex-col gap-3">
-                            <h2 className="text-xl font-bold text-[var(--text-color)]">حاضری شیٹ</h2>
+                            <h2 className="text-4xl font-bold text-[var(--text-color)]">حاضری شیٹ</h2>
                             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                                 <div className="space-y-2">
                                     <label className="block text-sm font-bold text-[var(--text-color)]">تاریخ</label>

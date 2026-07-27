@@ -101,6 +101,18 @@ export const TeachersScheduleManager = () => {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
+    // ==================================================
+
+    const isFormComplete =
+    Boolean(formData.teacherId) &&
+    Boolean(formData.sessionId) &&
+    Boolean(formData.classId) &&
+    Boolean(formData.sectionId) &&
+    formData.subjects.length > 0 &&
+    formData.days.length > 0 &&
+    Boolean(formData.startTime) &&
+    Boolean(formData.endTime);
+    // ==================================================
 
     useEffect(() => {
         const loadSetup = async () => {
@@ -292,7 +304,6 @@ export const TeachersScheduleManager = () => {
                         <div>
                             <label className="text-base font-bold opacity-60 block mb-2">تعلیمی سیشن<span className="text-red-500"> *</span></label>
                             <select
-                                required
                                 className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none appearance-none cursor-pointer"
                                 value={formData.sessionId}
                                 disabled={isLoadingOptions}
@@ -310,7 +321,6 @@ export const TeachersScheduleManager = () => {
                             <div>
                                 <label className="text-base font-bold opacity-60 block mb-2">کلاس منتخب کریں<span className="text-red-500"> *</span></label>
                                 <select
-                                    required
                                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                     value={formData.classId}
                                     disabled={isLoadingOptions}
@@ -326,7 +336,6 @@ export const TeachersScheduleManager = () => {
                             <div>
                                 <label className="text-base font-bold opacity-60 block mb-2">سیکشن<span className="text-red-500"> *</span></label>
                                 <select
-                                    required
                                     className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                     value={formData.sectionId}
                                     disabled={isLoadingOptions || !formData.classId}
@@ -344,7 +353,6 @@ export const TeachersScheduleManager = () => {
                         <div>
                             <label className="text-base font-bold opacity-60 block mb-2">استاد منتخب کریں<span className="text-red-500"> *</span></label>
                             <select
-                                required
                                 className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none cursor-pointer"
                                 value={formData.teacherId}
                                 disabled={isLoadingOptions}
@@ -395,11 +403,11 @@ export const TeachersScheduleManager = () => {
                         <div className="grid grid-cols-2 gap-3 pt-2">
                             <div>
                                 <label className="text-base opacity-50 block mb-1">کلاس شروع<span className="text-red-500"> *</span></label>
-                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.startTime} onChange={(event) => setFormData({ ...formData, startTime: event.target.value })} />
+                                <input  type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.startTime} onChange={(event) => setFormData({ ...formData, startTime: event.target.value })} />
                             </div>
                             <div>
                                 <label className="text-base opacity-50 block mb-1">کلاس ختم<span className="text-red-500"> *</span></label>
-                                <input required type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.endTime} onChange={(event) => setFormData({ ...formData, endTime: event.target.value })} />
+                                <input  type="time" className="w-full bg-[var(--color-bg)] border border-[var(--color-border)]/10 rounded-xl p-3 text-base outline-none" value={formData.endTime} onChange={(event) => setFormData({ ...formData, endTime: event.target.value })} />
                             </div>
                         </div>
 
@@ -422,7 +430,7 @@ export const TeachersScheduleManager = () => {
                                     منسوخ‌ کریں
                                 </button>
                             ) : null}
-                            <button type="submit" disabled={isSaving} className="flex-1 bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                            <button type="submit" disabled={isSaving || !isFormComplete} className="flex-1 bg-[var(--color-primary)] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-60">
                                 {editingScheduleId ? <Edit2 size={20} /> : <Plus size={20} />}
                                 {isSaving ? 'محفوظ ہو رہا ہے...' : editingScheduleId ? 'تبدیل کریں' : 'محفوظ کریں'}
                             </button>

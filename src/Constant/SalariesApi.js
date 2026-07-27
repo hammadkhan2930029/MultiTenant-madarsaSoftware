@@ -20,6 +20,11 @@ export const getSalaryEntries = async (query = '') => {
   return result?.data || { items: [], meta: null };
 };
 
+export const getSalaryTeachers = async (query = '') => {
+  const result = await apiRequest(`/finance/salaries/teachers${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
 export const createSalaryEntry = async (payload) => {
   const result = await apiRequest('/finance/salaries', withJson('POST', payload));
   return result?.data;

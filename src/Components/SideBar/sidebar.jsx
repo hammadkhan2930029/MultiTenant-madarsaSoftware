@@ -296,9 +296,11 @@ export const SideBar = () => {
                 { id: 'std_parents', label: 'سرپرست', path: '/students/parents' },
                 { id: 'std_admission', label: 'داخلہ فارم', path: '/students/admission' },
                 { id: 'std_list', label: 'طلباء کی فہرست', path: '/students/list' },
-                { id: 'std_id_card', label: 'آئی ڈی کارڈ بنائیں', path: '/students/create-id-card' },
-                { id: 'std_attendance', label: 'طلبہ کی حاضری', path: '/students/attendance' },
                 { id: 'std_class_asign', label: 'طلباء کو جماعت میں شامل کریں', path: '/students/class_asign' },
+
+                { id: 'std_attendance', label: 'طلبہ کی حاضری', path: '/students/attendance' },
+                { id: 'std_id_card', label: 'آئی ڈی کارڈ بنائیں', path: '/students/create-id-card' },
+
                 { id: 'std_schedule ', label: 'نظام الاوقات', path: '/students/schedule' },
                 { id: 'std_fees ', label: 'فیس جینریشن', path: '/students/fees' },
 
@@ -498,7 +500,7 @@ export const SideBar = () => {
             subMenu: [
                 { id: 'shift', label: 'شفٹ کا انتظام', path: '/setting/shift', permissions: ['settings.view', 'settings.update', 'settings.shifts.view'] },
                 { id: 'department', label: 'شعبہ جات کا انتظام', path: '/setting/department', permissions: ['settings.view', 'settings.update', 'settings.departments.view'] },
-                { id: 'degree', label: 'تعلیمی اسناد کے نام', path: '/setting/degree-name', permissions: ['settings.view', 'settings.update', 'settings.degrees.view'] },
+                { id: 'degree', label: 'تعلیمی اسناد کا انتظام', path: '/setting/degree-name', permissions: ['settings.view', 'settings.update', 'settings.degrees.view'] },
                 { id: 'role_management', label: 'کردار مینجمنٹ', path: '/role-management', permissions: ['roles.view', 'roles.manage'] },
                 { id: 'user_management', label: 'صارفین مینجمنٹ', path: '/role-management/users', permissions: ['users.view', 'users.manage'] },
                 { id: 'tenant_management', label: 'مدارس کا انتظام', path: '/tenant-management', permission: 'tenant_management.view' },
@@ -587,7 +589,7 @@ export const SideBar = () => {
         setting: 'ترتیبات',
         shift: 'شفٹ کا انتظام',
         department: 'شعبہ جات کا انتظام',
-        degree: 'تعلیمی اسناد کے نام',
+        degree: 'تعلیمی اسناد کا انتظام',
         role_management: 'کردار مینجمنٹ',
         user_management: 'صارفین مینجمنٹ',
         tenant_management: 'مدارس کا انتظام',

@@ -125,6 +125,11 @@ const getRoleStatus = (role) => String(role?.status || 'active').toLowerCase();
 const getUserStatus = (user) => String(user?.status || 'active').toLowerCase();
 const isSuperAdminUser = (user) => getRoleName(user) === SUPER_ADMIN_ROLE;
 const getUserPhone = (user) => user?.phone || user?.phoneNumber || user?.phone_number || '---';
+const isMainBranch = (branch) => {
+  const name = String(branch?.name || '').trim().toLowerCase();
+  const code = String(branch?.code || '').trim().toLowerCase();
+  return name === 'main branch' || name === 'main campus' || code === 'main' || code === 'mc-01';
+};
 
 const formatDate = (value) => {
   if (!value) return '---';
@@ -182,6 +187,11 @@ export const UserManagement = () => {
 
   useNotificationBridge({ error, success });
 
+  const mainTenantBranchId = useMemo(() => {
+    const mainBranch = branches.find(isMainBranch);
+    return mainBranch?.id ? String(mainBranch.id) : '';
+  }, [branches]);
+  const roleSourceBranchId = selectedTenantBranchId || mainTenantBranchId;
   const formBranchId = formData.branchId ? String(formData.branchId) : '';
   const assignmentBranchId = branchScopedSession
     ? String(sessionBranchId || '')
@@ -206,12 +216,6 @@ export const UserManagement = () => {
         if (Number(roleBranchId) !== Number(sessionBranchId) || Number(roleScopeKey) !== Number(sessionBranchId)) {
           return false;
         }
-      } else if (assignmentBranchId) {
-        if (Number(roleBranchId) !== Number(assignmentBranchId) || Number(roleScopeKey) !== Number(assignmentBranchId)) {
-          return false;
-        }
-      } else if (roleBranchId) {
-        return false;
       }
       return (active || (lockSuperAdminRole && isCurrentRole)) && (roleName !== SUPER_ADMIN_ROLE || lockSuperAdminRole);
     });
@@ -220,7 +224,7 @@ export const UserManagement = () => {
       { value: '', label: 'کردار منتخب کریں' },
       ...visibleRoles.map((role) => ({ value: String(role.id), label: getRoleDisplayName(getRoleRecordName(role)) })),
     ];
-  }, [assignmentBranchId, branchScopedSession, currentUser, mode, roles, sessionBranchId]);
+  }, [branchScopedSession, currentUser, mode, roles, sessionBranchId]);
 
   const roleFilterOptions = useMemo(() => [
     { value: '', label: 'تمام کردار' },
@@ -241,15 +245,45 @@ export const UserManagement = () => {
 
   const branchOptions = useMemo(() => [
     { value: '', label: 'برانچ منتخب کریں' },
-    ...branches
-      .filter((branch) => getUserStatus(branch) === 'active')
-      .map((branch) => ({ value: String(branch.id), label: branch.name || branch.code || `#${branch.id}` })),
+    ...(() => {
+      const activeBranches = branches.filter((branch) => getUserStatus(branch) === 'active');
+      const mainBranch = activeBranches.find(isMainBranch);
+      const orderedBranches = mainBranch
+        ? [mainBranch, ...activeBranches.filter((branch) => Number(branch.id) !== Number(mainBranch.id))]
+        : activeBranches;
+
+      return orderedBranches.map((branch) => ({
+        value: String(branch.id),
+        label: isMainBranch(branch) ? `مرکزی برانچ - ${branch.name}` : branch.name || branch.code || `#${branch.id}`,
+      }));
+    })(),
   ], [branches]);
 
   const loadRoles = useCallback(async () => {
-    const result = await getRoles({ page: 1, limit: 100 });
-    setRoles(result.items || []);
-  }, []);
+    if (branchScopedSession) {
+      const result = await getRoles({ page: 1, limit: 100, branchId: sessionBranchId });
+      setRoles(result.items || []);
+      return;
+    }
+
+    const branchIds = [...new Set([
+      assignmentBranchId,
+      selectedTenantBranchId,
+      roleSourceBranchId,
+      mainTenantBranchId,
+      ...branches.map((branch) => branch?.id),
+    ].filter(Boolean).map(String))];
+    const roleRequests = [
+      getRoles({ page: 1, limit: 100 }),
+      ...branchIds.map((branchId) => getRoles({ page: 1, limit: 100, branchId })),
+    ];
+    const roleResults = await Promise.all(roleRequests);
+    const mergedRoles = new Map();
+    roleResults.flatMap((result) => result.items || []).forEach((role) => {
+      mergedRoles.set(String(role.id), role);
+    });
+    setRoles(Array.from(mergedRoles.values()));
+  }, [assignmentBranchId, branchScopedSession, branches, mainTenantBranchId, roleSourceBranchId, selectedTenantBranchId, sessionBranchId]);
 
   const loadBranches = useCallback(async () => {
     if (branchScopedSession) {
@@ -305,9 +339,12 @@ export const UserManagement = () => {
   }, [branchScopedSession, sessionBranchId, mode, userId]);
 
   useEffect(() => {
-    loadRoles().catch((roleError) => setError(roleError.message || 'کردار لوڈ نہیں ہو سکے۔'));
     loadBranches();
-  }, [loadBranches, loadRoles]);
+  }, [loadBranches]);
+
+  useEffect(() => {
+    loadRoles().catch((roleError) => setError(roleError.message || 'کردار لوڈ نہیں ہو سکے۔'));
+  }, [loadRoles]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -319,7 +356,7 @@ export const UserManagement = () => {
       setCurrentUser(null);
       setFormData({
         ...emptyForm,
-        branchId: branchScopedSession && sessionBranchId ? String(sessionBranchId) : selectedTenantBranchId,
+        branchId: branchScopedSession && sessionBranchId ? String(sessionBranchId) : selectedTenantBranchId || mainTenantBranchId,
       });
       setIsLoading(false);
       return undefined;
@@ -327,7 +364,7 @@ export const UserManagement = () => {
 
     loadUser();
     return undefined;
-  }, [branchScopedSession, loadUser, loadUsers, mode, selectedTenantBranchId, sessionBranchId]);
+  }, [branchScopedSession, loadUser, loadUsers, mainTenantBranchId, mode, selectedTenantBranchId, sessionBranchId]);
 
   const handleSubmit = async () => {
     if (isSaving) return undefined;
@@ -462,7 +499,7 @@ export const UserManagement = () => {
               readOnly
             />
           ) : (
-            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, roleId: '' }))} />
+            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))} />
           )}
           <SelectField id="user-status" label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
         </div>

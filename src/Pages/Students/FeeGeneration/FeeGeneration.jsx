@@ -709,7 +709,7 @@ export const FeesCollection = () => {
                 <div className="overflow-hidden rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm print:hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[1100px] text-right">
-                            <thead className="bg-[var(--color-bg)] text-xs font-black text-[var(--color-text-muted)]">
+                            <thead className="bg-[var(--color-bg)] text-base font-black text-[var(--color-text-muted)]">
                                 <tr>
                                     <th className="px-5 py-4">واؤچر</th>
                                     <th className="px-5 py-4">طالب علم</th>
@@ -724,7 +724,7 @@ export const FeesCollection = () => {
                             </thead>
                             <tbody className="divide-y divide-[var(--color-border)]">
                                 {isLoading ? (
-                                    <tr><td colSpan="9" className="px-5 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">فیس ریکارڈ لوڈ ہو رہا ہے...</td></tr>
+                                    <tr><td colSpan="9" className="px-5 py-10 text-center text-base font-bold text-[var(--color-text-muted)]">فیس ریکارڈ لوڈ ہو رہا ہے...</td></tr>
                                 ) : vouchers.length ? vouchers.map((voucher) => {
                                     const StatusIcon = statusConfig[voucher.status]?.icon || Clock;
                                     const assignment = getAssignment(voucher);
@@ -738,11 +738,11 @@ export const FeesCollection = () => {
                                                         <span> داخلہ نمبر : </span>
                                                         <span>{voucher.student?.admissionNumber || '---'}</span>
                                                     </div>
-                                                     <div>
+                                                    <div>
                                                         <span> سرپرست کا نام : </span>
                                                         <span>{voucher.student?.fatherName || '---'}</span>
                                                     </div>
-                                                   
+
                                                 </div>
                                             </td>
                                             <td className="px-5 py-4 text-sm font-bold text-[var(--color-text-muted)]">{assignment.class?.name || '---'} / {assignment.section?.name || '---'}</td>
@@ -796,7 +796,7 @@ export const FeesCollection = () => {
                             className="w-10 h-15 absolute left-5 top-5 rounded-xl bg-[var(--color-bg)]  transition-all hover:text-rose-500 "
                             aria-label="بند کریں"
                         >
-                           <span className="text-lg text-[var(--color-text-primary)]">X</span>
+                            <span className="text-lg text-[var(--color-text-primary)]">X</span>
                         </button>
                         <h3 className="text-xl font-black">فیس ادائیگی</h3>
                         <p className="mt-2 text-sm font-bold text-[var(--color-text-muted)]">{paymentTarget.student?.fullName} - {paymentTarget.voucherNo}</p>

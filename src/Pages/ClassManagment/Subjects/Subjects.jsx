@@ -4,6 +4,7 @@ import { createSubjectsBulk, deleteSubject, getSubjects, updateSubject } from '.
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
+import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
 
 const emptyForm = {
     name: '',
@@ -55,6 +56,19 @@ export const CreateSubjects = () => {
 
     useEffect(() => {
         loadSubjects();
+    }, []);
+
+    useEffect(() => {
+        const handleBranchContextUpdated = () => {
+            resetForm();
+            loadSubjects();
+        };
+
+        window.addEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
+
+        return () => {
+            window.removeEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
+        };
     }, []);
 
     const resetForm = () => {

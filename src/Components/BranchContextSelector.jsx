@@ -19,7 +19,8 @@ export const BranchContextSelector = () => {
   const [session, setSession] = useState(() => getAdminSession());
   const hasFixedBranch = Boolean(session?.admin?.branchId || session?.user?.branchId);
   const accountScope = String(session?.admin?.accountScope || session?.admin?.userType || session?.user?.accountScope || session?.user?.userType || '').toLowerCase();
-  const canUseBranchFilter = canUseTenantBranchContext(session) && !hasFixedBranch && !accountScope.startsWith('branch');
+  const isTenantAdminAccount = String(session?.admin?.role || session?.user?.role || session?.role?.roleName || session?.role?.role_name || '').toLowerCase() === 'admin';
+  const canUseBranchFilter = canUseTenantBranchContext(session) && (!hasFixedBranch || isTenantAdminAccount) && !accountScope.startsWith('branch');
   const selectedContext = getSelectedBranchContext(session);
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState(selectedContext.branchId || '');
@@ -44,10 +45,25 @@ export const BranchContextSelector = () => {
 
         const currentBranchId = getSelectedBranchContext(getAdminSession()).branchId;
         const selectedStillActive = currentBranchId && items.some((branch) => Number(branch.id) === Number(currentBranchId));
+        const mainBranch = items.find(isMainBranch);
 
         if (currentBranchId && !selectedStillActive) {
+          if (mainBranch?.id) {
+            setSelectedBranchContext(Number(mainBranch.id), getAdminSession());
+            setSelectedBranchId(String(mainBranch.id));
+            window.location.reload();
+            return;
+          }
+
           setSelectedBranchContext(null, getAdminSession());
           setSelectedBranchId('');
+          return;
+        }
+
+        if (!currentBranchId && mainBranch?.id) {
+          setSelectedBranchContext(Number(mainBranch.id), getAdminSession());
+          setSelectedBranchId(String(mainBranch.id));
+          window.location.reload();
           return;
         }
 
@@ -99,7 +115,11 @@ export const BranchContextSelector = () => {
           className="w-full appearance-none rounded-2xl border border-themeBorder bg-themeSurface py-3 pl-11 pr-12 text-right text-sm font-bold text-themeText outline-none transition-colors focus:border-themePrimary disabled:cursor-not-allowed disabled:opacity-70"
           aria-label="برانچ فلٹر"
         >
-          <option value="">{loading ? 'برانچز لوڈ ہو رہی ہیں...' : 'مین ٹیننٹ'}</option>
+          {loading || !sortedBranches.length ? (
+            <option value="" disabled>
+              {loading ? 'برانچز لوڈ ہو رہی ہیں...' : 'برانچ دستیاب نہیں'}
+            </option>
+          ) : null}
           {sortedBranches.map((branch) => (
             <option key={branch.id} value={branch.id}>
               {isMainBranch(branch) ? `مرکزی برانچ - ${branch.name}` : branch.name}

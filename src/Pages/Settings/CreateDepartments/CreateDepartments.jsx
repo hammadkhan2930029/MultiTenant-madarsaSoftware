@@ -422,7 +422,7 @@ export const DepartmentManagement = () => {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1  gap-6">
                 {isLoading ? (
                     <div
                         style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
@@ -431,47 +431,136 @@ export const DepartmentManagement = () => {
                         شعبہ جات لوڈ ہو رہے ہیں...
                     </div>
                 ) : departments.length > 0 ? (
-                    departments.map((dept) => (
-                        <div
-                            key={dept.id}
-                            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-                            className="group border rounded-[2rem] p-5 flex items-center justify-between hover:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
-                        >
-                            <div className="flex items-center gap-5">
-                                <div style={{ backgroundColor: 'var(--color-input)' }} className="w-14 h-14 rounded-2xl flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform">
-                                    <Target size={26} />
-                                </div>
-                                <div>
-                                    <h3 style={{ color: 'var(--color-text-main)' }} className="text-xl font-black">
-                                        {dept.name} <span className="px-2 text-sm font-bold opacity-60">#{dept.code || '-'}</span>
-                                    </h3>
-                                    <div className="flex flex-wrap items-center gap-4 mt-2">
-                                        <span style={{ color: 'var(--color-text-muted)' }} className="flex items-center gap-1.5 text-sm font-bold md:text-base">
-                                            <Shield size={15} /> ہیڈ: {dept.head || '-'}
-                                        </span>
-                                        <span style={{ color: 'var(--color-text-muted)' }} className="flex items-center gap-1.5 text-sm font-bold md:text-base">
-                                            <Users size={15} /> {dept.members || 0} ممبرز
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+                        className="border rounded-[2rem] overflow-hidden shadow-sm">
+                        <div className="w-full overflow-x-auto">
+                            <table dir="rtl" className="w-full min-w-[750px] table-fixed">
+                                <thead>
+                                    <tr
+                                        style={{
+                                            backgroundColor: 'var(--color-bg)',
+                                            borderColor: 'var(--color-border)',
+                                        }}
+                                        className="border-b"
+                                    >
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[35%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            شعبہ
+                                        </th>
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => handleEdit(dept)}
-                                    className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
-                                >
-                                    <Edit2 size={18} />
-                                </button>
-                                <button
-                                    onClick={() => setDeleteTarget(dept)}
-                                    className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[20%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            شعبہ کوڈ
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[20%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            شعبہ ہیڈ
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[12%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            ممبرز
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[13%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            ایکشنز
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {departments.map((dept) => (
+                                        <tr
+                                            key={dept.id}
+                                            style={{
+                                                backgroundColor: 'var(--color-surface)',
+                                                borderColor: 'var(--color-border)',
+                                            }}
+                                            className="group border-b last:border-b-0 hover:bg-[var(--color-input)] transition-all"
+                                        >
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div
+                                                        style={{
+                                                            backgroundColor: 'var(--color-input)',
+                                                        }}
+                                                        className="w-12 h-12 rounded-xl flex items-center justify-center text-[var(--color-primary)]"
+                                                    >
+                                                        <Target size={24} />
+                                                    </div>
+
+                                                    <span
+                                                        style={{ color: 'var(--color-text-main)' }}
+                                                        className="font-bold text-lg"
+                                                    >
+                                                        {dept.name}
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            <td
+                                              
+                                                style={{ color: 'var(--color-text-muted)' }}
+                                                className="px-6 py-4 font-bold"
+                                            >
+                                                #{dept.code || '-'}
+                                            </td>
+
+                                            <td className="px-6 py-4">
+                                                <div
+                                                    style={{ color: 'var(--color-text-muted)' }}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Shield size={16} />
+                                                    {dept.head || '-'}
+                                                </div>
+                                            </td>
+
+                                            <td className="px-6 py-4">
+                                                <div
+                                                    style={{ color: 'var(--color-text-muted)' }}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Users size={16} />
+                                                    {dept.members || 0}
+                                                </div>
+                                            </td>
+
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(dept)}
+                                                        className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setDeleteTarget(dept)}
+                                                        className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ))
+                    </div>
                 ) : (
                     <div
                         style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}

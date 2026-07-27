@@ -120,7 +120,7 @@ export const QualificationManagement = () => {
         <div className="space-y-8 animate-in fade-in duration-700 lg:pt-0 md:pt-0 pt-6" dir="rtl">
             <div className="flex flex-row justify-between items-center gap-6 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
                 <div>
-                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">تعلیمی اسناد کی ترتیب</h1>
+                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">تعلیمی اسناد کا انتظام</h1>
                     <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-7">تعلیمی ڈگریوں اور سرٹیفکیٹس کے نام یہاں رجسٹر کریں</p>
                 </div>
                 <div style={{ backgroundColor: 'var(--color-primary)' }} className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#00d094]/20">
@@ -187,59 +187,143 @@ export const QualificationManagement = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="w-full overflow-x-auto">
                 {isLoading ? (
                     <div
-                        style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+                        style={{
+                            backgroundColor: 'var(--color-surface)',
+                            borderColor: 'var(--color-border)',
+                        }}
                         className="border rounded-[2rem] p-5 text-center text-sm font-bold text-[var(--color-text-muted)]"
                     >
                         تعلیمی اسناد لوڈ ہو رہی ہیں...
                     </div>
                 ) : qualifications.length > 0 ? (
-                    qualifications.map((edu) => (
-                        <div
-                            key={edu.id}
-                            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-                            className="group border rounded-[2rem] p-5 flex items-center justify-between hover:border-[var(--color-primary)] transition-all shadow-sm hover:shadow-md"
-                        >
-                            <div className="flex items-center gap-5">
-                                <div style={{ backgroundColor: 'var(--color-input)' }} className="w-14 h-14 rounded-2xl flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform">
-                                    <FileCheck size={26} />
-                                </div>
-                                <div>
-                                    <h3 style={{ color: 'var(--color-text-main)' }} className="font-bold text-lg">
-                                        {edu.title}
-                                    </h3>
-                                    <div className="flex flex-wrap items-center gap-4 mt-1">
-                                        <span style={{ color: 'var(--color-text-muted)' }} className="text-xs flex items-center gap-1 font-medium">
-                                            <BookOpen size={12} /> {edu.category || '-'}
-                                        </span>
-                                        <span style={{ color: 'var(--color-text-muted)' }} className="text-xs flex items-center gap-1 font-medium">
-                                            <Award size={12} /> {edu.level || '-'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                    <div style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+                        className="border rounded-[2rem] overflow-hidden shadow-sm">
+                        <div className="w-full overflow-x-auto">
+                            <table dir="rtl" className="w-full min-w-[800px] table-fixed">
+                                <thead>
+                                    <tr
+                                        style={{
+                                            backgroundColor: 'var(--color-bg)',
+                                            borderColor: 'var(--color-border)',
+                                        }}
+                                        className="border-b"
+                                    >
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[40%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            تعلیمی سند
+                                        </th>
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => handleEdit(edu)}
-                                    className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
-                                >
-                                    <Edit2 size={18} />
-                                </button>
-                                <button
-                                    onClick={() => setDeleteTarget(edu)}
-                                    className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[25%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            کیٹیگری
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[20%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            لیول
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[15%] px-6 py-4 text-right text-sm font-bold"
+                                        >
+                                            ایکشنز
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {qualifications.map((edu) => (
+                                        <tr
+                                            key={edu.id}
+                                            style={{
+                                                backgroundColor: 'var(--color-surface)',
+                                                borderColor: 'var(--color-border)',
+                                            }}
+                                            className="group border-b last:border-b-0 hover:bg-[var(--color-input)] transition-all"
+                                        >
+                                            {/* Qualification */}
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div
+                                                        style={{
+                                                            backgroundColor: 'var(--color-input)',
+                                                        }}
+                                                        className="w-12 h-12 rounded-xl flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform"
+                                                    >
+                                                        <FileCheck size={24} />
+                                                    </div>
+
+                                                    <span
+                                                        style={{ color: 'var(--color-text-main)' }}
+                                                        className="font-bold text-lg"
+                                                    >
+                                                        {edu.title}
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            {/* Category */}
+                                            <td className="px-6 py-4">
+                                                <div
+                                                    style={{ color: 'var(--color-text-muted)' }}
+                                                    className="flex items-center gap-2 text-sm font-medium"
+                                                >
+                                                    <BookOpen size={15} />
+                                                    <span>{edu.category || '-'}</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Level */}
+                                            <td className="px-6 py-4">
+                                                <div
+                                                    style={{ color: 'var(--color-text-muted)' }}
+                                                    className="flex items-center gap-2 text-sm font-medium"
+                                                >
+                                                    <Award size={15} />
+                                                    <span>{edu.level || '-'}</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Actions */}
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(edu)}
+                                                        className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
+                                                    >
+                                                        <Edit2 size={18} />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => setDeleteTarget(edu)}
+                                                        className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ))
+                    </div>
                 ) : (
                     <div
-                        style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+                        style={{
+                            backgroundColor: 'var(--color-surface)',
+                            borderColor: 'var(--color-border)',
+                        }}
                         className="border rounded-[2rem] p-5 text-center text-sm font-bold text-[var(--color-text-muted)]"
                     >
                         ابھی تک کوئی تعلیمی سند شامل نہیں کی گئی۔

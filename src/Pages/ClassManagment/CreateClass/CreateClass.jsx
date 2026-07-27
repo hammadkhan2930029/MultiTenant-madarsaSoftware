@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createClassesBulk, deleteClass, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
-import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession } from '../../../Constant/AdminAuth';
+import { BRANCH_CONTEXT_UPDATED_EVENT, getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
@@ -50,6 +50,8 @@ export const CreateClasses = () => {
 
     const onlyActiveBranchClasses = (items = []) => {
         const activeBranchId = getActiveBranchId();
+        if (!activeBranchId) return items;
+
         return items.filter((item) => {
             const itemBranchId = item.branchId === null || item.branchId === undefined || item.branchId === ''
                 ? null
@@ -82,6 +84,17 @@ export const CreateClasses = () => {
 
     useEffect(() => {
         loadDependencies();
+
+        const handleBranchContextUpdated = () => {
+            resetForm();
+            loadDependencies();
+        };
+
+        window.addEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
+
+        return () => {
+            window.removeEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
+        };
     }, []);
 
     const resetForm = () => {

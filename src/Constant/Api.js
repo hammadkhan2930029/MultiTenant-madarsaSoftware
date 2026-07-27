@@ -63,11 +63,18 @@ const BRANCH_FILTERED_GET_PREFIXES = [
   '/exam-schedules',
   '/schedules',
   '/teacher-schedules',
+  '/teacher-assignments',
   '/classes',
   '/sections',
+  '/subjects',
+  '/sessions',
   '/audit-logs',
   '/support',
   '/suggestions',
+];
+
+const BODY_BRANCH_ASSIGNMENT_PREFIXES = [
+  '/users',
 ];
 
 const getRoleNameFromSession = (session) => {
@@ -88,19 +95,19 @@ const getSessionBranchId = (session) => {
 
 const isTenantAdminSession = (session) => (
   String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin' &&
-  !getSessionBranchId(session)
+  Boolean(getSessionTenantId(session))
 );
 
 const isSuperAdminSession = (session) => String(getRoleNameFromSession(session)).trim().toLowerCase() === 'super_admin';
 
 const isBranchScopedSession = (session) => {
   const branchId = getSessionBranchId(session);
-  return Boolean(branchId) && !isSuperAdminSession(session);
+  return Boolean(branchId) && !isSuperAdminSession(session) && !isTenantAdminSession(session);
 };
 
-const isBranchSystemEnabled = (session) => Boolean(
-  session?.tenantBranding?.settings?.branchEnabled ||
-  session?.currentTenant?.branchEnabled,
+const isBranchSystemExplicitlyDisabled = (session) => (
+  session?.tenantBranding?.settings?.branchEnabled === false ||
+  session?.currentTenant?.branchEnabled === false
 );
 
 const getSelectedTenantBranchId = () => {
@@ -113,19 +120,20 @@ const getSelectedTenantBranchId = () => {
       !isTenantAdminSession(session) ||
       isSuperAdminSession(session) ||
       isBranchScopedSession(session) ||
-      !isBranchSystemEnabled(session)
+      isBranchSystemExplicitlyDisabled(session)
     ) {
       return null;
     }
 
     const tenantId = getSessionTenantId(session);
+    const sessionBranchId = getSessionBranchId(session);
     const stored = JSON.parse(window.localStorage.getItem(BRANCH_CONTEXT_KEY) || 'null');
     const branchId = stored?.branchId === null || stored?.branchId === undefined || stored?.branchId === ''
       ? null
       : Number(stored.branchId);
 
     if (!tenantId || Number(stored?.tenantId) !== tenantId || !Number.isFinite(branchId) || branchId <= 0) {
-      return null;
+      return Number.isFinite(sessionBranchId) && sessionBranchId > 0 ? sessionBranchId : null;
     }
 
     return branchId;
@@ -151,6 +159,18 @@ const shouldApplyBranchContext = (endpoint) => {
 
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return BRANCH_FILTERED_GET_PREFIXES.some((prefix) => (
+    normalizedEndpoint === prefix ||
+    normalizedEndpoint.startsWith(`${prefix}/`) ||
+    normalizedEndpoint.startsWith(`${prefix}?`)
+  ));
+};
+
+const shouldPreserveBodyBranchId = (endpoint, method = 'GET') => {
+  if (!['POST', 'PUT', 'PATCH'].includes(String(method || 'GET').toUpperCase())) return false;
+  if (!endpoint) return false;
+
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return BODY_BRANCH_ASSIGNMENT_PREFIXES.some((prefix) => (
     normalizedEndpoint === prefix ||
     normalizedEndpoint.startsWith(`${prefix}/`) ||
     normalizedEndpoint.startsWith(`${prefix}?`)
@@ -192,11 +212,20 @@ const buildBranchScopedRequest = (endpoint, options = {}) => {
   }
 
   if (typeof FormData !== 'undefined' && options.body instanceof FormData) {
+    const preserveBranchId = shouldPreserveBodyBranchId(endpoint, method);
     const nextBody = new FormData();
+    let hasPayloadBranchId = false;
     options.body.forEach((value, key) => {
-      if (key !== 'branchId') nextBody.append(key, value);
+      if (key === 'branchId') {
+        hasPayloadBranchId = true;
+        if (preserveBranchId) nextBody.append(key, value);
+        return;
+      }
+      nextBody.append(key, value);
     });
-    nextBody.append('branchId', String(branchId));
+    if (!preserveBranchId || !hasPayloadBranchId) {
+      nextBody.append('branchId', String(branchId));
+    }
 
     return {
       endpoint,
@@ -219,7 +248,10 @@ const buildBranchScopedRequest = (endpoint, options = {}) => {
         ...options,
         body: JSON.stringify({
           ...parsedBody,
-          branchId,
+          branchId: shouldPreserveBodyBranchId(endpoint, method) &&
+            Object.prototype.hasOwnProperty.call(parsedBody, 'branchId')
+            ? parsedBody.branchId
+            : branchId,
         }),
       },
     };
