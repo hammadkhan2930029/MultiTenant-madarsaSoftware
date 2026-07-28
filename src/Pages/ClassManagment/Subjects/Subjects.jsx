@@ -9,6 +9,7 @@ import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
 const emptyForm = {
     name: '',
     detail: '',
+    status: 'active',
 };
 
 const createEmptySubjectRow = () => ({
@@ -21,6 +22,7 @@ const createEmptySubjectRow = () => ({
 export const CreateSubjects = () => {
     const [subjects, setSubjects] = useState([]);
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editMode, setEditMode] = useState(null);
     const [formData, setFormData] = useState(emptyForm);
@@ -45,7 +47,7 @@ export const CreateSubjects = () => {
         setError('');
 
         try {
-            const result = await getSubjects('page=1&limit=100');
+            const result = await getSubjects(`page=1&limit=100&status=${statusFilter || 'active'}`);
             setSubjects(result.items || []);
         } catch (loadError) {
             setError(loadError.message || 'مضامین کی فہرست لوڈ نہیں ہو سکی۔');
@@ -56,7 +58,7 @@ export const CreateSubjects = () => {
 
     useEffect(() => {
         loadSubjects();
-    }, []);
+    }, [statusFilter]);
 
     useEffect(() => {
         const handleBranchContextUpdated = () => {
@@ -83,6 +85,7 @@ export const CreateSubjects = () => {
         setFormData({
             name: subject.name || '',
             detail: subject.detail || '',
+            status: subject.status || 'active',
         });
         setSubjectRows([createEmptySubjectRow()]);
         setError('');
@@ -168,6 +171,7 @@ export const CreateSubjects = () => {
             payload = {
                 name: formData.name.trim(),
                 detail: formData.detail.trim(),
+                status: formData.status || 'active',
             };
         } else {
             const validRows = validateSubjectRows();
@@ -251,6 +255,14 @@ export const CreateSubjects = () => {
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row items-center">
                     <ExportExcelButton rows={filteredSubjects} columns={exportColumns} fileName="subjects-list" className="w-full md:w-auto" />
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
+                    >
+                        <option value="active">فعال</option>
+                        <option value="inactive">غیر فعال</option>
+                    </select>
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -281,7 +293,7 @@ export const CreateSubjects = () => {
                     </div>
 
                     {editMode ? (
-                        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2">
+                        <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-3">
                             <div className="space-y-2 text-right">
                                 <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مضمون کا نام<span className="text-red-500"> *</span></label>
                                 <input
@@ -303,6 +315,18 @@ export const CreateSubjects = () => {
                                     onChange={(e) => setFormData((prev) => ({ ...prev, detail: e.target.value }))}
                                     className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pb-2 pt-1 text-right text-lg font-bold leading-[2.5] text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
                                 />
+                            </div>
+
+                            <div className="space-y-2 text-right">
+                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت<span className="text-red-500"> *</span></label>
+                                <select
+                                    value={formData.status}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                    className="h-[64px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-lg font-bold text-[var(--color-text)] outline-none transition-all focus:border-[#00d094] focus:ring-4 focus:ring-[#00d094]/5"
+                                >
+                                    <option value="active">فعال</option>
+                                    <option value="inactive">غیر فعال</option>
+                                </select>
                             </div>
                         </div>
                     ) : (

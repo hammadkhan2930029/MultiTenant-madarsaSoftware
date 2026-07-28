@@ -314,7 +314,7 @@ export const SideBar = () => {
                 { id: 't_add', label: 'نیا استاد شامل کریں', path: '/HRManagement?staffType=teacher' },
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
-                { id: 't_attendance', label: 'حاضری', path: '/teachers/attendance' },
+                { id: 't_attendance', label: 'اساتذہ کی حاضری', path: '/teachers/attendance' },
                 { id: 't_assignments', label: 'مضامین اور ذمہ داریاں', path: '/teachers/assignments', permissions: ['teachers.assignments.view'] },
                 { id: 't_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
                 { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/teachers/salary' },
@@ -410,7 +410,7 @@ export const SideBar = () => {
             subMenu: [
                 { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
                 { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
-                { id: 'staff_attendance', label: 'حاضری', path: '/staff/attendance', permissions: ['attendance.view'] },
+                { id: 'staff_attendance', label: 'عملہ کی حاضری', path: '/staff/attendance', permissions: ['attendance.view'] },
                 { id: 'staff_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/staff/salary-increments' },
                 { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/staff/salary', permissions: ['salary.view'] }
             ]
@@ -543,7 +543,7 @@ export const SideBar = () => {
         teachers: 'اساتذہ',
         t_add: 'نیا استاد شامل کریں',
         t_list: 'اساتذہ کی فہرست',
-        t_attendance: 'حاضری',
+        t_attendance: 'اساتذہ کی حاضری',
         't_schedule ': 'نظام الاوقات',
         t_salary_increment: 'تنخواہ انکریمنٹ',
         t_salary: 'تنخواہ کی ادائیگی',
@@ -560,7 +560,7 @@ export const SideBar = () => {
         HRManagement: 'عملہ',
         staff_add: 'نیا عملہ شامل کریں',
         staff_list: 'دیگر عملہ فہرست',
-        staff_attendance: 'حاضری',
+        staff_attendance: 'عملہ کی حاضری',
         staff_salary_increment: 'تنخواہ انکریمنٹ',
         staff_salary: 'تنخواہ کی ادائیگی',
         exams: 'امتحان',

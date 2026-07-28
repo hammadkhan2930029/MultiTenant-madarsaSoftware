@@ -13,12 +13,12 @@ import {
     User,
     X,
 } from 'lucide-react';
-import { Field, Form, Formik } from 'formik';
+import { Field, Form, Formik, useFormikContext } from 'formik';
 import { useSearchParams } from 'react-router-dom';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
 import { createStudent, getNextAdmissionNumber, getParents, getStudentById, updateStudent } from '../../../Constant/StudentsApi';
-import { getClasses, getSections } from '../../../Constant/AcademicSetupApi';
+import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
@@ -51,6 +51,7 @@ const INITIAL_VALUES = {
     prevSchool: '',
     secularEdu: '',
     religiousEdu: '',
+    sessionId: '',
     requiredClass: '',
     requiredJamaat: '',
     teacherName: '',
@@ -197,6 +198,53 @@ const validateAdmissionForm = (values) => {
     return errors;
 };
 
+const collectErrorMessages = (errorValue, messages = []) => {
+    if (!errorValue) return messages;
+
+    if (typeof errorValue === 'string') {
+        messages.push(errorValue);
+        return messages;
+    }
+
+    if (Array.isArray(errorValue)) {
+        errorValue.forEach((item) => collectErrorMessages(item, messages));
+        return messages;
+    }
+
+    if (typeof errorValue === 'object') {
+        Object.values(errorValue).forEach((item) => collectErrorMessages(item, messages));
+    }
+
+    return messages;
+};
+
+const AdmissionValidationSummary = () => {
+    const { errors, submitCount } = useFormikContext();
+    const [visibleErrors, setVisibleErrors] = useState([]);
+
+    useEffect(() => {
+        if (!submitCount) return undefined;
+
+        const messages = Array.from(new Set(collectErrorMessages(errors)));
+        if (!messages.length) return undefined;
+
+        setVisibleErrors(messages.map((message, index) => ({ id: `${submitCount}-${index}`, message })));
+        const timeoutId = window.setTimeout(() => setVisibleErrors([]), 5000);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [errors, submitCount]);
+
+    if (!visibleErrors.length) return null;
+
+    return (
+        <div role="alert" className="rounded-[2rem] border border-red-500/30 bg-red-500/10 p-4 space-y-2 text-right">
+            {visibleErrors.map((item) => (
+                <p key={item.id} className="text-sm font-bold text-red-400">{item.message}</p>
+            ))}
+        </div>
+    );
+};
+
 const toUrduAdmissionError = (message) => {
     if (!message) return 'براہ کرم مطلوبہ معلومات درست اور مکمل درج کریں۔';
     if (/[\u0600-\u06FF]/.test(message)) return message;
@@ -211,6 +259,7 @@ const mapStudentToFormValues = (student) => {
     const primaryParent = primaryParentLink.parent || {};
     const guardianLink = student?.parents?.find((item) => !item.isPrimary) || {};
     const guardian = guardianLink.parent || primaryParent;
+    const activeAssignment = student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || {};
 
     return {
         ...INITIAL_VALUES,
@@ -240,8 +289,9 @@ const mapStudentToFormValues = (student) => {
         prevSchool: student?.prevSchool || '',
         secularEdu: student?.secularEdu || '',
         religiousEdu: student?.religiousEdu || '',
-        requiredClass: student?.requiredClass || '',
-        requiredJamaat: student?.requiredJamaat || '',
+        sessionId: activeAssignment?.sessionId ? String(activeAssignment.sessionId) : activeAssignment?.session?.id ? String(activeAssignment.session.id) : '',
+        requiredClass: activeAssignment?.class?.name || student?.requiredClass || '',
+        requiredJamaat: activeAssignment?.section?.name || student?.requiredJamaat || '',
         teacherName: student?.teacherName || '',
         medicalCondition: student?.medicalCondition || '',
         monthlyFee: student?.monthlyFee ?? '',
@@ -276,6 +326,7 @@ export const AdmissionForm = () => {
 
     const [classOptions, setClassOptions] = useState([]);
     const [sectionOptions, setSectionOptions] = useState([]);
+    const [sessionOptions, setSessionOptions] = useState([]);
     const [teacherOptions, setTeacherOptions] = useState([]);
     const [selectedRequiredClassId, setSelectedRequiredClassId] = useState(null);
 
@@ -400,18 +451,21 @@ export const AdmissionForm = () => {
     useEffect(() => {
         const loadDropdownOptions = async () => {
             try {
-                const [classesResponse, sectionsResponse, teachersResponse] = await Promise.all([
+                const [classesResponse, sectionsResponse, sessionsResponse, teachersResponse] = await Promise.all([
                     getClasses('page=1&limit=100&status=active'),
                     getSections('page=1&limit=100&status=active'),
+                    getSessions('page=1&limit=100&status=active'),
                     getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
 
                 setClassOptions((classesResponse?.items || []).filter((item) => item.status === 'active'));
                 setSectionOptions((sectionsResponse?.items || []).filter((item) => item.status === 'active'));
+                setSessionOptions((sessionsResponse?.items || []).filter((item) => item.status === 'active'));
                 setTeacherOptions((teachersResponse?.items || []).filter((item) => item.status === 'active'));
             } catch {
                 setClassOptions([]);
                 setSectionOptions([]);
+                setSessionOptions([]);
                 setTeacherOptions([]);
             }
         };
@@ -567,6 +621,7 @@ export const AdmissionForm = () => {
                 prevSchool: submittedValues.prevSchool,
                 secularEdu: submittedValues.secularEdu,
                 religiousEdu: submittedValues.religiousEdu,
+                sessionId: submittedValues.sessionId ? Number(submittedValues.sessionId) : undefined,
                 requiredClass: submittedValues.requiredClass,
                 requiredJamaat: submittedValues.requiredJamaat,
                 teacherName: submittedValues.teacherName,
@@ -641,6 +696,7 @@ export const AdmissionForm = () => {
                     return (
                     <>
                         <Form noValidate className="admission-form print:hidden space-y-8 pb-10">
+                            <AdmissionValidationSummary />
                             <div className="bg-[var(--color-surface)] rounded-[2rem] shadow-2xl border border-[#00d094]/30 overflow-hidden">
                                 <div className="bg-[#002a33] p-8 text-center text-white">
                                     <h2 className="text-3xl font-bold">طالب علم داخلہ فارم</h2>
@@ -819,6 +875,17 @@ export const AdmissionForm = () => {
                                             <FormikInputField label="سابقہ مدرسہ" name="prevMadrassa" />
                                             <FormikInputField label="سابقہ اسکول" name="prevSchool" />
 
+                                            <FormikSelectField
+                                                label="سیشن"
+                                                name="sessionId"
+                                                options={[
+                                                    { value: '', label: 'سیشن منتخب کریں' },
+                                                    ...sessionOptions.map((session) => ({
+                                                        value: String(session.id),
+                                                        label: session.name,
+                                                    })),
+                                                ]}
+                                            />
                                             <Field name="requiredClass">
                                                 {({ field, form }) => (
                                                     <SearchableSelectField

@@ -153,11 +153,23 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         setTeachers((prev) => prev.map((teacher) => (teacher.id === id ? { ...teacher, status: newStatus } : teacher)));
     };
 
+    const markAllTeachers = (status) => {
+        const selectedTeacherIds = new Set(attendanceRows.map((teacher) => String(teacher.id)));
+        setTeachers((prev) =>
+            prev.map((teacher) => (selectedTeacherIds.has(String(teacher.id)) ? { ...teacher, status } : teacher)),
+        );
+    };
+
     const handleSave = async () => {
         const activeBranchId = selectedBranchId || defaultBranchId;
 
         if (!activeBranchId) {
             setError('محفوظ کرنے سے پہلے بنیادی سیٹ اپ دستیاب ہونا چاہیے۔');
+            return;
+        }
+
+        if (!attendanceRows.length) {
+            setError('تلاش یا فلٹر کے ذریعے پہلے ریکارڈ منتخب کریں۔');
             return;
         }
 
@@ -167,7 +179,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
 
         try {
             await Promise.all(
-                teachers.map((teacher) =>
+                attendanceRows.map((teacher) =>
                     saveTeacherAttendance({
                         teacherId: Number(teacher.id),
                         branchId: Number(activeBranchId),
@@ -249,15 +261,18 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         [assignmentsByTeacher, searchTerm, selectedClassId, selectedSectionId, selectedSubject, teachers],
     );
 
+    const hasSelectionFilter = Boolean(searchTerm.trim() || selectedSubject || selectedClassId || selectedSectionId);
+    const attendanceRows = hasSelectionFilter ? filteredTeachers : [];
+
     const stats = useMemo(
         () => ({
-            total: filteredTeachers.length,
-            hazir: filteredTeachers.filter((teacher) => teacher.status === 'Present').length,
-            ghairHazir: filteredTeachers.filter((teacher) => teacher.status === 'Absent').length,
-            leave: filteredTeachers.filter((teacher) => teacher.status === 'Leave').length,
-            late: filteredTeachers.filter((teacher) => teacher.status === 'Late').length,
+            total: attendanceRows.length,
+            hazir: attendanceRows.filter((teacher) => teacher.status === 'Present').length,
+            ghairHazir: attendanceRows.filter((teacher) => teacher.status === 'Absent').length,
+            leave: attendanceRows.filter((teacher) => teacher.status === 'Leave').length,
+            late: attendanceRows.filter((teacher) => teacher.status === 'Late').length,
         }),
-        [filteredTeachers],
+        [attendanceRows],
     );
 
     const exportColumns = useMemo(() => [
@@ -347,14 +362,27 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                                     className="bg-transparent outline-none px-3 w-full text-sm"
                                 />
                             </div>
-                            <ExportExcelButton rows={filteredTeachers} columns={exportColumns} fileName={`${staffType}-attendance-${selectedDate}`} className="w-full h-12" />
+                            <ExportExcelButton rows={attendanceRows} columns={exportColumns} fileName={`${staffType}-attendance-${selectedDate}`} className="w-full h-12" />
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || !(selectedBranchId || defaultBranchId)}
+                                disabled={isSaving || !attendanceRows.length || !(selectedBranchId || defaultBranchId)}
                                 className="w-full h-12 flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
                             >
                                 <Save size={18} /> {isSaving ? 'محفوظ...' : 'محفوظ کریں'}
                             </button>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                            {STATUS_OPTIONS.map((status) => (
+                                <button
+                                    key={status.value}
+                                    type="button"
+                                    onClick={() => markAllTeachers(status.value)}
+                                    disabled={!attendanceRows.length}
+                                    className="rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2 text-xs font-black text-[var(--color-text)] transition-all hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    سب {status.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -376,7 +404,21 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]/5">
-                            {filteredTeachers.map((teacher, index) => (
+                            {!hasSelectionFilter ? (
+                                <tr>
+                                    <td colSpan={8} className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                        تلاش یا فلٹر کے ذریعے {entityPluralLabel} منتخب کریں۔
+                                    </td>
+                                </tr>
+                            ) : null}
+                            {hasSelectionFilter && !attendanceRows.length ? (
+                                <tr>
+                                    <td colSpan={8} className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                        کوئی ریکارڈ نہیں ملا۔
+                                    </td>
+                                </tr>
+                            ) : null}
+                            {attendanceRows.map((teacher, index) => (
                                 <tr key={teacher.id} className="hover:bg-black/5 transition-colors">
                                     <td className="p-4 font-mono text-sm">{index + 1}</td>
                                     <td className="p-4 font-bold text-[var(--text-color)]">{teacher.fullName}</td>
@@ -406,7 +448,17 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                 </div>
 
                 <div className="lg:hidden p-4 space-y-4">
-                    {filteredTeachers.map((teacher, index) => (
+                    {!hasSelectionFilter ? (
+                        <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                            تلاش یا فلٹر کے ذریعے {entityPluralLabel} منتخب کریں۔
+                        </div>
+                    ) : null}
+                    {hasSelectionFilter && !attendanceRows.length ? (
+                        <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                            کوئی ریکارڈ نہیں ملا۔
+                        </div>
+                    ) : null}
+                    {attendanceRows.map((teacher, index) => (
                         <div
                             onClick={() => navigate(`/${isStaffAttendance ? 'staff' : 'teachers'}/attendance-history/${teacher.id}?branchId=${selectedBranchId || defaultBranchId}`)}
                             key={teacher.id}

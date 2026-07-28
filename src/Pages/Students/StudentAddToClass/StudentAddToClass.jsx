@@ -11,7 +11,7 @@ export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [filters, setFilters] = useState({ sessionId: '', classId: '', sectionId: '' });
-    const [tableFilters, setTableFilters] = useState({ sessionId: '', classId: '', sectionId: '' });
+    const [tableFilters, setTableFilters] = useState({ sessionId: '', classId: '', sectionId: '', status: 'active' });
     const [studentsData, setStudentsData] = useState([]);
     const [assignedList, setAssignedList] = useState([]);
     const [classes, setClasses] = useState([]);
@@ -43,7 +43,7 @@ export const StudentAddToClass = () => {
 
                 const mappedAssignments = (studentsResult.items || []).flatMap((student) =>
                     (student.assignments || [])
-                        .filter((assignment) => assignment.status === 'active')
+                        .filter((assignment) => assignment.status === tableFilters.status)
                         .map((assignment) => ({
                             id: assignment.id,
                             studentId: student.id,
@@ -55,6 +55,7 @@ export const StudentAddToClass = () => {
                             classId: assignment.class?.id || assignment.classId || '',
                             section: assignment.section?.name || '---',
                             sectionId: assignment.section?.id || assignment.sectionId || '',
+                            status: assignment.status || 'active',
                         })),
                 );
 
@@ -65,7 +66,7 @@ export const StudentAddToClass = () => {
         };
 
         loadData();
-    }, []);
+    }, [tableFilters.status]);
 
     const filteredSearchStudents = useMemo(() => {
         const query = searchTerm.trim().toLowerCase();
@@ -93,7 +94,8 @@ export const StudentAddToClass = () => {
             assignedList.filter((assignment) =>
                 (!tableFilters.sessionId || String(assignment.sessionId) === String(tableFilters.sessionId)) &&
                 (!tableFilters.classId || String(assignment.classId) === String(tableFilters.classId)) &&
-                (!tableFilters.sectionId || String(assignment.sectionId) === String(tableFilters.sectionId)),
+                (!tableFilters.sectionId || String(assignment.sectionId) === String(tableFilters.sectionId)) &&
+                assignment.status === tableFilters.status,
             ),
         [assignedList, tableFilters],
     );
@@ -135,6 +137,7 @@ export const StudentAddToClass = () => {
                 classId: assignment?.class?.id || Number(filters.classId),
                 section: assignment?.section?.name || section?.name || '---',
                 sectionId: assignment?.section?.id || Number(filters.sectionId),
+                status: assignment?.status || 'active',
             };
 
             setAssignedList((current) => [newData, ...current.filter((item) => item.studentId !== selectedStudent.id)]);
@@ -288,7 +291,7 @@ export const StudentAddToClass = () => {
             <div className="bg-[var(--color-surface)] rounded-[2.5rem] border border-[var(--color-border)] overflow-hidden shadow-sm">
                 <div className="flex flex-col gap-3 p-5 border-b border-[var(--color-border)] bg-[var(--color-input)]/30 md:flex-row md:items-center md:justify-between">
                     <h3 className="text-sm font-black text-[var(--color-text)]">حالیہ داخلے</h3>
-                    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 md:max-w-3xl">
+                    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-4 md:max-w-4xl">
                         <select
                             value={tableFilters.sessionId}
                             onChange={(event) => setTableFilters((current) => ({ ...current, sessionId: event.target.value }))}
@@ -319,6 +322,14 @@ export const StudentAddToClass = () => {
                                 <option key={item.id} value={item.id}>{item.name}</option>
                             ))}
                         </select>
+                        <select
+                            value={tableFilters.status}
+                            onChange={(event) => setTableFilters((current) => ({ ...current, status: event.target.value }))}
+                            className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-bold text-[var(--color-text)] outline-none transition-all focus:border-[var(--color-primary)]/50"
+                        >
+                            <option value="active">فعال</option>
+                            <option value="inactive">غیر فعال</option>
+                        </select>
                     </div>
                     <ExportExcelButton rows={filteredAssignedList} columns={exportColumns} fileName="student-class-assignments" className="w-full md:w-auto" />
                 </div>
@@ -331,6 +342,7 @@ export const StudentAddToClass = () => {
                                 <th className="p-4 text-[10px] font-black text-[var(--color-text-muted)]">سیشن</th>
                                 <th className="p-4 text-[10px] font-black text-[var(--color-text-muted)] text-center">جماعت</th>
                                 <th className="p-4 text-[10px] font-black text-[var(--color-text-muted)] text-center">سیکشن</th>
+                                <th className="p-4 text-[10px] font-black text-[var(--color-text-muted)] text-center">حالت</th>
                                 <th className="p-4 text-[10px] font-black text-[var(--color-text-muted)] text-center">ایکشن</th>
                             </tr>
                         </thead>
@@ -344,6 +356,11 @@ export const StudentAddToClass = () => {
                                     <td className="p-4 text-xs font-bold text-[var(--color-text-muted)]">{item.session}</td>
                                     <td className="p-4 text-xs font-black text-center"><span className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-3 py-1 rounded-full">{item.className}</span></td>
                                     <td className="p-4 text-xs font-black text-center">{item.section}</td>
+                                    <td className="p-4 text-xs font-black text-center">
+                                        <span className={`rounded-full px-3 py-1 ${item.status === 'inactive' ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                            {item.status === 'inactive' ? 'غیر فعال' : 'فعال'}
+                                        </span>
+                                    </td>
                                     <td className="p-4 text-center">
                                         <div className="flex items-center justify-center gap-2">
                                             <button
@@ -372,7 +389,7 @@ export const StudentAddToClass = () => {
                             ))}
                             {!filteredAssignedList.length ? (
                                 <tr>
-                                    <td colSpan={5} className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan={6} className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         کوئی طالب علم نہیں ملا
                                     </td>
                                 </tr>

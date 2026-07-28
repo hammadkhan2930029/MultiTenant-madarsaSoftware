@@ -9,6 +9,7 @@ import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows'
 const emptyForm = {
     classId: '',
     name: '',
+    status: 'active',
 };
 
 const createEmptySectionRow = () => ({
@@ -22,6 +23,7 @@ export const CreateSections = () => {
     const [sections, setSections] = useState([]);
     const [search, setSearch] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [formData, setFormData] = useState(emptyForm);
     const [sectionRows, setSectionRows] = useState([createEmptySectionRow()]);
     const [editMode, setEditMode] = useState(null);
@@ -53,8 +55,8 @@ export const CreateSections = () => {
 
         try {
             const [classesResult, sectionsResult] = await Promise.all([
-                getClasses('page=1&limit=100'),
-                getSections('page=1&limit=100'),
+                getClasses('page=1&limit=100&status=active'),
+                getSections(`page=1&limit=100&status=${statusFilter || 'active'}`),
             ]);
 
             setClasses(classesResult.items || []);
@@ -68,7 +70,7 @@ export const CreateSections = () => {
 
     useEffect(() => {
         loadDependencies();
-    }, []);
+    }, [statusFilter]);
 
     const resetForm = () => {
         setFormData(emptyForm);
@@ -82,6 +84,7 @@ export const CreateSections = () => {
         setFormData({
             classId: section.classId ? String(section.classId) : '',
             name: section.name || '',
+            status: section.status || 'active',
         });
         setSectionRows([{ ...createEmptySectionRow(), name: section.name || '' }]);
         setError('');
@@ -195,6 +198,7 @@ export const CreateSections = () => {
             const payload = {
                 classId: Number(formData.classId),
                 name: formData.name.trim(),
+                ...(editMode ? { status: formData.status || 'active' } : {}),
             };
 
             if (editMode) {
@@ -276,6 +280,14 @@ export const CreateSections = () => {
                 <div className="flex w-full flex-col items-center gap-3 md:w-auto md:flex-row">
                     <ExportExcelButton rows={filteredSections} columns={exportColumns} fileName="sections-list" className="w-full md:w-auto" />
                     <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
+                    >
+                        <option value="active">فعال</option>
+                        <option value="inactive">غیر فعال</option>
+                    </select>
+                    <select
                         value={selectedClassFilter}
                         onChange={(e) => setSelectedClassFilter(e.target.value)}
                         className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-44"
@@ -338,17 +350,32 @@ export const CreateSections = () => {
 
                     <div className="mt-6 space-y-4">
                         {editMode ? (
-                            <div className="space-y-2">
-                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                    سیکشن نام<span className="text-red-500"> *</span>
-                                </label>
-                                <input
-                                    required
-                                    value={formData.name}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                                    placeholder="مثلاً A"
-                                    className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                                />
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        سیکشن نام<span className="text-red-500"> *</span>
+                                    </label>
+                                    <input
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                        placeholder="مثلاً A"
+                                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        حالت<span className="text-red-500"> *</span>
+                                    </label>
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                    >
+                                        <option value="active">فعال</option>
+                                        <option value="inactive">غیر فعال</option>
+                                    </select>
+                                </div>
                             </div>
                         ) : (
                             <MultipleEntryRows

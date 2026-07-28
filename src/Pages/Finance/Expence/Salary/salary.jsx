@@ -19,6 +19,7 @@ const createEmptyForm = (financeHeadId = '') => ({
     paymentDate: today(),
     paymentMethod: 'Cash',
     remarks: '',
+    status: 'active',
 });
 
 const formatAmount = (value) => Number(value || 0).toLocaleString('en-US');
@@ -81,6 +82,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [viewTarget, setViewTarget] = useState(null);
     const [filterMonth, setFilterMonth] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -117,7 +119,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
     );
 
     const refreshEntries = async () => {
-        const params = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
+        const params = new URLSearchParams({ page: '1', limit: '100', status: statusFilter });
         if (staffType) params.set('staffType', staffType);
         const salaryResult = await getSalaryEntries(params.toString());
         setEntries(salaryResult.items || []);
@@ -130,7 +132,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
         try {
             const [teacherResult, salaryResult] = await Promise.all([
                 getSalaryTeachers(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
-                getSalaryEntries(`page=1&limit=100&status=active${staffType ? `&staffType=${staffType}` : ''}`),
+                getSalaryEntries(`page=1&limit=100&status=${statusFilter}${staffType ? `&staffType=${staffType}` : ''}`),
             ]);
             const headsResult = await getFinanceHeads('page=1&limit=100&type=expense&status=active').catch(() => ({ items: [] }));
 
@@ -152,7 +154,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
     useEffect(() => {
         loadData();
-    }, [staffType]);
+    }, [staffType, statusFilter]);
 
     const handleSelectTeacher = (teacher) => {
         setFormData((prev) => ({
@@ -180,7 +182,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
             paymentDate: formData.paymentDate,
             paymentMethod: formData.paymentMethod,
             remarks: formData.remarks,
-            status: 'active',
+            status: formData.status || 'active',
         };
         if (formData.financeHeadId) {
             payload.financeHeadId = Number(formData.financeHeadId);
@@ -233,6 +235,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
             paymentDate: toDateInputValue(entry.paymentDate),
             paymentMethod: entry.paymentMethod || 'Cash',
             remarks: entry.remarks || '',
+            status: entry.status || 'active',
         });
         setSearchQuery(entry.teacher?.fullName || '');
         setShowSuggestions(false);
@@ -375,6 +378,20 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 />
                             </div>
 
+                            {editingEntry ? (
+                                <div>
+                                    <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">حالت</label>
+                                    <select
+                                        className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none"
+                                        value={formData.status}
+                                        onChange={(event) => setFormData({ ...formData, status: event.target.value })}
+                                    >
+                                        <option value="active">فعال</option>
+                                        <option value="inactive">غیر فعال</option>
+                                    </select>
+                                </div>
+                            ) : null}
+
                             <textarea
                                 rows={2}
                                 className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none resize-none"
@@ -406,6 +423,17 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                     onChange={(event) => setFilterMonth(event.target.value)}
                                     className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2.5 text-base font-bold [color-scheme:dark] focus:outline-none sm:w-48"
                                 />
+                            </div>
+                            <div>
+                                <label className="mb-2 mr-2 block text-base font-bold text-[var(--color-text-muted)]">حالت</label>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(event) => setStatusFilter(event.target.value)}
+                                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2.5 text-base font-bold focus:outline-none sm:w-40"
+                                >
+                                    <option value="active">فعال</option>
+                                    <option value="inactive">غیر فعال</option>
+                                </select>
                             </div>
                             {filterMonth ? (
                                 <button
@@ -474,9 +502,9 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 </div>
                                 <div className="rounded-xl bg-[var(--color-bg)]/60 p-3 text-right sm:bg-transparent sm:p-0 sm:text-center">
                                     <p className="mb-1 text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">اسٹیٹس</p>
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-primary)] px-4 py-1 text-sm font-bold text-[#0b1120]">
+                                    <span className={`inline-flex items-center gap-1 rounded-full px-4 py-1 text-sm font-bold ${entry.status === 'active' ? 'bg-[var(--color-primary)] text-[#0b1120]' : 'bg-rose-500/10 text-rose-500'}`}>
                                         <Wallet size={12} />
-                                        جاری
+                                        {entry.status === 'active' ? 'فعال' : 'غیر فعال'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-end gap-2 sm:justify-center">

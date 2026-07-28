@@ -6,7 +6,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { Can } from '../../../Components/Auth/Can';
 
-const emptyValue = '---';
+const emptyValue = '-';
 
 const formatDate = (value) => {
     if (!value) return '';
@@ -20,6 +20,8 @@ const getActiveAssignment = (student) =>
 
 const getStudentClassName = (student, assignment) => assignment?.class?.name || student.requiredClass || emptyValue;
 const getStudentSectionName = (student, assignment) => assignment?.section?.name || student.requiredJamaat || emptyValue;
+const getStudentSessionName = (student, assignment) =>
+    assignment?.session?.name || student.session?.name || student.sessionName || student.requiredSession || emptyValue;
 
 const getPrimaryParent = (student) =>
     student.parents?.find((parentItem) => parentItem.isPrimary)?.parent || student.parents?.[0]?.parent || null;
@@ -51,6 +53,16 @@ const formatAssignmentSummary = (assignment) =>
         .filter(Boolean)
         .join(' | ');
 
+const getStatusLabel = (status) => {
+    const normalizedStatus = String(status || '').toLowerCase();
+
+    if (normalizedStatus === 'active') return 'فعال';
+    if (normalizedStatus === 'inactive') return 'غیر فعال';
+    if (normalizedStatus === 'suspended') return 'معطل';
+
+    return status || emptyValue;
+};
+
 const mapStudentsForList = (items) =>
     items.map((student) => {
         const activeAssignment = getActiveAssignment(student);
@@ -61,8 +73,11 @@ const mapStudentsForList = (items) =>
             idNo: student.admissionNumber,
             name: student.fullName,
             fatherName: student.fatherName,
+            sessionName: getStudentSessionName(student, activeAssignment),
             className: getStudentClassName(student, activeAssignment),
             section: getStudentSectionName(student, activeAssignment),
+            status: student.status || emptyValue,
+            statusLabel: getStatusLabel(student.status),
             familyNo:
                 primaryParent?.familyNumber ||
                 primaryParent?.phone ||
@@ -107,7 +122,7 @@ const mapStudentForExport = (student) => {
         status: student.status,
         className: getStudentClassName(student, activeAssignment),
         sectionName: getStudentSectionName(student, activeAssignment),
-        sessionName: activeAssignment?.session?.name,
+        sessionName: getStudentSessionName(student, activeAssignment),
         branchName: activeAssignment?.branch?.name,
         primaryParentName: primaryParent?.fullName,
         primaryParentFamilyNumber: primaryParent?.familyNumber,
@@ -130,8 +145,10 @@ export const StudentList = () => {
     const [studentRecords, setStudentRecords] = useState([]);
     const [studentMeta, setStudentMeta] = useState({ totalItems: 0 });
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSession, setSelectedSession] = useState('');
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedSection, setSelectedSection] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [isLoading, setIsLoading] = useState(true);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -171,7 +188,7 @@ export const StudentList = () => {
             setError('');
 
             try {
-                const result = await getStudents(`page=1&limit=100&status=active${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
+                const result = await getStudents(`page=1&limit=100&status=${statusFilter}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
                 if (!isCurrentSearch) return;
                 const items = result.items || [];
                 setStudentRecords(items);
@@ -192,7 +209,7 @@ export const StudentList = () => {
             isCurrentSearch = false;
             window.clearTimeout(timeoutId);
         };
-    }, [searchTerm]);
+    }, [searchTerm, statusFilter]);
 
     const handleDelete = async () => {
         if (!deleteTarget) return;
@@ -215,6 +232,13 @@ export const StudentList = () => {
         }
     };
 
+    const sessionOptions = useMemo(
+        () =>
+            Array.from(new Set(students.map((student) => student.sessionName).filter((sessionName) => sessionName && sessionName !== emptyValue)))
+                .sort((firstSession, secondSession) => firstSession.localeCompare(secondSession)),
+        [students],
+    );
+
     const classOptions = useMemo(
         () =>
             Array.from(new Set(students.map((student) => student.className).filter((className) => className && className !== emptyValue)))
@@ -222,29 +246,30 @@ export const StudentList = () => {
         [students],
     );
 
-    const sectionOptions = useMemo(
-        () =>
-            Array.from(
-                new Set(
-                    students
-                        .filter((student) => !selectedClass || student.className === selectedClass)
-                        .map((student) => student.section)
-                        .filter((section) => section && section !== emptyValue),
-                ),
-            ).sort((firstSection, secondSection) => firstSection.localeCompare(secondSection)),
-        [selectedClass, students],
-    );
+    const sectionOptions = useMemo(() => {
+        if (!selectedClass) return [];
+
+        return Array.from(
+            new Set(
+                students
+                    .filter((student) => student.className === selectedClass)
+                    .map((student) => student.section)
+                    .filter((section) => section && section !== emptyValue),
+            ),
+        ).sort((firstSection, secondSection) => firstSection.localeCompare(secondSection));
+    }, [selectedClass, students]);
 
     const filteredStudents = useMemo(
         () =>
             students.filter((student) =>
+                (!selectedSession || student.sessionName === selectedSession) &&
                 (!selectedClass || student.className === selectedClass) &&
                 (!selectedSection || student.section === selectedSection) &&
-                [student.name, student.idNo, student.fatherName, student.familyNo]
+                [student.name, student.idNo, student.fatherName, student.familyNo, student.sessionName]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
-        [searchTerm, selectedClass, selectedSection, students],
+        [searchTerm, selectedClass, selectedSection, selectedSession, students],
     );
 
     const exportRows = useMemo(() => {
@@ -256,6 +281,11 @@ export const StudentList = () => {
                 const primaryParent = getPrimaryParent(student);
                 const className = getStudentClassName(student, activeAssignment);
                 const sectionName = getStudentSectionName(student, activeAssignment);
+                const sessionName = getStudentSessionName(student, activeAssignment);
+
+                if (selectedSession && sessionName !== selectedSession) {
+                    return false;
+                }
 
                 if (selectedClass && className !== selectedClass) {
                     return false;
@@ -272,6 +302,7 @@ export const StudentList = () => {
                     student.phone,
                     primaryParent?.familyNumber,
                     primaryParent?.phone,
+                    sessionName,
                     className,
                     sectionName,
                 ]
@@ -279,7 +310,7 @@ export const StudentList = () => {
                     .some((value) => String(value).toLowerCase().includes(query));
             })
             .map(mapStudentForExport);
-    }, [searchTerm, selectedClass, selectedSection, studentRecords]);
+    }, [searchTerm, selectedClass, selectedSection, selectedSession, studentRecords]);
 
     const exportColumns = useMemo(() => [
         { header: 'Student ID', accessor: 'id' },
@@ -329,7 +360,7 @@ export const StudentList = () => {
         { header: 'Updated At', accessor: 'updatedAt' },
     ], []);
 
-    const visibleTotal = selectedClass || selectedSection ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
+    const visibleTotal = selectedSession || selectedClass || selectedSection || statusFilter !== 'active' ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
@@ -370,6 +401,18 @@ export const StudentList = () => {
                             />
                         </div>
                         <select
+                            value={selectedSession}
+                            onChange={(event) => setSelectedSession(event.target.value)}
+                            className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
+                        >
+                            <option value="">تمام سیشن</option>
+                            {sessionOptions.map((sessionName) => (
+                                <option key={sessionName} value={sessionName}>
+                                    {sessionName}
+                                </option>
+                            ))}
+                        </select>
+                        <select
                             value={selectedClass}
                             onChange={(event) => {
                                 setSelectedClass(event.target.value);
@@ -387,14 +430,23 @@ export const StudentList = () => {
                         <select
                             value={selectedSection}
                             onChange={(event) => setSelectedSection(event.target.value)}
-                            className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
+                            disabled={!selectedClass}
+                            className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            <option value="">تمام سیکشن</option>
+                            <option value="">{selectedClass ? 'تمام سیکشن' : 'پہلے جماعت منتخب کریں'}</option>
                             {sectionOptions.map((sectionName) => (
                                 <option key={sectionName} value={sectionName}>
                                     {sectionName}
                                 </option>
                             ))}
+                        </select>
+                        <select
+                            value={statusFilter}
+                            onChange={(event) => setStatusFilter(event.target.value)}
+                            className="w-full sm:w-44 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
+                        >
+                            <option value="active">فعال</option>
+                            <option value="inactive">غیر فعال</option>
                         </select>
                     </div>
                 </div>
@@ -437,9 +489,16 @@ export const StudentList = () => {
                         </div>
 
                         <div className="py-4 border-y border-[var(--color-border)]">
-                            <div className="flex items-center gap-2 justify-end">
-                                <Users size={16} className="text-[var(--color-primary)]" />
-                                <span className="text-[12px] font-bold text-[var(--color-text)]/80">{student.className} ({student.section})</span>
+                            <div className="flex flex-wrap items-center gap-2 justify-end">
+                                <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20">
+                                    {student.statusLabel}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <Users size={16} className="text-[var(--color-primary)]" />
+                                    <span className="text-[12px] font-bold text-[var(--color-text)]/80">
+                                        {student.sessionName} | {student.className} ({student.section})
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
@@ -477,8 +536,10 @@ export const StudentList = () => {
                         <tr>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">آئی ڈی</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">طالب علم کی تفصیلات</th>
+                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">سیشن</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">جماعت</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">جماعت سیکشن</th>
+                            <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest">حالت</th>
                             <th className="p-6 text-[var(--color-text-muted)] font-black text-[11px] uppercase tracking-widest text-center">ایکشن</th>
                         </tr>
                     </thead>
@@ -517,12 +578,22 @@ export const StudentList = () => {
                                 </td>
                                 <td className="p-6">
                                     <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
+                                        {student.sessionName}
+                                    </span>
+                                </td>
+                                <td className="p-6">
+                                    <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
                                         {student.className}
                                     </span>
                                 </td>
                                 <td className="p-6">
                                     <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
                                         {student.section}
+                                    </span>
+                                </td>
+                                <td className="p-6">
+                                    <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
+                                        {student.statusLabel}
                                     </span>
                                 </td>
                                 <td className="p-6 text-center">

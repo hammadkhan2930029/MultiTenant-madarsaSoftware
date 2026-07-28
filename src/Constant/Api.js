@@ -66,6 +66,10 @@ const BRANCH_FILTERED_GET_PREFIXES = [
   '/teacher-assignments',
   '/classes',
   '/sections',
+  '/shifts',
+  '/departments',
+  '/qualifications',
+  '/result-grades',
   '/subjects',
   '/sessions',
   '/audit-logs',
@@ -83,6 +87,19 @@ const getRoleNameFromSession = (session) => {
   return role?.roleName || role?.role_name || role?.name || '';
 };
 
+const getRoleScopeFromSession = (session) => {
+  const role = session?.role || session?.admin?.roleDetails || session?.user?.roleDetails || session?.admin?.role || session?.user?.role || null;
+  if (!role || typeof role === 'string') return '';
+
+  const explicitScope = role.scope || role.roleScope || role.role_scope || session?.admin?.roleScope || session?.user?.roleScope || '';
+  if (explicitScope) return String(explicitScope).trim().toLowerCase();
+
+  const tenantId = role.tenantId ?? role.tenant_id ?? null;
+  const branchId = role.branchId ?? role.branch_id ?? null;
+  if (tenantId === null || tenantId === undefined || tenantId === '') return 'system';
+  return branchId === null || branchId === undefined || branchId === '' ? 'tenant' : 'branch';
+};
+
 const getSessionTenantId = (session) => {
   const value = session?.admin?.tenantId ?? session?.user?.tenantId ?? session?.tenantId ?? null;
   return value === null || value === undefined || value === '' ? null : Number(value);
@@ -93,16 +110,32 @@ const getSessionBranchId = (session) => {
   return value === null || value === undefined || value === '' ? null : Number(value);
 };
 
+const normalizeBranchId = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const branchId = Number(value);
+  return Number.isFinite(branchId) && branchId > 0 ? branchId : null;
+};
+
+const getBranchIdFromSelector = () => {
+  if (typeof document === 'undefined') return null;
+  return normalizeBranchId(document.getElementById('tenant-branch-context')?.value);
+};
+
 const isTenantAdminSession = (session) => (
-  String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin' &&
-  Boolean(getSessionTenantId(session))
+  Boolean(getSessionTenantId(session)) &&
+  !isSuperAdminSession(session) &&
+  (
+    String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin' ||
+    getRoleScopeFromSession(session) === 'tenant'
+  )
 );
 
 const isSuperAdminSession = (session) => String(getRoleNameFromSession(session)).trim().toLowerCase() === 'super_admin';
 
 const isBranchScopedSession = (session) => {
   const branchId = getSessionBranchId(session);
-  return Boolean(branchId) && !isSuperAdminSession(session) && !isTenantAdminSession(session);
+  const roleScope = getRoleScopeFromSession(session);
+  return (roleScope === 'branch' || Boolean(branchId)) && !isSuperAdminSession(session) && !isTenantAdminSession(session);
 };
 
 const isBranchSystemExplicitlyDisabled = (session) => (
@@ -126,17 +159,20 @@ const getSelectedTenantBranchId = () => {
     }
 
     const tenantId = getSessionTenantId(session);
-    const sessionBranchId = getSessionBranchId(session);
+    const sessionBranchId = normalizeBranchId(getSessionBranchId(session));
+    const selectorBranchId = getBranchIdFromSelector();
     const stored = JSON.parse(window.localStorage.getItem(BRANCH_CONTEXT_KEY) || 'null');
-    const branchId = stored?.branchId === null || stored?.branchId === undefined || stored?.branchId === ''
-      ? null
-      : Number(stored.branchId);
+    const branchId = normalizeBranchId(stored?.branchId);
 
-    if (!tenantId || Number(stored?.tenantId) !== tenantId || !Number.isFinite(branchId) || branchId <= 0) {
-      return Number.isFinite(sessionBranchId) && sessionBranchId > 0 ? sessionBranchId : null;
+    if (!tenantId) {
+      return null;
     }
 
-    return branchId;
+    if (Number(stored?.tenantId) === tenantId && branchId) {
+      return branchId;
+    }
+
+    return selectorBranchId || sessionBranchId || null;
   } catch {
     return null;
   }

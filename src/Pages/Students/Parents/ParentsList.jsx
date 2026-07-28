@@ -14,6 +14,7 @@ const INITIAL_FORM = {
     address: '',
     email: '',
     cnic: '',
+    status: 'active',
 };
 
 const formatDate = (value) => {
@@ -73,6 +74,7 @@ export const ParentsList = () => {
     const navigate = useNavigate();
     const [parents, setParents] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [formValues, setFormValues] = useState(INITIAL_FORM);
     const [editingParentId, setEditingParentId] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -83,7 +85,7 @@ export const ParentsList = () => {
 
     const loadParents = useCallback(async () => {
         try {
-            const result = await getParents('page=1&limit=100');
+            const result = await getParents(`page=1&limit=100&status=${statusFilter}`);
             setParents(result.items || []);
         } catch (loadError) {
             const loadMessage = loadError?.message || '';
@@ -99,7 +101,7 @@ export const ParentsList = () => {
 
             setError(loadMessage || 'سرپرست کی فہرست لوڈ نہیں ہو سکی۔');
         }
-    }, []);
+    }, [statusFilter]);
 
     useEffect(() => {
         let isMounted = true;
@@ -177,6 +179,7 @@ export const ParentsList = () => {
             address: parent.address || '',
             email: parent.email || '',
             cnic: parent.cnic || '',
+            status: parent.status === 'inactive' ? 'inactive' : 'active',
         });
         window.scrollTo(0, 0);
     };
@@ -292,6 +295,19 @@ export const ParentsList = () => {
                             dir="ltr"
                             className="text-right"
                         />
+                        {editingParentId ? (
+                            <label className="space-y-3">
+                                <span className="block text-sm font-bold text-[var(--color-text-muted)]">حالت</span>
+                                <select
+                                    value={formValues.status}
+                                    onChange={(event) => handleChange('status', event.target.value)}
+                                    className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]/50"
+                                >
+                                    <option value="active">فعال</option>
+                                    <option value="inactive">غیر فعال</option>
+                                </select>
+                            </label>
+                        ) : null}
                     </div>
                 </form>
             </div>
@@ -301,6 +317,14 @@ export const ParentsList = () => {
                     <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">سرپرست</h3>
                     <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
                         <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="parents-complete-list" className="w-full md:w-auto" />
+                        <select
+                            value={statusFilter}
+                            onChange={(event) => setStatusFilter(event.target.value)}
+                            className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]/50 md:w-44"
+                        >
+                            <option value="active">فعال</option>
+                            <option value="inactive">غیر فعال</option>
+                        </select>
                         <div className="group relative w-full md:w-96">
                             <Search size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]" />
                             <input
@@ -324,6 +348,7 @@ export const ParentsList = () => {
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پیشہ</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پتہ</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">منسلک طلباء</th>
+                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ایکشن</th>
                             </tr>
                         </thead>
@@ -341,6 +366,11 @@ export const ParentsList = () => {
                                         {parent.address || '---'}
                                     </td>
                                     <td className="p-5 text-sm font-bold text-[var(--color-text-main)]">{parent.students?.length || 0}</td>
+                                    <td className="p-5">
+                                        <span className={`rounded-2xl px-4 py-2 text-xs font-black ${parent.status === 'inactive' ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                            {parent.status === 'inactive' ? 'غیر فعال' : 'فعال'}
+                                        </span>
+                                    </td>
                                     <td className="p-5">
                                         <div className="flex items-center justify-center gap-2">
                                             <button type="button" onClick={() => navigate(`/students/parents/profile/${parent.id}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white">

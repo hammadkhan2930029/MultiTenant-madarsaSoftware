@@ -125,6 +125,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('');
     const [shiftFilter, setShiftFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [teachers, setTeachers] = useState([]);
     const [teacherMeta, setTeacherMeta] = useState({ totalItems: 0 });
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -135,13 +136,13 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
 
     const loadTeachers = useCallback(async () => {
         try {
-            const result = await getTeachers(`page=1&limit=100&staffType=${staffType}`);
+            const result = await getTeachers(`page=1&limit=100&status=${statusFilter}&staffType=${staffType}`);
             setTeachers(result.items || []);
             setTeacherMeta(result.meta || { totalItems: result.items?.length || 0 });
         } catch (loadError) {
             setError(loadError.message || config.loadError);
         }
-    }, [config.loadError, staffType]);
+    }, [config.loadError, staffType, statusFilter]);
 
     useEffect(() => {
         loadTeachers();
@@ -171,7 +172,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     );
 
     const exportRows = useMemo(() => filteredTeachers.map(mapTeacherForExport), [filteredTeachers]);
-    const visibleTotal = searchTerm.trim() || subjectFilter || shiftFilter ? filteredTeachers.length : Number(teacherMeta.totalItems ?? filteredTeachers.length);
+    const visibleTotal = searchTerm.trim() || subjectFilter || shiftFilter || statusFilter !== 'active' ? filteredTeachers.length : Number(teacherMeta.totalItems ?? filteredTeachers.length);
 
     const exportColumns = useMemo(() => [
         { header: 'Teacher / Staff ID', accessor: 'id' },
@@ -241,7 +242,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         </div>
                     </div>
 
-                    <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,150px)_minmax(240px,1fr)_minmax(140px,160px)_minmax(140px,160px)_minmax(130px,150px)]">
+                    <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(130px,150px)_minmax(240px,1fr)_minmax(140px,160px)_minmax(140px,160px)_minmax(120px,140px)_minmax(130px,150px)]">
                         <Can permission={`${permissionPrefix}.export`}>
                             <ExportExcelButton rows={exportRows} columns={exportColumns} fileName={`${staffType}-complete-list`} className="h-[72px] w-full" />
                         </Can>
@@ -271,6 +272,14 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         >
                             <option value="">شفٹ</option>
                             {shiftOptions.map((shift) => <option key={shift} value={shift}>{shift}</option>)}
+                        </select>
+                        <select
+                            value={statusFilter}
+                            onChange={(event) => setStatusFilter(event.target.value)}
+                            className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
+                        >
+                            <option value="active">فعال</option>
+                            <option value="inactive">غیر فعال</option>
                         </select>
                         <Can permission={`${permissionPrefix}.create`}>
                             <button

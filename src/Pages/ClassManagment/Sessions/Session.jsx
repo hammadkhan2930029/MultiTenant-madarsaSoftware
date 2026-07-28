@@ -9,6 +9,7 @@ const emptyForm = {
     name: '',
     startDate: '',
     endDate: '',
+    status: 'active',
 };
 
 const formatDateInput = (value) => {
@@ -21,6 +22,7 @@ const formatDateInput = (value) => {
 export const CreateSessions = () => {
     const [sessions, setSessions] = useState([]);
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [formData, setFormData] = useState(emptyForm);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -44,7 +46,7 @@ export const CreateSessions = () => {
         setError('');
 
         try {
-            const result = await getSessions('page=1&limit=100');
+            const result = await getSessions(`page=1&limit=100&status=${statusFilter || 'active'}`);
             setSessions(result.items || []);
         } catch (loadError) {
             setError(loadError.message || 'سیشنز کی فہرست لوڈ نہیں ہو سکی۔');
@@ -55,7 +57,7 @@ export const CreateSessions = () => {
 
     useEffect(() => {
         loadSessions();
-    }, []);
+    }, [statusFilter]);
 
     useEffect(() => {
         const handleBranchContextUpdated = () => {
@@ -82,6 +84,7 @@ export const CreateSessions = () => {
             name: session.name || '',
             startDate: formatDateInput(session.startDate),
             endDate: formatDateInput(session.endDate),
+            status: session.status || 'active',
         });
         setError('');
         setSuccess('');
@@ -119,6 +122,7 @@ export const CreateSessions = () => {
                 name: formData.name.trim(),
                 startDate: formData.startDate,
                 endDate: formData.endDate,
+                ...(editMode ? { status: formData.status || 'active' } : {}),
             };
 
             if (editMode) {
@@ -186,6 +190,14 @@ export const CreateSessions = () => {
 
                 <div className="flex w-full items-center flex-col gap-3 md:w-auto md:flex-row">
                     <ExportExcelButton rows={filteredSessions} columns={exportColumns} fileName="sessions-list" className="w-full md:w-auto" />
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
+                    >
+                        <option value="active">فعال</option>
+                        <option value="inactive">غیر فعال</option>
+                    </select>
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -215,7 +227,7 @@ export const CreateSessions = () => {
                         <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نیا سیشن اندراج'}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <div className={`grid grid-cols-1 gap-6 ${editMode ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سیشن نام<span className="text-red-500"> *</span></label>
                             <div className="relative">
@@ -251,6 +263,20 @@ export const CreateSessions = () => {
                                 className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
                             />
                         </div>
+
+                        {editMode ? (
+                            <div className="space-y-2">
+                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت<span className="text-red-500"> *</span></label>
+                                <select
+                                    value={formData.status}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                    className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                >
+                                    <option value="active">فعال</option>
+                                    <option value="inactive">غیر فعال</option>
+                                </select>
+                            </div>
+                        ) : null}
                     </div>
 
                     <div className="mt-8 flex justify-end gap-3">

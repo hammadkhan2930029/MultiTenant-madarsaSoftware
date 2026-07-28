@@ -9,6 +9,7 @@ import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows'
 const emptyForm = {
     name: '',
     branchId: '',
+    status: 'active',
 };
 
 const createEmptyClassRow = () => ({
@@ -20,6 +21,7 @@ const createEmptyClassRow = () => ({
 export const CreateClasses = () => {
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [formData, setFormData] = useState(emptyForm);
     const [classRows, setClassRows] = useState([createEmptyClassRow()]);
     const [editMode, setEditMode] = useState(null);
@@ -43,7 +45,7 @@ export const CreateClasses = () => {
 
     const buildClassesQuery = () => {
         const selectedBranchId = getActiveBranchId();
-        const params = new URLSearchParams({ page: '1', limit: '100' });
+        const params = new URLSearchParams({ page: '1', limit: '100', status: statusFilter || 'active' });
         if (selectedBranchId) params.set('branchId', String(selectedBranchId));
         return params.toString();
     };
@@ -95,7 +97,7 @@ export const CreateClasses = () => {
         return () => {
             window.removeEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
         };
-    }, []);
+    }, [statusFilter]);
 
     const resetForm = () => {
         setEditMode(null);
@@ -109,6 +111,7 @@ export const CreateClasses = () => {
         setFormData({
             name: academicClass.name || '',
             branchId: academicClass.branchId ? String(academicClass.branchId) : '',
+            status: academicClass.status || 'active',
         });
         setClassRows([{ ...createEmptyClassRow(), name: academicClass.name || '' }]);
         setError('');
@@ -207,6 +210,7 @@ export const CreateClasses = () => {
         try {
             const payload = {
                 name: formData.name.trim(),
+                ...(editMode ? { status: formData.status || 'active' } : {}),
                 ...(branchId ? { branchId: Number(branchId) } : {}),
             };
 
@@ -287,6 +291,14 @@ export const CreateClasses = () => {
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
                     <ExportExcelButton rows={filteredClasses} columns={exportColumns} fileName="classes-list" className="w-full md:w-auto" />
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
+                    >
+                        <option value="active">فعال</option>
+                        <option value="inactive">غیر فعال</option>
+                    </select>
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -318,19 +330,34 @@ export const CreateClasses = () => {
 
                     <div className="space-y-4">
                         {editMode ? (
-                            <div className="space-y-2">
-                                <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                    جماعت نام<span className="text-red-500"> *</span>
-                                </label>
-                                <div className="relative">
-                                    <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                                    <input
-                                        required
-                                        value={formData.name}
-                                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                                        placeholder="مثلاً حفظ اول"
-                                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                                    />
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        جماعت نام<span className="text-red-500"> *</span>
+                                    </label>
+                                    <div className="relative">
+                                        <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                        <input
+                                            required
+                                            value={formData.name}
+                                            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                                            placeholder="مثلاً حفظ اول"
+                                            className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        حالت<span className="text-red-500"> *</span>
+                                    </label>
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                    >
+                                        <option value="active">فعال</option>
+                                        <option value="inactive">غیر فعال</option>
+                                    </select>
                                 </div>
                             </div>
                         ) : (

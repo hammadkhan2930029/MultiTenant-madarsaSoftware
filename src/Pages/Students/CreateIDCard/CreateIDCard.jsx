@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { CreditCard, GraduationCap, Layout, Printer, Search, Smartphone, User } from 'lucide-react';
+import { useRef } from 'react';
 /* eslint-disable-next-line no-unused-vars */
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppImages } from '../../../Constant/AppImages';
@@ -77,9 +78,18 @@ const getStudentClassName = (student) => getActiveAssignment(student)?.class?.na
 const getStudentSectionName = (student) => getActiveAssignment(student)?.section?.name || student?.requiredJamaat || '---';
 const getStudentSessionName = (student) => getActiveAssignment(student)?.session?.name || '---';
 
+const studentMatchesSessionFilter = (student, sessionId) => {
+    if (!sessionId) return true;
+
+    const activeAssignment = getActiveAssignment(student);
+    const studentSessionId = activeAssignment?.sessionId || activeAssignment?.session?.id || student?.sessionId;
+
+    return !studentSessionId || String(studentSessionId) === String(sessionId);
+};
+
 const buildStudentQuery = (filters = {}, search = '') => {
-    const params = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
-    if (filters.sessionId) params.set('sessionId', filters.sessionId);
+    const params = new URLSearchParams({ page: '1', limit: '100', status: filters.status || 'active' });
+    if (filters.sessionId && !filters.classId && !filters.sectionId) params.set('sessionId', filters.sessionId);
     if (filters.classId) params.set('classId', filters.classId);
     if (filters.sectionId) params.set('sectionId', filters.sectionId);
     if (search?.trim()) params.set('search', search.trim());
@@ -95,13 +105,14 @@ export const CreateIdCard = () => {
     const [sessions, setSessions] = useState([]);
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
-    const [filters, setFilters] = useState({ sessionId: '', classId: '', sectionId: '' });
+    const [filters, setFilters] = useState({ sessionId: '', classId: '', sectionId: '', status: 'active' });
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [madrassaProfile, setMadrassaProfile] = useState(() => getAdminSession()?.madrassaProfile || null);
     const [loading, setLoading] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const previewRef = useRef(null);
 
     useNotificationBridge({ error, success });
 
@@ -171,8 +182,8 @@ export const CreateIdCard = () => {
     );
 
     const tableStudents = useMemo(
-        () => students.slice(0, 100),
-        [students],
+        () => students.filter((student) => studentMatchesSessionFilter(student, filters.sessionId)).slice(0, 100),
+        [filters.sessionId, students],
     );
 
     const filteredStudents = useMemo(() => {
@@ -184,9 +195,10 @@ export const CreateIdCard = () => {
         );
 
         return mergedStudents
+            .filter((student) => studentMatchesSessionFilter(student, filters.sessionId))
             .filter((student) => getStudentSearchFields(student).some((value) => normalizeSearchText(value).includes(query)))
             .slice(0, 8);
-    }, [searchId, searchResults, students]);
+    }, [filters.sessionId, searchId, searchResults, students]);
 
     useEffect(() => {
         const query = searchId.trim();
@@ -218,6 +230,9 @@ export const CreateIdCard = () => {
         setIsDropdownOpen(false);
         setError('');
         setSuccess('');
+        window.setTimeout(() => {
+            previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
     };
 
     const handleSearch = async () => {
@@ -269,7 +284,7 @@ export const CreateIdCard = () => {
                     <CreditCard className="text-[var(--color-primary)]" /> آئی ڈی کارڈ جنریٹر
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5 items-end ">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-5 items-end ">
                     <FilterSelect
                         label="سیشن"
                         value={filters.sessionId}
@@ -291,6 +306,16 @@ export const CreateIdCard = () => {
                         options={availableSections}
                         placeholder="تمام سیکشن"
                         disabled={!filters.classId}
+                    />
+                    <FilterSelect
+                        label="حالت"
+                        value={filters.status}
+                        onChange={(value) => setFilters((current) => ({ ...current, status: value || 'active' }))}
+                        options={[
+                            { id: 'active', name: 'فعال' },
+                            { id: 'inactive', name: 'غیر فعال' },
+                        ]}
+                        placeholder="فعال"
                     />
                     <div className="relative flex flex-col gap-2 xl:col-span-2">
                         <label className="text-xs font-bold text-[var(--color-text-muted)] mr-2">رجسٹریشن نمبر یا نام<span className="text-red-500"> *</span></label>
@@ -410,6 +435,7 @@ export const CreateIdCard = () => {
                 </div>
             </div>
 
+            <div ref={previewRef} className="scroll-mt-8">
             <AnimatePresence mode="wait">
                 {studentData ? (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-6">
@@ -433,6 +459,7 @@ export const CreateIdCard = () => {
                     </div>
                 )}
             </AnimatePresence>
+            </div>
 
             <style
                 dangerouslySetInnerHTML={{
@@ -584,5 +611,3 @@ const VerticalInfo = ({ label, value }) => (
         <p className="truncate text-center text-[12px] font-bold leading-tight text-gray-800">{value || '---'}</p>
     </div>
 );
-
-

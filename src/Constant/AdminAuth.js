@@ -33,7 +33,7 @@ const hasFixedBranchContext = (session) => {
   const value = session?.admin?.branchId ?? session?.user?.branchId ?? null;
   const branchId = value === null || value === undefined || value === '' ? null : Number(value);
   const roleName = String(getRoleNameFromSession(session)).trim().toLowerCase();
-  return Number.isFinite(branchId) && branchId > 0 && roleName !== 'admin';
+  return Number.isFinite(branchId) && branchId > 0 && roleName !== 'admin' && getRoleScopeFromSession(session) !== 'tenant';
 };
 
 const clearBranchContextForFixedBranchSession = (session) => {
@@ -145,6 +145,19 @@ const getRoleNameFromSession = (session) => {
   return roleName || session?.admin?.role || session?.user?.role || '';
 };
 
+const getRoleScopeFromSession = (session) => {
+  const role = session?.role || session?.admin?.roleDetails || session?.user?.roleDetails || session?.admin?.role || session?.user?.role || null;
+  if (!role || typeof role === 'string') return '';
+
+  const explicitScope = role.scope || role.roleScope || role.role_scope || session?.admin?.roleScope || session?.user?.roleScope || '';
+  if (explicitScope) return String(explicitScope).trim().toLowerCase();
+
+  const tenantId = role.tenantId ?? role.tenant_id ?? null;
+  const branchId = role.branchId ?? role.branch_id ?? null;
+  if (tenantId === null || tenantId === undefined || tenantId === '') return 'system';
+  return branchId === null || branchId === undefined || branchId === '' ? 'tenant' : 'branch';
+};
+
 const expireSession = (message = TENANT_SESSION_EXPIRED_MESSAGE) => {
   if (!canUseStorage) return;
   window.localStorage.removeItem(AUTH_KEY);
@@ -218,7 +231,11 @@ export const isTenantAdmin = () => {
   const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
   const legacyRoleName = session?.admin?.role;
 
-  return roleName === 'admin' || legacyRoleName === 'admin';
+  return Boolean(getSessionTenantId(session)) && (
+    roleName === 'admin' ||
+    legacyRoleName === 'admin' ||
+    getRoleScopeFromSession(session) === 'tenant'
+  );
 };
 
 export const getSessionBranchId = (session = readSession()) => {
@@ -246,7 +263,7 @@ export const isBranchScopedSession = (session = readSession()) => {
 
   const role = normalizeRole(session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || null);
   const roleName = String(role?.roleName || session?.admin?.role || session?.user?.role || '').trim().toLowerCase();
-  return roleName !== 'super_admin' && roleName !== 'admin';
+  return roleName !== 'super_admin' && roleName !== 'admin' && getRoleScopeFromSession(session) !== 'tenant';
 };
 
 export const canAccessBranchManagement = (session = readSession()) => (

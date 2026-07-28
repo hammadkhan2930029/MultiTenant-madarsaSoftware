@@ -35,6 +35,30 @@ const getStatusColor = (status) => {
     }
 };
 
+const parseDateOnly = (value) => {
+    if (!value) return null;
+    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+    const date = year && month && day ? new Date(year, month - 1, day) : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+
+const getStudentAdmissionDate = (student) =>
+    student?.admissionDate ||
+    student?.dateOfAdmission ||
+    student?.admission?.admissionDate ||
+    student?.admission?.date;
+
+const isStudentAvailableOnDate = (student, dateValue) => {
+    const selected = parseDateOnly(dateValue);
+    const admissionDate = parseDateOnly(getStudentAdmissionDate(student));
+
+    if (!selected || !admissionDate) return true;
+
+    return selected >= admissionDate;
+};
+
 export const AttendancePage = () => {
     const navigate = useNavigate();
     const today = new Date().toISOString().split('T')[0];
@@ -164,6 +188,10 @@ export const AttendancePage = () => {
                     const activeAssignment = student.assignments?.find((assignment) => assignment.status === 'active');
 
                     if (!activeAssignment) {
+                        return null;
+                    }
+
+                    if (!isStudentAvailableOnDate(student, searchFilters.date)) {
                         return null;
                     }
 

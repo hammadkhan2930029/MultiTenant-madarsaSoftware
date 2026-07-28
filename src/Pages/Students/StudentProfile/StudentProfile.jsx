@@ -43,7 +43,7 @@ const SectionCard = ({ title, icon, children }) => (
             <div className="p-3 rounded-2xl bg-[var(--color-primary)]/10">
                 {React.createElement(icon, { size: 22 })}
             </div>
-            <h2 className="text-xl font-black text-[var(--color-text-main)] flex-1">{title}</h2>
+            <h2 className="text-2xl md:text-3xl font-black text-[var(--color-text-main)] flex-1">{title}</h2>
         </div>
         {children}
     </section>
@@ -100,11 +100,11 @@ export const StudentProfile = () => {
                     <div className="flex-1 text-center md:text-right space-y-3">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-black text-[var(--color-text-muted)] uppercase tracking-[0.25em]">طالب علم کی پروفائل</p>
-                                <h1 className="mt-2 py-2 text-3xl font-black leading-[1.8] text-[var(--color-text-main)]">
+                                <p className="text-3xl md:text-4xl font-black text-[var(--color-text-main)]">طالب علم کی پروفائل</p>
+                                <h1 className="mt-4 py-2 text-4xl md:text-5xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {student.fullName}
                                 </h1>
-                                <p className="text-sm font-bold text-[var(--color-text-muted)] mt-4">سرپرست: {student.fatherName}</p>
+                                <p className="text-base md:text-lg font-bold text-[var(--color-text-muted)] mt-4">سرپرست: {student.fatherName}</p>
                             </div>
 
                             <div className="flex flex-wrap items-center justify-center gap-3 md:justify-end">
@@ -170,12 +170,12 @@ export const StudentProfile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(student.parents || []).map((parentItem) => (
                         <div key={parentItem.id} className="bg-[var(--color-bg)] rounded-[1.8rem] border border-[var(--color-border)] p-5">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-black text-[var(--color-text-main)]">{parentItem.parent?.fullName}</h3>
-                                <span className="text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-full text-xs font-bold">
-                                    {parentItem.relationship}
-                                </span>
-                            </div>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xl md:text-2xl font-black text-[var(--color-text-main)]">{parentItem.parent?.fullName}</h3>
+                                    <span className="text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-full text-sm md:text-base font-bold">
+                                        {parentItem.relationship}
+                                    </span>
+                                </div>
                             <p className="mt-4 text-sm font-bold text-[var(--color-text-main)] flex items-center gap-2">
                                 <Phone size={14} className="text-[var(--color-primary)]" /> سرپرست فون نمبر: {parentItem.parent?.phone || '---'}
                             </p>

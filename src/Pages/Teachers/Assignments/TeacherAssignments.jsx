@@ -49,7 +49,7 @@ export const TeacherAssignments = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [filters, setFilters] = useState({ search: '', status: '', branchId: '', classId: '', sectionId: '', subjectId: '', responsibilityId: '' });
+  const [filters, setFilters] = useState({ search: '', status: 'active', branchId: '', classId: '', sectionId: '', subjectId: '', responsibilityId: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const showBranchControls = canUseTenantBranchContext();
@@ -293,7 +293,6 @@ export const TeacherAssignments = () => {
           {responsibilities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
         <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none">
-          <option value="">تمام حالتیں</option>
           <option value="active">فعال</option>
           <option value="inactive">غیر فعال</option>
         </select>

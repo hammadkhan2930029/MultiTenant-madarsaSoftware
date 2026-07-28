@@ -12,7 +12,7 @@ export const useNotificationBridge = ({ error, success, info, warning }) => {
 
   useEffect(() => {
     if (error && previous.current.error !== error) {
-      notify.showNotification({ severity: 'error', message: error, autoHideDuration: null });
+      notify.showNotification({ severity: 'error', message: error });
       previous.current.error = error;
     }
     if (!error && previous.current.error) {

@@ -13,6 +13,7 @@ const initialForm = {
     incrementAmount: '',
     effectiveDate: todayInputValue(),
     reason: '',
+    status: 'active',
 };
 
 export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
@@ -22,6 +23,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
     const [increments, setIncrements] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [staffType, setStaffType] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
     const [formData, setFormData] = useState(initialForm);
     const [editingIncrement, setEditingIncrement] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -34,6 +36,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
         try {
             const activeStaffType = fixedStaffType || staffType;
             const params = new URLSearchParams({ page: '1', limit: '100' });
+            params.set('status', statusFilter);
             if (activeStaffType) params.set('staffType', activeStaffType);
             if (searchTerm.trim()) params.set('search', searchTerm.trim());
             const teacherParams = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
@@ -51,7 +54,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
         } finally {
             setIsLoading(false);
         }
-    }, [fixedStaffType, notify, searchTerm, staffType]);
+    }, [fixedStaffType, notify, searchTerm, staffType, statusFilter]);
 
     useEffect(() => {
         loadData();
@@ -87,6 +90,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                 incrementAmount: Number(formData.incrementAmount),
                 effectiveDate: formData.effectiveDate,
                 reason: formData.reason,
+                status: formData.status,
             };
             if (editingIncrement) {
                 await updateTeacherIncrement(editingIncrement.id, payload);
@@ -111,6 +115,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
             incrementAmount: String(item.incrementAmount || ''),
             effectiveDate: item.effectiveDate || todayInputValue(),
             reason: item.reason || '',
+            status: item.status || 'active',
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -176,7 +181,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                     <h2 className="text-2xl font-black">نیا انکریمنٹ شامل کریں</h2>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr_1fr_2fr_auto]">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]">
                     <Field label="استاد / عملہ">
                         <select
                             value={formData.teacherId}
@@ -218,6 +223,17 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                         />
                     </Field>
 
+                    <Field label="حالت">
+                        <select
+                            value={formData.status}
+                            onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))}
+                            className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
+                        >
+                            <option value="active">فعال</option>
+                            <option value="inactive">غیر فعال</option>
+                        </select>
+                    </Field>
+
                     <div className="flex items-end">
                         <button
                             type="submit"
@@ -256,7 +272,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
             </form>
 
             <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:p-6">
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_180px_220px]">
                     <div className="relative">
                         <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -281,17 +297,26 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                             <option value="staff">دیگر عملہ</option>
                         </select>
                     )}
+                    <select
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value)}
+                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
+                    >
+                        <option value="active">فعال</option>
+                        <option value="inactive">غیر فعال</option>
+                    </select>
                 </div>
             </div>
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-                <div className="hidden grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_150px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/40 px-5 py-4 text-sm font-black text-[var(--color-text-muted)] lg:grid">
+                <div className="hidden grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_0.8fr_150px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/40 px-5 py-4 text-sm font-black text-[var(--color-text-muted)] lg:grid">
                     <span>نام</span>
                     <span>قسم</span>
                     <span>تاریخ</span>
                     <span>پرانی تنخواہ</span>
                     <span>اضافہ</span>
                     <span>نئی تنخواہ</span>
+                    <span>حالت</span>
                     <span>ایکشن</span>
                 </div>
 
@@ -299,7 +324,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                     <div className="px-5 py-10 text-center text-sm font-bold text-[var(--color-text-muted)]">ریکارڈز لوڈ ہو رہے ہیں...</div>
                 ) : increments.length ? (
                     increments.map((item) => (
-                        <div key={item.id} className="grid grid-cols-1 gap-3 border-b border-[var(--color-border)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] last:border-b-0 lg:grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_150px] lg:items-center">
+                        <div key={item.id} className="grid grid-cols-1 gap-3 border-b border-[var(--color-border)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] last:border-b-0 lg:grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_0.8fr_150px] lg:items-center">
                             <div>
                                 <p className="text-base font-black">{item.teacherName || '---'}</p>
                                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.department || item.jobTitle || item.reason || '---'}</p>
@@ -309,6 +334,9 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                             <span>{formatCurrency(item.previousSalary)}</span>
                             <span className="text-[var(--color-primary)]">{formatCurrency(item.incrementAmount)}</span>
                             <span>{formatCurrency(item.newSalary)}</span>
+                            <span className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-black ${item.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                {item.status === 'active' ? 'فعال' : 'غیر فعال'}
+                            </span>
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"
