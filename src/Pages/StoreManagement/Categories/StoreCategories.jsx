@@ -9,11 +9,13 @@ const emptyForm = {
     description: '',
     status: 'active',
 };
+const createAdditionalRow = () => ({ id: `${Date.now()}-${Math.random()}`, name: '', description: '' });
 
 export const StoreCategories = () => {
     const [categories, setCategories] = useState([]);
     const [search, setSearch] = useState('');
     const [formData, setFormData] = useState(emptyForm);
+    const [additionalRows, setAdditionalRows] = useState([]);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +34,7 @@ export const StoreCategories = () => {
             const result = await getStoreCategories({ search });
             setCategories(result.items || []);
         } catch (loadError) {
-            setError(loadError.message || 'کیٹیگریز لوڈ نہیں ہو سکیں۔');
+            setError(loadError.message || 'اقسام لوڈ نہیں ہو سکیں۔');
         } finally {
             setIsLoading(false);
         }
@@ -45,6 +47,7 @@ export const StoreCategories = () => {
 
     const resetForm = () => {
         setFormData(emptyForm);
+        setAdditionalRows([]);
         setEditMode(null);
         setIsFormOpen(false);
     };
@@ -62,7 +65,8 @@ export const StoreCategories = () => {
     };
 
     const handleSubmit = async () => {
-        if (!formData.name.trim()) return setError('کیٹیگری کا نام درج کریں۔');
+        if (!formData.name.trim()) return setError('قسم کا نام درج کریں۔');
+        if (!editMode && additionalRows.some((row) => !row.name.trim())) return setError('ہر قسم کا نام درج کریں۔');
 
         setIsSaving(true);
         setError('');
@@ -76,16 +80,20 @@ export const StoreCategories = () => {
 
             if (editMode) {
                 await updateStoreCategory(editMode, payload);
-                setSuccess('کیٹیگری کامیابی سے اپ ڈیٹ ہو گئی۔');
+                setSuccess('قسم کامیابی سے اپ ڈیٹ ہو گئی۔');
             } else {
-                await createStoreCategory(payload);
-                setSuccess('نئی کیٹیگری کامیابی سے شامل ہو گئی۔');
+                await Promise.all([payload, ...additionalRows.map((row) => ({
+                    name: row.name.trim(),
+                    description: row.description.trim(),
+                    status: 'active',
+                }))].map(createStoreCategory));
+                setSuccess('نئی اقسام کامیابی سے شامل ہو گئیں۔');
             }
 
             resetForm();
             await loadCategories();
         } catch (saveError) {
-            setError(saveError.message || 'کیٹیگری محفوظ نہیں ہو سکی۔');
+            setError(saveError.message || 'قسم محفوظ نہیں ہو سکی۔');
         } finally {
             setIsSaving(false);
         }
@@ -100,10 +108,10 @@ export const StoreCategories = () => {
             await deleteStoreCategory(deleteTarget.id);
             if (editMode === deleteTarget.id) resetForm();
             setDeleteTarget(null);
-            setSuccess('کیٹیگری حذف کر دی گئی۔');
+            setSuccess('قسم حذف کر دی گئی۔');
             await loadCategories();
         } catch (deleteError) {
-            setError(deleteError.message || 'کیٹیگری حذف نہیں ہو سکی۔');
+            setError(deleteError.message || 'قسم حذف نہیں ہو سکی۔');
         } finally {
             setIsDeleting(false);
         }
@@ -111,7 +119,7 @@ export const StoreCategories = () => {
 
     const exportColumns = useMemo(
         () => [
-            { header: 'کیٹیگری', accessor: 'name' },
+            { header: 'قسم', accessor: 'name' },
             { header: 'تفصیل', accessor: 'description' },
             { header: 'حالت', accessor: 'status' },
         ],
@@ -126,18 +134,18 @@ export const StoreCategories = () => {
                         <PackageCheck size={18} />
                         اسٹور مینجمنٹ
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">کیٹیگریز کا انتظام</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل کیٹیگریز: {categories.length}</p>
+                    <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">اقسام کا انتظام</h2>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل اقسام: {categories.length}</p>
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
                     <ExportExcelButton rows={categories} columns={exportColumns} fileName="store-categories-list" className="w-full md:w-auto" />
                     <div className="relative md:w-72">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="کیٹیگری تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none" />
+                        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="قسم تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none" />
                     </div>
                     <button type="button" onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))} className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all active:scale-95 ${isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white shadow-lg shadow-emerald-500/20'}`}>
-                        {isFormOpen ? 'بند کریں' : 'نئی کیٹیگری'}
+                        {isFormOpen ? 'بند کریں' : 'نئی قسم'}
                         {isFormOpen ? <X size={18} /> : <Plus size={18} />}
                     </button>
                 </div>
@@ -147,35 +155,44 @@ export const StoreCategories = () => {
                 <div className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span>{editMode ? 'کیٹیگری میں ترمیم' : 'نئی کیٹیگری کا اندراج'}</span>
+                        <span>{editMode ? 'قسم میں ترمیم' : 'نئی قسم کا اندراج'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">کیٹیگری کا نام<span className="text-red-500"> *</span></label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">قسم کا نام<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <FolderTree size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                                 <input value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} placeholder="مثلاً راشن" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                        {editMode ? <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                             <div className="text-right">
                                 <p className="text-sm font-black text-[var(--color-text)]">حالت</p>
-                                <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{formData.status === 'active' ? 'فعال کیٹیگری' : 'غیر فعال کیٹیگری'}</p>
+                                <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{formData.status === 'active' ? 'فعال قسم' : 'غیر فعال قسم'}</p>
                             </div>
                             <button type="button" onClick={() => setFormData((prev) => ({ ...prev, status: prev.status === 'active' ? 'inactive' : 'active' }))} className={`rounded-xl p-2 transition-all ${formData.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-slate-500/10 text-[var(--color-text-muted)]'}`} title="حالت تبدیل کریں">
                                 {formData.status === 'active' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                             </button>
-                        </div>
+                        </div> : null}
 
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تفصیل</label>
                             <textarea value={formData.description} onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))} placeholder="اختیاری تفصیل" rows={3} className="w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
                     </div>
 
+                    {!editMode ? additionalRows.map((row) => (
+                        <div key={row.id} className="mt-4 grid grid-cols-1 gap-4 rounded-2xl border border-[var(--color-border)] p-4 md:grid-cols-[1fr_2fr_auto]">
+                            <input value={row.name} onChange={(event) => setAdditionalRows((current) => current.map((item) => item.id === row.id ? { ...item, name: event.target.value } : item))} placeholder="قسم کا نام" className="h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold outline-none" />
+                            <input value={row.description} onChange={(event) => setAdditionalRows((current) => current.map((item) => item.id === row.id ? { ...item, description: event.target.value } : item))} placeholder="تفصیل" className="h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold outline-none" />
+                            <button type="button" onClick={() => setAdditionalRows((current) => current.filter((item) => item.id !== row.id))} className="rounded-xl p-3 text-rose-500"><Trash2 size={18} /></button>
+                        </div>
+                    )) : null}
+
                     <div className="mt-8 flex justify-end gap-3">
+                        {!editMode ? <button type="button" onClick={() => setAdditionalRows((current) => [...current, createAdditionalRow()])} className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black"><Plus size={18} />مزید سطر شامل کریں</button> : null}
                         {editMode ? <button type="button" onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">منسوخ کریں</button> : null}
                         <button type="button" onClick={handleSubmit} disabled={isSaving} className="flex items-center gap-3 rounded-xl bg-[#218838] px-8 py-3 text-sm font-black text-white transition-all hover:bg-[#1a6d2c] disabled:opacity-70">
                             {isSaving ? 'محفوظ ہو رہا ہے...' : editMode ? 'اپ ڈیٹ کریں' : 'محفوظ کریں'}
@@ -190,15 +207,15 @@ export const StoreCategories = () => {
                     <table className="w-full text-right">
                         <thead >
                             <tr className="text-[var(--color-text-muted)] border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کیٹیگری</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">قسم</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">تفصیل</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
-                                <tr><td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">کیٹیگریز لوڈ ہو رہی ہیں...</td></tr>
+                                <tr><td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">اقسام لوڈ ہو رہی ہیں...</td></tr>
                             ) : categories.length ? (
                                 categories.map((category) => (
                                     <tr key={category.id} className={`border-t border-[var(--color-border)]/60 ${editMode === category.id ? 'bg-emerald-500/5' : ''}`}>
@@ -214,7 +231,7 @@ export const StoreCategories = () => {
                                     </tr>
                                 ))
                             ) : (
-                                <tr><td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی کیٹیگری موجود نہیں۔</td></tr>
+                                <tr><td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">کوئی قسم موجود نہیں۔</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -226,7 +243,7 @@ export const StoreCategories = () => {
                     <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
                         <div className="flex items-start justify-between gap-4">
                             <div className="text-right">
-                                <h3 className="text-xl font-black text-[var(--color-text)]">کیٹیگری حذف کرنے کی تصدیق</h3>
+                                <h3 className="text-xl font-black text-[var(--color-text)]">قسم حذف کرنے کی تصدیق</h3>
                                 <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">کیا آپ واقعی <span className="text-rose-500">{deleteTarget.name}</span> کو حذف کرنا چاہتے ہیں؟</p>
                             </div>
                             <button type="button" onClick={() => !isDeleting && setDeleteTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500"><X size={18} /></button>

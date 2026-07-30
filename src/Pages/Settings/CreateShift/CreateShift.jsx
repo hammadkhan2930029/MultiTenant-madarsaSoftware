@@ -10,6 +10,7 @@ const emptyForm = {
     startTime: '',
     endTime: '',
     type: 'Custom',
+    status: 'active',
 };
 
 const createEmptyShiftRow = () => ({
@@ -62,8 +63,11 @@ export const ShiftManagement = () => {
     const loadShifts = useCallback(async () => {
         try {
             setIsLoading(true);
-            const result = await getShifts('page=1&limit=100');
-            setShifts(result.items || []);
+            const [activeResult, inactiveResult] = await Promise.all([
+                getShifts('page=1&limit=100&status=active'),
+                getShifts('page=1&limit=100&status=inactive'),
+            ]);
+            setShifts([...(activeResult.items || []), ...(inactiveResult.items || [])]);
         } catch (loadError) {
             setError(loadError.message || 'شفٹس لوڈ نہیں ہو سکیں۔');
         } finally {
@@ -149,6 +153,7 @@ export const ShiftManagement = () => {
             startTime: shift.startTime || '',
             endTime: shift.endTime || '',
             type: shift.type || 'Custom',
+            status: shift.status || 'active',
         });
         setEditMode(shift.id);
         setError('');
@@ -182,7 +187,7 @@ export const ShiftManagement = () => {
         } else {
             const validation = validateShiftRows();
             if (!validation.isValid) {
-                setError('درج کردہ شفٹس میں غلطی موجود ہے۔');
+                setError('درج کردہ شفٹ کی معلومات میں غلطی موجود ہے۔');
                 return;
             }
             validRows = validation.rows;
@@ -199,9 +204,10 @@ export const ShiftManagement = () => {
                     startTime: formData.startTime,
                     endTime: formData.endTime,
                     type: formData.type,
+                    status: formData.status,
                 };
                 await updateShift(editMode, payload);
-                setSuccess('شفٹ کامیابی سے اپڈیٹ ہو گئی۔');
+                setSuccess('شفٹ کامیابی سے تبدیل ہو گئی ہے۔');
             } else {
                 await createShifts({
                     shifts: validRows.map((row) => ({
@@ -241,16 +247,30 @@ export const ShiftManagement = () => {
             setIsDeleting(false);
         }
     };
+    // =====================================================
+    const isEditFormValid =
+        formData.name.trim() !== '' &&
+        formData.startTime !== '' &&
+        formData.endTime !== '';
+
+    const isCreateFormValid =
+        shiftRows.length > 0 &&
+        shiftRows.every(
+            (row) =>
+                row.name.trim() !== '' &&
+                row.startTime !== '' &&
+                row.endTime !== ''
+        );
 
     return (
         <div className="space-y-8 animate-in fade-in duration-700 lg:pt-0 md:pt-0 pt-6" dir="rtl">
-            <div className="flex flex-row justify-between items-center gap-6 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
-                <div>
-                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">شفٹ کا انتظام</h1>
-                    <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-7">نئی شفٹس بنائیں اور اوقات کو منظم کریں</p>
-                </div>
-                <div style={{ backgroundColor: 'var(--color-primary)' }} className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#00d094]/20">
+            <div className="flex items-center gap-3 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
+                <div className="rounded-2xl bg-emerald-500/10 p-3 text-[var(--color-primary)]">
                     <Clock size={24} />
+                </div>
+                <div>
+                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-3xl font-black">شفٹ کا انتظام</h1>
+                    <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-5">نئی شفٹس بنائیں اور اوقات کو منظم کریں</p>
                 </div>
             </div>
 
@@ -265,7 +285,7 @@ export const ShiftManagement = () => {
                 </div>
 
                 {editMode ? (
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
                         <InputField
                             type="text"
                             label="شفٹ کا نام"
@@ -288,6 +308,17 @@ export const ShiftManagement = () => {
                             value={formData.endTime}
                             onChange={(e) => setFormData((prev) => ({ ...prev, endTime: e.target.value }))}
                         />
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-[var(--color-text-muted)]">حالت</label>
+                            <select
+                                value={formData.status}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                className="h-[58px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                            >
+                                <option value="active">فعال</option>
+                                <option value="inactive">غیر فعال</option>
+                            </select>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -337,19 +368,29 @@ export const ShiftManagement = () => {
                     {editMode ? (
                         <button
                             onClick={resetForm}
-                            className="rounded-2xl border border-[var(--color-border)] px-6 py-4 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]"
+                            className="h-[58px] rounded-2xl border border-[var(--color-border)] px-6 text-base font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]"
                         >
                             منسوخ
                         </button>
                     ) : null}
+
                     <button
                         onClick={handleSubmit}
-                        disabled={isSaving}
+                        disabled={
+                            isSaving ||
+                            (editMode ? !isEditFormValid : !isCreateFormValid)
+                        }
                         style={{ backgroundColor: 'var(--color-primary)' }}
-                        className="px-10 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70"
+                        className="h-[58px] px-10 rounded-2xl text-white text-base font-black flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-[#00d094]/20 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         {editMode ? <Save size={20} /> : <Plus size={20} />}
-                        <span>{isSaving ? 'محفوظ ہو رہی ہے...' : editMode ? 'تبدیل کریں' : 'محفوظ کریں'}</span>
+                        <span>
+                            {isSaving
+                                ? 'محفوظ ہو رہی ہے...'
+                                : editMode
+                                    ? 'تبدیل کریں'
+                                    : 'محفوظ کریں'}
+                        </span>
                     </button>
                 </div>
             </div>
@@ -365,7 +406,7 @@ export const ShiftManagement = () => {
                         className="border rounded-[2rem] overflow-hidden shadow-sm"
                     >
                         <div className="overflow-x-auto">
-                            <table dir="rtl" className="w-full min-w-[560px] table-fixed">
+                            <table dir="rtl" className="settings-management-table w-full min-w-[560px] table-fixed">
                                 <thead>
                                     <tr
                                         style={{ borderColor: 'var(--color-border)' }}
@@ -373,63 +414,70 @@ export const ShiftManagement = () => {
                                     >
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[40%] text-right px-6 py-4 text-sm font-semibold"
+                                            className="w-[28%] text-center px-6 py-4 text-sm font-semibold"
                                         >
                                             شفٹ
                                         </th>
 
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[35%] text-right px-6 py-4 text-sm font-semibold"
+                                            className="w-[28%] text-center px-6 py-4 text-sm font-semibold"
                                         >
                                             اوقات
                                         </th>
 
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[25%] text-right px-6 py-4 text-sm font-semibold"
+                                            className="w-[20%] text-center px-6 py-4 text-sm font-semibold"
                                         >
-                                            ایکشنز
+                                            حالت
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[24%] text-center px-6 py-4 text-sm font-semibold"
+                                        >
+                                            ایکشن
                                         </th>
                                     </tr>
                                 </thead>
 
-                                <tbody>
+                                <tbody className="font-bold text-[var(--color-text-main)]">
                                     {shifts.map((shift) => (
                                         <tr
                                             key={shift.id}
                                             style={{ borderColor: 'var(--color-border)' }}
                                             className="group border-b last:border-b-0 hover:bg-[var(--color-input)] transition-all"
                                         >
-                                            <td className="px-6 py-4 align-middle">
-                                                <div className="flex items-center justify-start gap-4">
-                                                    <div
+                                            <td className="px-6 py-4 text-center align-middle">
+                                                <div className="flex items-center justify-center gap-4">
+                                                    {/* <div
                                                         style={{ backgroundColor: 'var(--color-input)' }}
                                                         className="w-11 h-11 rounded-xl flex items-center justify-center text-[var(--color-primary)] group-hover:scale-110 transition-transform shrink-0"
                                                     >
                                                         {getShiftIcon(shift.type)}
-                                                    </div>
+                                                    </div> */}
 
                                                     <h3
                                                         style={{ color: 'var(--color-text-main)' }}
-                                                        className="font-bold text-base text-right"
+                                                        className="font-bold text-base text-center"
                                                     >
                                                         {shift.name}
                                                     </h3>
                                                 </div>
                                             </td>
 
-                                            <td className="px-6 py-4 align-middle">
-                                                <div className="flex items-center justify-start">
+                                            <td className="px-6 py-4 text-center align-middle">
+                                                <div className="flex items-center justify-center">
                                                     <span
                                                         dir="ltr"
                                                         style={{
-                                                            color: 'var(--color-text-muted)',
+                                                            color: 'var(--color-text-main)',
                                                             unicodeBidi: 'isolate',
                                                         }}
                                                         className="inline-flex items-center gap-2 text-base font-bold whitespace-nowrap"
                                                     >
-                                                        <Clock size={17} />
+                                                        {/* <Clock size={17} /> */}
 
                                                         {formatTime(shift.startTime)} -{' '}
                                                         {formatTime(shift.endTime)}
@@ -437,8 +485,14 @@ export const ShiftManagement = () => {
                                                 </div>
                                             </td>
 
-                                            <td className="px-6 py-4 align-middle">
-                                                <div className="flex items-center justify-start gap-2">
+                                            <td className="px-6 py-4 text-center align-middle">
+                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${shift.status === 'inactive' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                    {shift.status === 'inactive' ? 'غیر فعال' : 'فعال'}
+                                                </span>
+                                            </td>
+
+                                            <td className="px-6 py-4 text-center align-middle">
+                                                <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         type="button"
                                                         onClick={() => handleEdit(shift)}

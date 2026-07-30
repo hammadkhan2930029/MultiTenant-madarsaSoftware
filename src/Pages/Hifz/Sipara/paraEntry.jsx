@@ -303,7 +303,7 @@ export const ParaJaizaEntry = () => {
                                 <BookOpen size={28} />
                             </div>
                             <div className="space-y-1">
-                                <h1 className="text-3xl font-black">سپارہ جائزہ اندراج</h1>
+                                <h1 className="text-3xl font-black">سپارہ جائزے کا اندراج</h1>
                                 <p className="text-sm font-bold text-[var(--color-text-muted)] mt-5">
                                     طالب علم منتخب کریں اور سپاروں کی آغاز، اختتام، کل ایام اور کیفیت درج کریں
                                 </p>
@@ -355,7 +355,7 @@ export const ParaJaizaEntry = () => {
                         </div>
 
                         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 h-14 flex items-center justify-between text-sm font-bold">
-                            <span>ولدیت:</span>
+                            <span>سرپرست:</span>
                             <span>{selectedStudent?.fatherName || '____________'}</span>
                         </div>
                         <div className="relative">

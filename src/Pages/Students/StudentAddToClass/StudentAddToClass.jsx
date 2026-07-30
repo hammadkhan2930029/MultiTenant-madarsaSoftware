@@ -171,6 +171,15 @@ export const StudentAddToClass = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const cancelEditAssignment = () => {
+        setSelectedStudent(null);
+        setEditingAssignmentId(null);
+        setFilters({ sessionId: '', classId: '', sectionId: '' });
+        setSearchTerm('');
+        setError('');
+        setSuccess('');
+    };
+
     const handleRemoveAssignment = async () => {
         if (!assignmentToRemove) return;
 
@@ -279,12 +288,23 @@ export const StudentAddToClass = () => {
                         }} />
                     </div>
 
-                    <button
-                        onClick={handleAddToList}
-                        className="w-full h-[55px] bg-[var(--color-primary)] text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-[var(--color-primary)]/20 active:scale-95"
-                    >
-                        <PlusCircle size={20} /> {editingAssignmentId ? 'اپڈیٹ کریں' : 'محفوظ کریں'}
-                    </button>
+                    <div className="flex gap-3">
+                        {editingAssignmentId ? (
+                            <button
+                                type="button"
+                                onClick={cancelEditAssignment}
+                                className="h-[55px] flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] font-black text-sm text-[var(--color-text)]"
+                            >
+                                منسوخ
+                            </button>
+                        ) : null}
+                        <button
+                            onClick={handleAddToList}
+                            className="h-[55px] flex-1 bg-[var(--color-primary)] text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-[var(--color-primary)]/20 active:scale-95"
+                        >
+                            <PlusCircle size={20} /> {editingAssignmentId ? 'تبدیل کریں' : 'محفوظ کریں'}
+                        </button>
+                    </div>
                 </div>
             </div>
 

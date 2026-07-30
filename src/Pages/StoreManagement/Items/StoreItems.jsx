@@ -12,6 +12,7 @@ const emptyForm = {
     description: '',
     status: 'active',
 };
+const createAdditionalItem = () => ({ id: `${Date.now()}-${Math.random()}`, ...emptyForm });
 
 const statusLabels = {
     active: 'فعال',
@@ -25,7 +26,9 @@ export const StoreItems = () => {
     const [categories, setCategories] = useState([]);
     const [search, setSearch] = useState(() => searchParams.get('search') || '');
     const [categoryFilter, setCategoryFilter] = useState(() => searchParams.get('category') || '');
+    const [itemFilter, setItemFilter] = useState('');
     const [formData, setFormData] = useState(emptyForm);
+    const [additionalItems, setAdditionalItems] = useState([]);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,12 +50,8 @@ export const StoreItems = () => {
             const categoryResult = await getStoreCategories({ activeOnly: 'true' });
             const nextCategories = categoryResult.items || [];
             setCategories(nextCategories);
-            setFormData((prev) => ({
-                ...prev,
-                category: prev.category || nextCategories[0]?.name || '',
-            }));
         } catch (setupError) {
-            setError(setupError.message || 'کیٹیگریز لوڈ نہیں ہو سکیں۔');
+            setError(setupError.message || 'اقسام لوڈ نہیں ہو سکیں۔');
         }
     };
 
@@ -62,7 +61,7 @@ export const StoreItems = () => {
 
         try {
             const result = await getStoreItems({
-                search: search.trim(),
+                search: itemFilter || search.trim(),
                 category: categoryFilter,
                 includeInactive: 'true',
             });
@@ -86,12 +85,7 @@ export const StoreItems = () => {
 
         const timer = setTimeout(loadItems, 250);
         return () => clearTimeout(timer);
-    }, [search, categoryFilter]);
-
-    const resetFilters = () => {
-        setSearch('');
-        setCategoryFilter('');
-    };
+    }, [search, categoryFilter, itemFilter]);
 
     const categoryOptions = useMemo(() => {
         const options = categories.map((category) => category.name).filter(Boolean);
@@ -100,9 +94,11 @@ export const StoreItems = () => {
     }, [categories, categoryFilter]);
 
     const activeCategoryNames = useMemo(() => new Set(categories.map((category) => category.name).filter(Boolean)), [categories]);
+    const itemOptions = useMemo(() => [...new Set(items.map((item) => item.itemName).filter(Boolean))], [items]);
 
     const resetForm = () => {
         setFormData(emptyForm);
+        setAdditionalItems([]);
         setEditMode(null);
         setIsFormOpen(false);
     };
@@ -131,8 +127,8 @@ export const StoreItems = () => {
     const validateForm = () => {
         const itemName = formData.itemName.trim();
         const category = formData.category.trim();
-        if (!category) return 'کیٹیگری منتخب کریں۔';
-        if (!activeCategoryNames.has(category)) return 'فعال کیٹیگری منتخب کریں۔';
+        if (!category) return 'قسم منتخب کریں۔';
+        if (!activeCategoryNames.has(category)) return 'فعال قسم منتخب کریں۔';
         if (!itemName) return 'شے کا نام درج کرنا ضروری ہے۔';
         if (!['active', 'inactive'].includes(formData.status)) return 'حالت درست منتخب کریں۔';
 
@@ -141,7 +137,7 @@ export const StoreItems = () => {
             && String(item.category || '').trim() === category
             && String(item.itemName || '').trim().toLowerCase() === itemName.toLowerCase()
         ));
-        if (duplicate) return 'اسی کیٹیگری میں یہ شے پہلے سے موجود ہے۔';
+        if (duplicate) return 'اسی قسم میں یہ شے پہلے سے موجود ہے۔';
 
         return '';
     };
@@ -169,8 +165,16 @@ export const StoreItems = () => {
                 await updateStoreItem(editMode, payload);
                 setSuccess('شے کامیابی سے اپ ڈیٹ ہو گئی۔');
             } else {
-                await createStoreItem(payload);
-                setSuccess('نئی شے کامیابی سے شامل ہو گئی۔');
+                const rows = [formData, ...additionalItems];
+                const invalidRow = rows.find((row) => !row.itemName.trim() || !activeCategoryNames.has(row.category.trim()));
+                if (invalidRow) throw new Error('ہر شے کا نام اور فعال قسم منتخب کریں۔');
+                await Promise.all(rows.map((row) => createStoreItem({
+                    itemName: row.itemName.trim(),
+                    category: row.category.trim(),
+                    description: row.description.trim(),
+                    status: 'active',
+                })));
+                setSuccess('نئی اشیاء کامیابی سے شامل ہو گئیں۔');
             }
 
             resetForm();
@@ -250,12 +254,12 @@ export const StoreItems = () => {
                             <Boxes size={18} />
                             اسٹور مینجمنٹ
                         </div>
-                        <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">اشیاء مینجمنٹ</h2>
+                        <h2 className="text-2xl font-black tracking-tight text-[var(--color-text)]">اشیاء کا انتظام</h2>
                     </div>
                     <p className="text-sm font-medium text-[var(--color-text-muted)]">کل اشیاء: {items.length}</p>
                 </div>
 
-                <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid w-full grid-cols-1 items-center gap-3 sm:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_auto]">
                     <div className="relative min-w-0">
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -271,7 +275,7 @@ export const StoreItems = () => {
                         onChange={(event) => setCategoryFilter(event.target.value)}
                         className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none"
                     >
-                        <option value="">تمام کیٹیگریز</option>
+                        <option value="">تمام اقسام</option>
                         {categoryOptions.map((category) => (
                             <option key={category} value={category}>
                                 {category}
@@ -279,9 +283,10 @@ export const StoreItems = () => {
                         ))}
                     </select>
 
-                    <button type="button" onClick={resetFilters} className="h-12 w-full whitespace-nowrap rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 text-sm font-black text-[var(--color-text)]">
-                        فلٹر صاف کریں
-                    </button>
+                    <select value={itemFilter} onChange={(event) => setItemFilter(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none">
+                        <option value="">تمام اشیاء</option>
+                        {itemOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
 
                     {canCreateItem ? (
                         <button
@@ -307,19 +312,19 @@ export const StoreItems = () => {
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">کیٹیگری منتخب کریں<span className="text-red-500"> *</span></label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">قسم منتخب کریں<span className="text-red-500"> *</span></label>
                             <select value={formData.category} onChange={(event) => setFormData((prev) => ({ ...prev, category: event.target.value }))} className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]">
-                                <option value="">کیٹیگری منتخب کریں</option>
+                                <option value="">قسم منتخب کریں</option>
                                 {categories.map((category) => (
                                     <option key={category.id} value={category.name}>{category.name}</option>
                                 ))}
                             </select>
                         </div>
 
-                        <div className="space-y-2">
+                        {editMode ? <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">شے کا نام<span className="text-red-500"> *</span></label>
                             <input value={formData.itemName} onChange={(event) => setFormData((prev) => ({ ...prev, itemName: event.target.value }))} placeholder="مثلاً کتاب" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
-                        </div>
+                        </div> : null}
 
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت<span className="text-red-500"> *</span></label>
@@ -329,13 +334,23 @@ export const StoreItems = () => {
                             </select>
                         </div>
 
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مختصر تفصیل</label>
+                        <div className="space-y-2">
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تفصیل</label>
                             <textarea value={formData.description} onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))} placeholder="اختیاری تفصیل لکھیں" rows="3" className="w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
                     </div>
 
+                    {!editMode ? additionalItems.map((row) => (
+                        <div key={row.id} className="mt-4 grid grid-cols-1 gap-4 rounded-2xl border border-[var(--color-border)] p-4 md:grid-cols-[1fr_1fr_2fr_auto]">
+                            <select value={row.category} onChange={(event) => setAdditionalItems((current) => current.map((item) => item.id === row.id ? { ...item, category: event.target.value } : item))} className="h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4"><option value="">قسم منتخب کریں</option>{categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}</select>
+                            <input value={row.itemName} onChange={(event) => setAdditionalItems((current) => current.map((item) => item.id === row.id ? { ...item, itemName: event.target.value } : item))} placeholder="شے کا نام" className="h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4" />
+                            <input value={row.description} onChange={(event) => setAdditionalItems((current) => current.map((item) => item.id === row.id ? { ...item, description: event.target.value } : item))} placeholder="تفصیل" className="h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4" />
+                            <button type="button" onClick={() => setAdditionalItems((current) => current.filter((item) => item.id !== row.id))} className="p-3 text-rose-500"><Trash2 size={18} /></button>
+                        </div>
+                    )) : null}
+
                     <div className="mt-8 flex justify-end gap-3">
+                        {!editMode ? <button type="button" onClick={() => setAdditionalItems((current) => [...current, createAdditionalItem()])} className="flex items-center gap-2 rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black"><Plus size={18} />مزید سطر شامل کریں</button> : null}
                         {editMode ? (
                             <button type="button" onClick={resetForm} className="rounded-xl px-5 py-3 text-sm font-black text-[var(--color-text-muted)]">
                                 منسوخ کریں
@@ -355,7 +370,7 @@ export const StoreItems = () => {
                         <thead>
                             <tr  className="text-[var(--color-text-muted)] border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">شے کا نام</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کیٹیگری</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">قسم</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کارروائی</th>
                             </tr>
@@ -418,7 +433,7 @@ export const StoreItems = () => {
                         </div>
                         <div className="mt-6 space-y-4 text-sm font-bold">
                             <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <span className="text-[var(--color-text-muted)]">کیٹیگری</span>
+                                <span className="text-[var(--color-text-muted)]">قسم</span>
                                 <span className="text-[var(--color-text)]">{viewTarget.category}</span>
                             </div>
                             <div className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
@@ -426,7 +441,7 @@ export const StoreItems = () => {
                                 {renderStatusBadge(viewTarget.status)}
                             </div>
                             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="mb-2 text-[var(--color-text-muted)]">مختصر تفصیل</p>
+                                <p className="mb-2 text-[var(--color-text-muted)]">تفصیل</p>
                                 <p className="leading-7 text-[var(--color-text)]">{viewTarget.description || '---'}</p>
                             </div>
                         </div>

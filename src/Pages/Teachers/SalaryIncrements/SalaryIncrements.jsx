@@ -24,6 +24,11 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [staffType, setStaffType] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [monthFilter, setMonthFilter] = useState('');
+    const [yearFilter, setYearFilter] = useState('');
+    const [assignmentFilter, setAssignmentFilter] = useState('');
+    const [assignmentOptions, setAssignmentOptions] = useState([]);
+    const [incrementStats, setIncrementStats] = useState({ totalRecords: 0, totalIncrement: 0 });
     const [formData, setFormData] = useState(initialForm);
     const [editingIncrement, setEditingIncrement] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -39,6 +44,9 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
             params.set('status', statusFilter);
             if (activeStaffType) params.set('staffType', activeStaffType);
             if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            if (monthFilter) params.set('month', monthFilter);
+            if (yearFilter) params.set('year', yearFilter);
+            if (assignmentFilter) params.set('assignment', assignmentFilter);
             const teacherParams = new URLSearchParams({ page: '1', limit: '100', status: 'active' });
             if (activeStaffType) teacherParams.set('staffType', activeStaffType);
 
@@ -49,12 +57,25 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
 
             setTeachers(teacherResult.items || []);
             setIncrements(incrementResult.items || []);
+            if (!assignmentFilter) {
+                setAssignmentOptions((current) => [...new Set([
+                    ...current,
+                    ...(incrementResult.items || []).flatMap((item) => [
+                        item.primaryAssignment,
+                        ...String(item.assignedLabels || '').split(','),
+                    ]).map((value) => String(value || '').trim()).filter(Boolean),
+                ])]);
+            }
+            setIncrementStats(incrementResult.stats || {
+                totalRecords: incrementResult.meta?.totalItems || 0,
+                totalIncrement: 0,
+            });
         } catch (error) {
             notify.error(error?.message || 'انکریمنٹ ریکارڈ لوڈ نہیں ہو سکے۔', 'لوڈنگ میں مسئلہ');
         } finally {
             setIsLoading(false);
         }
-    }, [fixedStaffType, notify, searchTerm, staffType, statusFilter]);
+    }, [assignmentFilter, fixedStaffType, monthFilter, notify, searchTerm, staffType, statusFilter, yearFilter]);
 
     useEffect(() => {
         loadData();
@@ -66,15 +87,19 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
     );
 
     const stats = useMemo(() => {
-        const totalIncrement = increments.reduce((sum, item) => sum + Number(item.incrementAmount || 0), 0);
         const latest = increments[0];
 
         return {
-            totalRecords: increments.length,
-            totalIncrement,
+            totalRecords: incrementStats.totalRecords,
+            totalIncrement: incrementStats.totalIncrement,
             latestAmount: latest?.incrementAmount || 0,
         };
-    }, [increments]);
+    }, [incrementStats, increments]);
+
+    const yearOptions = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: currentYear - 1889 }, (_, index) => currentYear + 10 - index);
+    }, []);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -167,12 +192,6 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                         <Wallet size={34} />
                     </div>
                 </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <SummaryCard icon={UserCheck} label="کل ریکارڈز" value={stats.totalRecords} />
-                <SummaryCard icon={TrendingUp} label="کل اضافہ" value={formatCurrency(stats.totalIncrement)} />
-                <SummaryCard icon={Wallet} label="آخری اضافہ" value={formatCurrency(stats.latestAmount)} />
             </div>
 
             <form onSubmit={handleSubmit} className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:p-8">
@@ -272,7 +291,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
             </form>
 
             <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:p-6">
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_180px_220px]">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_160px_160px_180px_220px]">
                     <div className="relative">
                         <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
@@ -282,10 +301,46 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                             className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 pl-12 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
                         />
                     </div>
+                    <select
+                        value={monthFilter}
+                        onChange={(event) => setMonthFilter(event.target.value)}
+                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
+                    >
+                        <option value="">تمام ماہ</option>
+                        <option value="1">جنوری</option>
+                        <option value="2">فروری</option>
+                        <option value="3">مارچ</option>
+                        <option value="4">اپریل</option>
+                        <option value="5">مئی</option>
+                        <option value="6">جون</option>
+                        <option value="7">جولائی</option>
+                        <option value="8">اگست</option>
+                        <option value="9">ستمبر</option>
+                        <option value="10">اکتوبر</option>
+                        <option value="11">نومبر</option>
+                        <option value="12">دسمبر</option>
+                    </select>
+                    <select
+                        value={yearFilter}
+                        onChange={(event) => setYearFilter(event.target.value)}
+                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
+                    >
+                        <option value="">تمام سال</option>
+                        {yearOptions.map((year) => (
+                            <option key={year} value={year}>{year}</option>
+                        ))}
+                    </select>
                     {fixedStaffType ? (
-                        <div className="flex h-14 w-full items-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)]">
-                            {staffTypeLabel(fixedStaffType)}
-                        </div>
+                        <select
+                            value={assignmentFilter}
+                            onChange={(event) => setAssignmentFilter(event.target.value)}
+                            className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
+                        >
+                            <option value="">{fixedStaffType === 'staff' ? 'تمام ذمہ داریاں' : 'تمام مضامین'}</option>
+                            {assignmentOptions.map((option) => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </select>
                     ) : (
                         <select
                             value={staffType}
@@ -308,10 +363,16 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                 </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <SummaryCard icon={UserCheck} label="کل ریکارڈز" value={stats.totalRecords} />
+                <SummaryCard icon={TrendingUp} label="کل اضافہ" value={formatCurrency(stats.totalIncrement)} />
+                <SummaryCard icon={Wallet} label="آخری اضافہ" value={formatCurrency(stats.latestAmount)} />
+            </div>
+
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="hidden grid-cols-[1.3fr_0.8fr_0.9fr_0.9fr_0.9fr_1.2fr_0.8fr_150px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-input)]/40 px-5 py-4 text-sm font-black text-[var(--color-text-muted)] lg:grid">
                     <span>نام</span>
-                    <span>قسم</span>
+                    <span>{fixedStaffType === 'staff' ? 'ذمہ داری' : 'مضمون'}</span>
                     <span>تاریخ</span>
                     <span>پرانی تنخواہ</span>
                     <span>اضافہ</span>
@@ -329,7 +390,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                                 <p className="text-base font-black">{item.teacherName || '---'}</p>
                                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.department || item.jobTitle || item.reason || '---'}</p>
                             </div>
-                            <span>{staffTypeLabel(item.staffType)}</span>
+                            <span>{[item.primaryAssignment, item.assignedLabels].filter(Boolean).join('، ') || '---'}</span>
                             <span>{item.effectiveDate || '---'}</span>
                             <span>{formatCurrency(item.previousSalary)}</span>
                             <span className="text-[var(--color-primary)]">{formatCurrency(item.incrementAmount)}</span>

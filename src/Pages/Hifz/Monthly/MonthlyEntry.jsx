@@ -24,6 +24,24 @@ const hijriMonths = [
     'ذوالحجہ',
 ];
 
+const gregorianMonths = [
+    'جنوری',
+    'فروری',
+    'مارچ',
+    'اپریل',
+    'مئی',
+    'جون',
+    'جولائی',
+    'اگست',
+    'ستمبر',
+    'اکتوبر',
+    'نومبر',
+    'دسمبر',
+];
+
+const currentYear = new Date().getFullYear();
+const academicYearOptions = Array.from({ length: 21 }, (_, index) => currentYear - 10 + index);
+
 const createMonthRow = (monthName) => ({
     id: createClientId(),
     monthName,
@@ -46,6 +64,7 @@ const createInitialFormData = () => ({
     studentId: '',
     academicYear: String(new Date().getFullYear()),
     selectedMonth: '',
+    gregorianMonth: '',
     remarks: '',
     monthlyRows: hijriMonths.map(createMonthRow),
 });
@@ -68,7 +87,6 @@ const rowHasContent = (row) => (
 const baseFieldClassName = 'w-full h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-base font-bold outline-none focus:border-[var(--color-primary)]';
 const selectFieldClassName = `${baseFieldClassName} appearance-none pl-12`;
 const iconSelectFieldClassName = `${baseFieldClassName} appearance-none pr-12 pl-14`;
-const readOnlyFieldClassName = 'w-full h-14 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-base font-bold outline-none';
 const tableInputClassName = 'w-full h-12 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm leading-7 font-bold text-right outline-none focus:border-[var(--color-primary)]';
 
 const getYearValue = (value) => {
@@ -156,8 +174,10 @@ export const MonthlyJaizaEntry = () => {
     ), [classes, students]);
 
     const sectionOptions = useMemo(() => {
+        if (!formData.className) return [];
+
         const setupSections = sections
-            .filter((section) => !formData.className || section.class?.name === formData.className)
+            .filter((section) => section.class?.name === formData.className)
             .map((section) => section.name)
             .filter(Boolean);
 
@@ -168,9 +188,7 @@ export const MonthlyJaizaEntry = () => {
 
     const filteredStudents = useMemo(
         () => {
-            if (!formData.className && !formData.section) {
-                return students;
-            }
+            if (!formData.className || !formData.section) return [];
 
             return filterStudentsForHifz(students, formData.className, formData.section);
         },
@@ -223,6 +241,7 @@ export const MonthlyJaizaEntry = () => {
             setFormData((prev) => ({
                 ...prev,
                 monthlyRows: mergeRowsWithSavedEntries(savedEntries),
+                gregorianMonth: getRemarkValue(savedEntries[0]?.remarks, 'عیسوی مہینہ') || prev.gregorianMonth,
                 remarks: savedEntries.find((entry) => entry.remarks)?.remarks || prev.remarks,
             }));
         } catch (error) {
@@ -283,6 +302,7 @@ export const MonthlyJaizaEntry = () => {
     const buildRemarks = (row) => {
         const parts = [
             formData.teacher ? `استاد: ${formData.teacher}` : '',
+            formData.gregorianMonth ? `عیسوی مہینہ: ${formData.gregorianMonth}` : '',
             row.sabaqNama ? `سبق ناغہ: ${row.sabaqNama}` : '',
             row.sabqiNama ? `سبقی ناغہ: ${row.sabqiNama}` : '',
             row.manzilNama ? `منزل ناغہ: ${row.manzilNama}` : '',
@@ -353,6 +373,12 @@ export const MonthlyJaizaEntry = () => {
     return (
         <form
             onSubmit={handleSubmit}
+            onInvalidCapture={(event) => {
+                event.target.setCustomValidity('براہ کرم فہرست میں سے ایک انتخاب کریں۔');
+            }}
+            onInputCapture={(event) => {
+                event.target.setCustomValidity('');
+            }}
             className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-main)] p-3 md:p-6"
             dir="rtl"
         >
@@ -395,21 +421,23 @@ export const MonthlyJaizaEntry = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن<span className="text-red-500"> *</span></label>
-                            <select required value={formData.section} onChange={(e) => handleFieldChange('section', e.target.value)} className={selectFieldClassName}>
-                                <option value="">سیکشن منتخب کریں</option>
-                                {sectionOptions.map((section) => (
-                                    <option key={section} value={section}>{section}</option>
-                                ))}
-                            </select>
-                        </div>
+                        {formData.className && (
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-[var(--color-text-muted)]">سیکشن<span className="text-red-500"> *</span></label>
+                                <select required value={formData.section} onChange={(e) => handleFieldChange('section', e.target.value)} className={selectFieldClassName}>
+                                    <option value="">سیکشن منتخب کریں</option>
+                                    {sectionOptions.map((section) => (
+                                        <option key={section} value={section}>{section}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <label className="text-xs font-black text-[var(--color-text-muted)]">طالب علم<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <UserRound className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
-                                <select required value={formData.studentId} onChange={(e) => handleFieldChange('studentId', e.target.value)} className={iconSelectFieldClassName}>
+                                <select required disabled={!formData.className || !formData.section} value={formData.studentId} onChange={(e) => handleFieldChange('studentId', e.target.value)} className={iconSelectFieldClassName}>
                                     <option value="">طالب علم منتخب کریں</option>
                                     {filteredStudents.map((student) => (
                                         <option key={student.id} value={student.id}>
@@ -422,7 +450,11 @@ export const MonthlyJaizaEntry = () => {
 
                         <div className="space-y-2">
                             <label className="text-xs font-black text-[var(--color-text-muted)]">تعلیمی سال<span className="text-red-500"> *</span></label>
-                            <input required type="text" value={formData.academicYear} onChange={(e) => handleFieldChange('academicYear', e.target.value)} placeholder="2026" className={baseFieldClassName} />
+                            <select required value={formData.academicYear} onChange={(e) => handleFieldChange('academicYear', e.target.value)} className={selectFieldClassName}>
+                                {academicYearOptions.map((year) => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
                         </div>
 
                         <div className="space-y-2">
@@ -452,19 +484,26 @@ export const MonthlyJaizaEntry = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-black text-[var(--color-text-muted)]">داخلہ نمبر</label>
-                            <input type="text" value={selectedStudent?.admissionNumber || ''} readOnly placeholder="خودکار" className={readOnlyFieldClassName} />
+                            <label className="text-xs font-black text-[var(--color-text-muted)]">عیسوی مہینہ</label>
+                            <div className="relative">
+                                <CalendarDays className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
+                                <select value={formData.gregorianMonth} onChange={(e) => handleFieldChange('gregorianMonth', e.target.value)} className={iconSelectFieldClassName}>
+                                    <option value="">مہینہ منتخب کریں</option>
+                                    {gregorianMonths.map((month) => (
+                                        <option key={month} value={month}>{month}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {selectedStudent && (
                     <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:p-5 shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm font-bold">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-sm font-bold">
                             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">نام طالب علم: {selectedStudent.fullName}</div>
                             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">ولدیت: {selectedStudent.fatherName}</div>
                             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">کلاس: {selectedStudent.className} ({selectedStudent.sectionName})</div>
-                            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3">داخلہ نمبر: {selectedStudent.admissionNumber}</div>
                         </div>
                     </div>
                 )}

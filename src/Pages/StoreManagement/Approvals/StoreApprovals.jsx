@@ -143,7 +143,7 @@ export const StoreApprovals = () => {
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">درخواست</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">تفصیل</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>

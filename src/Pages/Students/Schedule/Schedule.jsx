@@ -18,6 +18,8 @@ import {
 import { getClasses, getSections, getSessions, getSubjects } from '../../../Constant/AcademicSetupApi';
 import { createSchedule, deleteSchedule, getSchedules, updateSchedule } from '../../../Constant/ScheduleApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { ExportPdfButton } from '../../../Components/Export/ExportPdfButton';
 
 const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
 
@@ -73,7 +75,9 @@ export const StudentScheduleManager = () => {
     const [isSavingSchedule, setIsSavingSchedule] = useState(false);
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
     const [editingScheduleId, setEditingScheduleId] = useState(null);
+    const [editingScheduleDay, setEditingScheduleDay] = useState('');
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [sortOption, setSortOption] = useState('created-desc');
     const [setupError, setSetupError] = useState('');
     const [scheduleMessage, setScheduleMessage] = useState('');
     useNotificationBridge({ error: setupError, success: scheduleMessage });
@@ -96,6 +100,31 @@ export const StudentScheduleManager = () => {
     const subjectsList = subjectOptions.map((subject) => subject.name).filter(Boolean);
     const sortScheduleDays = (days) => daysList.filter((day) => days.includes(day));
     const formatScheduleDays = (days) => sortScheduleDays(days).join(' - ');
+    const sortedSchedules = useMemo(() => [...schedules].sort((first, second) => {
+        if (sortOption === 'created-asc') return Number(first.id) - Number(second.id);
+        if (sortOption === 'created-desc') return Number(second.id) - Number(first.id);
+        if (sortOption === 'time-asc') return first.startTime.localeCompare(second.startTime);
+        if (sortOption === 'time-desc') return second.startTime.localeCompare(first.startTime);
+
+        const firstDay = sortOption === 'day-desc'
+            ? Math.max(...first.days.map((day) => daysList.indexOf(day)))
+            : Math.min(...first.days.map((day) => daysList.indexOf(day)));
+        const secondDay = sortOption === 'day-desc'
+            ? Math.max(...second.days.map((day) => daysList.indexOf(day)))
+            : Math.min(...second.days.map((day) => daysList.indexOf(day)));
+
+        return sortOption === 'day-desc' ? secondDay - firstDay : firstDay - secondDay;
+    }), [schedules, sortOption]);
+    const displayedDays = sortOption === 'day-desc' ? [...daysList].reverse() : daysList;
+    const exportColumns = useMemo(() => [
+        { header: 'Session', accessor: 'session' },
+        { header: 'Class', accessor: 'className' },
+        { header: 'Section', accessor: 'section' },
+        { header: 'Subjects', accessor: (row) => row.subjects.join(', ') },
+        { header: 'Days', accessor: (row) => sortScheduleDays(row.days).join(', ') },
+        { header: 'Start Time', accessor: 'startTime' },
+        { header: 'End Time', accessor: 'endTime' },
+    ], []);
 
     const availableSections = useMemo(
         () => sectionOptions.filter((section) => !formData.classId || String(section.classId) === String(formData.classId)),
@@ -180,17 +209,62 @@ export const StudentScheduleManager = () => {
                 startTime: formData.startTime,
                 endTime: formData.endTime,
             };
-            const savedSchedule = editingScheduleId
-                ? await updateSchedule(editingScheduleId, payload)
-                : await createSchedule(payload);
+            const scheduleBeingEdited = editingScheduleId
+                ? schedules.find((schedule) => schedule.id === editingScheduleId)
+                : null;
+            const remainingDays = scheduleBeingEdited && editingScheduleDay
+                ? sortScheduleDays(scheduleBeingEdited.days.filter((day) => day !== editingScheduleDay))
+                : [];
+
+            let savedSchedule;
+            let remainingDaysSchedule = null;
+
+            if (scheduleBeingEdited && remainingDays.length > 0) {
+                remainingDaysSchedule = await updateSchedule(editingScheduleId, {
+                    sessionId: Number(scheduleBeingEdited.sessionId),
+                    classId: Number(scheduleBeingEdited.classId),
+                    sectionId: Number(scheduleBeingEdited.sectionId),
+                    subjects: scheduleBeingEdited.subjects,
+                    days: remainingDays,
+                    startTime: scheduleBeingEdited.startTime,
+                    endTime: scheduleBeingEdited.endTime,
+                });
+
+                try {
+                    savedSchedule = await createSchedule(payload);
+                } catch (error) {
+                    await updateSchedule(editingScheduleId, {
+                        sessionId: Number(scheduleBeingEdited.sessionId),
+                        classId: Number(scheduleBeingEdited.classId),
+                        sectionId: Number(scheduleBeingEdited.sectionId),
+                        subjects: scheduleBeingEdited.subjects,
+                        days: scheduleBeingEdited.days,
+                        startTime: scheduleBeingEdited.startTime,
+                        endTime: scheduleBeingEdited.endTime,
+                    });
+                    throw error;
+                }
+            } else {
+                savedSchedule = editingScheduleId
+                    ? await updateSchedule(editingScheduleId, payload)
+                    : await createSchedule(payload);
+            }
 
             setSchedules((current) =>
-                editingScheduleId
+                remainingDaysSchedule
+                    ? [
+                        mapScheduleFromApi(savedSchedule),
+                        ...current.map((schedule) => (
+                            schedule.id === editingScheduleId ? mapScheduleFromApi(remainingDaysSchedule) : schedule
+                        )),
+                    ]
+                    : editingScheduleId
                     ? current.map((schedule) => (schedule.id === editingScheduleId ? mapScheduleFromApi(savedSchedule) : schedule))
                     : [mapScheduleFromApi(savedSchedule), ...current]
             );
             setFormData({ ...formData, subjects: [], days: [], startTime: '', endTime: '' });
             setEditingScheduleId(null);
+            setEditingScheduleDay('');
             setScheduleMessage(editingScheduleId ? 'شیڈول کامیابی سے اپڈیٹ ہو گیا۔' : 'شیڈول کامیابی سے محفوظ ہو گیا۔');
         } catch (error) {
             setSetupError(error.message || 'شیڈول محفوظ نہیں ہو سکا۔');
@@ -199,8 +273,9 @@ export const StudentScheduleManager = () => {
         }
     };
 
-    const handleEditSchedule = (schedule) => {
+    const handleEditSchedule = (schedule, day = '') => {
         setEditingScheduleId(schedule.id);
+        setEditingScheduleDay(day);
         setFormData({
             sessionId: schedule.sessionId,
             session: schedule.session,
@@ -209,7 +284,7 @@ export const StudentScheduleManager = () => {
             sectionId: schedule.sectionId,
             section: schedule.section,
             subjects: [...schedule.subjects],
-            days: [...schedule.days],
+            days: day ? [day] : [...schedule.days],
             startTime: schedule.startTime,
             endTime: schedule.endTime,
         });
@@ -220,6 +295,7 @@ export const StudentScheduleManager = () => {
 
     const cancelEditSchedule = () => {
         setEditingScheduleId(null);
+        setEditingScheduleDay('');
         setFormData({
             sessionId: '',
             session: '',
@@ -269,7 +345,7 @@ export const StudentScheduleManager = () => {
         }
     };
 
-    const groupedSchedules = schedules.reduce((acc, curr) => {
+    const groupedSchedules = sortedSchedules.reduce((acc, curr) => {
         if (!acc[curr.className]) acc[curr.className] = [];
         acc[curr.className].push(curr);
         return acc;
@@ -453,13 +529,27 @@ export const StudentScheduleManager = () => {
             </div>
             {/* ----------------------------------------------------Select Data Layout----------------------------------------------- */}
             {schedules.length > 0 && (
-                <div className='flex flex-row justify-start items-center'>
-                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-base lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
-                        <LayoutDashboard size={20} /> دنوں کے حساب سے
-                    </button>
-                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-base lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
-                        <LayoutPanelTop size={20} /> مضمون کے حساب سے
-                    </button>
+                <div className="space-y-3">
+                    <div className='flex flex-row justify-start items-center'>
+                        <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-base lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                            <LayoutDashboard size={20} /> دنوں کے حساب سے
+                        </button>
+                        <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-base lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'}  text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                            <LayoutPanelTop size={20} /> مضمون کے حساب سے
+                        </button>
+                    </div>
+                    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:flex-row md:items-center">
+                        <select value={sortOption} onChange={(event) => setSortOption(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black outline-none">
+                            <option value="created-asc">مضمون: پہلے شامل شدہ پہلے</option>
+                            <option value="created-desc">مضمون: آخری شامل شدہ پہلے</option>
+                            <option value="day-asc">دن: ہفتے کا پہلا دن پہلے</option>
+                            <option value="day-desc">دن: ہفتے کا آخری دن پہلے</option>
+                            <option value="time-asc">وقت: جلد شروع ہونے والا پہلے</option>
+                            <option value="time-desc">وقت: دیر سے شروع ہونے والا پہلے</option>
+                        </select>
+                        <ExportExcelButton rows={sortedSchedules} columns={exportColumns} fileName="student-schedule" className="h-12" />
+                        <ExportPdfButton rows={sortedSchedules} columns={exportColumns} fileName="student-schedule" title="Student Schedule" className="h-12" />
+                    </div>
                 </div>
             )}
 
@@ -591,7 +681,7 @@ export const StudentScheduleManager = () => {
                                 </div>
 
                                 <div className={`transition-all duration-300 ease-in-out overflow-hidden   ${isExpanded ? 'max-h-full opacity-100' : 'max-h-0 opacity-0'}`}   >
-                                    {daysList.map(dayName => {
+                                    {displayedDays.map(dayName => {
                                         const periodsForDay = groupedSchedules[className].filter(item =>
                                             item.days.includes(dayName)
                                         );
@@ -619,7 +709,7 @@ export const StudentScheduleManager = () => {
                                                                 <div className="flex items-center gap-1 opacity-0 transition-all group-hover:opacity-100">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => handleEditSchedule(period)}
+                                                                        onClick={() => handleEditSchedule(period, dayName)}
                                                                         className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all shadow-lg shadow-blue-500/5 hover:bg-blue-500 hover:text-white"
                                                                         title="تبدیل کریں"
                                                                     >

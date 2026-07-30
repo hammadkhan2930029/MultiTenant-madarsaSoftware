@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CheckCircle, Clock, CreditCard, Printer, Wallet } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowRight, CheckCircle, Clock, CreditCard, Edit2, Printer, Wallet } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getStudentFeeById, getStudentFeeHistory, saveStudentFeePayment } from '../../../Constant/StudentFeesApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { Can } from '../../../Components/Auth/Can';
@@ -18,11 +18,13 @@ const statusInfo = {
 export const StudentFeeDetail = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const [student, setStudent] = useState(null);
     const [vouchers, setVouchers] = useState([]);
     const [activeVoucher, setActiveVoucher] = useState(null);
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [isEditing, setIsEditing] = useState(searchParams.get('edit') === 'true');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -78,6 +80,7 @@ export const StudentFeeDetail = () => {
             setSuccess('ادائیگی محفوظ ہو گئی۔');
             setActiveVoucher(updated);
             await loadDetail();
+            setIsEditing(false);
         } catch (paymentError) {
             setError(paymentError.message || 'ادائیگی محفوظ نہیں ہو سکی۔');
         }
@@ -133,9 +136,18 @@ export const StudentFeeDetail = () => {
 
                 {activeVoucher ? (
                     <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
-                        <div className="mb-5 flex items-center gap-2 text-[var(--color-primary)]">
-                            <CreditCard size={20} />
-                            <h3 className="font-black">موجودہ واؤچر ادائیگی</h3>
+                        <div className="mb-5 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 text-[var(--color-primary)]">
+                                <CreditCard size={20} />
+                                <h3 className="font-black">موجودہ واؤچر ادائیگی</h3>
+                            </div>
+                            {!isEditing ? (
+                                <Can permission="fees.create">
+                                    <button type="button" onClick={() => setIsEditing(true)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
+                                        <Edit2 size={16} /> تبدیل کریں
+                                    </button>
+                                </Can>
+                            ) : null}
                         </div>
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                             <Info label="واؤچر" value={activeVoucher.voucherNo} />
@@ -145,16 +157,21 @@ export const StudentFeeDetail = () => {
                             <Info label="اسٹیٹس" value={statusInfo[activeVoucher.status]?.label || activeVoucher.status} />
                         </div>
                         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-                            <Field label="ادا شدہ رقم" type="number" value={paymentAmount} onChange={setPaymentAmount} required />
-                            <Select label="ادائیگی کا طریقہ" value={paymentMethod} onChange={setPaymentMethod}>
+                            <Field label="ادا شدہ رقم" type="number" value={paymentAmount} onChange={setPaymentAmount} required disabled={!isEditing} />
+                            <Select label="ادائیگی کا طریقہ" value={paymentMethod} onChange={setPaymentMethod} disabled={!isEditing}>
                                 <option value="Cash">Cash</option>
                                 <option value="Online">Online</option>
                                 <option value="Cheque">Cheque</option>
                                 <option value="Bank Transfer">Bank Transfer</option>
                             </Select>
-                            <Can permission="fees.create">
-                                <button onClick={handleSavePayment} className="h-12 self-end rounded-2xl bg-[var(--color-primary)] px-5 font-black text-white">محفوظ کریں</button>
-                            </Can>
+                            {isEditing ? (
+                                <Can permission="fees.create">
+                                    <div className="flex gap-2 self-end">
+                                        <button type="button" onClick={() => { setPaymentAmount(String(Number(activeVoucher.dueAmount || 0))); setPaymentMethod(activeVoucher.paymentMethod || 'Cash'); setIsEditing(false); }} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 font-black">منسوخ</button>
+                                        <button onClick={handleSavePayment} className="h-12 rounded-2xl bg-[var(--color-primary)] px-5 font-black text-white">محفوظ کریں</button>
+                                    </div>
+                                </Can>
+                            ) : null}
                             <button onClick={() => window.print()} className="flex h-12 items-center justify-center gap-2 self-end rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 font-black">
                                 <Printer size={16} /> پرنٹ
                             </button>
@@ -203,17 +220,17 @@ const Info = ({ label, value }) => (
     </div>
 );
 
-const Field = ({ label, value, onChange, type = 'text', required = false }) => (
+const Field = ({ label, value, onChange, type = 'text', required = false, disabled = false }) => (
     <label className="block space-y-2">
         <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}{required ? <span className="text-red-500"> *</span> : null}</span>
-        <input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none" />
+        <input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} disabled={disabled} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none disabled:opacity-60" />
     </label>
 );
 
-const Select = ({ label, value, onChange, children }) => (
+const Select = ({ label, value, onChange, children, disabled = false }) => (
     <label className="block space-y-2">
         <span className="mr-1 text-xs font-black text-[var(--color-text-muted)]">{label}</span>
-        <select value={value} onChange={(event) => onChange(event.target.value)} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none">
+        <select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none disabled:opacity-60">
             {children}
         </select>
     </label>

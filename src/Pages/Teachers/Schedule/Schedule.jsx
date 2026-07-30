@@ -17,6 +17,8 @@ import { getClasses, getSections, getSessions, getSubjects } from '../../../Cons
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { createTeacherSchedule, deleteTeacherSchedule, getTeacherSchedules, updateTeacherSchedule } from '../../../Constant/TeacherScheduleApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { ExportPdfButton } from '../../../Components/Export/ExportPdfButton';
 
 const activeOnly = (items) => (items || []).filter((item) => !item.status || item.status === 'active');
 
@@ -83,6 +85,7 @@ export const TeachersScheduleManager = () => {
     const [removingScheduleId, setRemovingScheduleId] = useState(null);
     const [editingScheduleId, setEditingScheduleId] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [sortOption, setSortOption] = useState('created-desc');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -91,6 +94,32 @@ export const TeachersScheduleManager = () => {
     const daysList = ['پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ', 'اتوار'];
     const sortScheduleDays = (days) => daysList.filter((day) => days.includes(day));
     const formatScheduleDays = (days) => sortScheduleDays(days).join(' - ');
+    const sortedSchedules = useMemo(() => [...schedules].sort((first, second) => {
+        if (sortOption === 'created-asc') return Number(first.id) - Number(second.id);
+        if (sortOption === 'created-desc') return Number(second.id) - Number(first.id);
+        if (sortOption === 'time-asc') return first.startTime.localeCompare(second.startTime);
+        if (sortOption === 'time-desc') return second.startTime.localeCompare(first.startTime);
+
+        const firstDay = sortOption === 'day-desc'
+            ? Math.max(...first.days.map((day) => daysList.indexOf(day)))
+            : Math.min(...first.days.map((day) => daysList.indexOf(day)));
+        const secondDay = sortOption === 'day-desc'
+            ? Math.max(...second.days.map((day) => daysList.indexOf(day)))
+            : Math.min(...second.days.map((day) => daysList.indexOf(day)));
+
+        return sortOption === 'day-desc' ? secondDay - firstDay : firstDay - secondDay;
+    }), [schedules, sortOption]);
+    const displayedDays = sortOption === 'day-desc' ? [...daysList].reverse() : daysList;
+    const exportColumns = useMemo(() => [
+        { header: 'Teacher', accessor: 'teacher' },
+        { header: 'Session', accessor: 'session' },
+        { header: 'Class', accessor: 'className' },
+        { header: 'Section', accessor: 'section' },
+        { header: 'Subjects', accessor: (row) => row.subjects.join(', ') },
+        { header: 'Days', accessor: (row) => sortScheduleDays(row.days).join(', ') },
+        { header: 'Start Time', accessor: 'startTime' },
+        { header: 'End Time', accessor: 'endTime' },
+    ], []);
     const subjectsList = subjectOptions.map((subject) => subject.name).filter(Boolean);
     const availableSections = useMemo(
         () => sectionOptions.filter((section) => !formData.classId || String(section.classId) === String(formData.classId)),
@@ -269,7 +298,7 @@ export const TeachersScheduleManager = () => {
         }
     };
 
-    const groupedSchedules = schedules.reduce((acc, current) => {
+    const groupedSchedules = sortedSchedules.reduce((acc, current) => {
         const groupKey = current.teacher || current.className || '---';
         if (!acc[groupKey]) acc[groupKey] = [];
         acc[groupKey].push(current);
@@ -440,13 +469,27 @@ export const TeachersScheduleManager = () => {
             </div>
 
             {schedules.length > 0 && (
-                <div className="flex flex-row justify-start items-center">
-                    <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
-                        <LayoutDashboard size={20} /> دنوں کے حساب سے
-                    </button>
-                    <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
-                        <LayoutPanelTop size={20} /> استاد کے حساب سے
-                    </button>
+                <div className="space-y-3">
+                    <div className="flex flex-row justify-start items-center">
+                        <button onClick={() => setSelectLayout(1)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 1 ? 'bg-[var(--color-primary)] brightness-110 scale-105' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                            <LayoutDashboard size={20} /> دنوں کے حساب سے
+                        </button>
+                        <button onClick={() => setSelectLayout(2)} className={`w-[50%] md:w-[50%] lg:w-[20%] text-[14px] md:text-md lg:text-lg ${selectLayout === 2 ? 'bg-[var(--color-primary)] brightness-110' : 'bg-[var(--color-primary)]/50'} text-white font-black py-3 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-[var(--color-primary)]/20 hover:brightness-110 active:scale-[0.98] transition-all m-2`}>
+                            <LayoutPanelTop size={20} /> استاد کے حساب سے
+                        </button>
+                    </div>
+                    <div className="flex flex-col gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:flex-row md:items-center">
+                        <select value={sortOption} onChange={(event) => setSortOption(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black outline-none">
+                            <option value="created-asc">مضمون: پہلے شامل شدہ پہلے</option>
+                            <option value="created-desc">مضمون: آخری شامل شدہ پہلے</option>
+                            <option value="day-asc">دن: ہفتے کا پہلا دن پہلے</option>
+                            <option value="day-desc">دن: ہفتے کا آخری دن پہلے</option>
+                            <option value="time-asc">وقت: جلد شروع ہونے والا پہلے</option>
+                            <option value="time-desc">وقت: دیر سے شروع ہونے والا پہلے</option>
+                        </select>
+                        <ExportExcelButton rows={sortedSchedules} columns={exportColumns} fileName="teacher-schedule" className="h-12" />
+                        <ExportPdfButton rows={sortedSchedules} columns={exportColumns} fileName="teacher-schedule" title="Teacher Schedule" className="h-12" />
+                    </div>
                 </div>
             )}
 
@@ -486,8 +529,8 @@ export const TeachersScheduleManager = () => {
 
             {selectLayout === 1 && (
                 <div className="grid grid-cols-1 gap-8">
-                    {daysList.map((dayName) => {
-                        const periodsForDay = schedules.filter((item) => item.days.includes(dayName));
+                    {displayedDays.map((dayName) => {
+                        const periodsForDay = sortedSchedules.filter((item) => item.days.includes(dayName));
                         if (!periodsForDay.length) return null;
                         const isExpanded = expandedDay === dayName;
 

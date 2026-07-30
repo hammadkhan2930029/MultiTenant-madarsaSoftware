@@ -11,24 +11,39 @@ import { useNotificationBridge } from '../../../../Components/Notifications/useN
 import { createClientId } from '../../../../Utils/createClientId';
 
 const DEFAULT_EXPENSE_CATEGORIES = ['عام اخراجات', 'انتظامی اخراجات', 'مستقل اثاثے', 'عملے کے متعلق'];
-const createIncomeHead = () => ({ id: createClientId(), title: '', description: '' });
-const createExpenseHead = (category = DEFAULT_EXPENSE_CATEGORIES[0]) => ({ id: createClientId(), title: '', category, budgetLimit: '' });
+const createIncomeHead = () => ({ id: createClientId(), title: '', category: '', description: '' });
+const createExpenseHead = () => ({ id: createClientId(), title: '', category: '', description: '', budgetLimit: '' });
 const createExpenseCategoryForm = () => ({ id: null, name: '' });
 
 const buildExpenseDescription = (item) => {
-    const parts = [`کیٹیگری: ${item.category || 'عام اخراجات'}`];
+    const parts = [];
+    if (item.category) parts.push(`کیٹیگری: ${item.category}`);
+    if (item.description) parts.push(`تفصیلات: ${item.description}`);
     if (item.budgetLimit) parts.push(`بجٹ لمٹ: ${item.budgetLimit}`);
+    return parts.join(' | ');
+};
+
+const buildIncomeDescription = (item) => {
+    const parts = [];
+    if (item.category) parts.push(`کیٹیگری: ${item.category}`);
+    if (item.description) parts.push(`تفصیلات: ${item.description}`);
     return parts.join(' | ');
 };
 
 const readCategory = (description = '') => {
     const match = description.match(/کیٹیگری:\s*([^|]+)/);
-    return match?.[1]?.trim() || 'عام اخراجات';
+    return match?.[1]?.trim() || '';
 };
 
 const readBudgetLimit = (description = '') => {
     const match = description.match(/بجٹ لمٹ:\s*([^|]+)/);
     return match?.[1]?.trim() || '';
+};
+
+const readDetails = (description = '') => {
+    const match = description.match(/تفصیلات:\s*([^|]+)/);
+    if (match) return match[1].trim();
+    return /کیٹیگری:|بجٹ لمٹ:/.test(description) ? '' : description;
 };
 
 export const FinanceHeadsSetup = () => {
@@ -65,7 +80,8 @@ export const FinanceHeadsSetup = () => {
             setExistingIncome((incomeResult.items || []).map((item) => ({
                 id: item.id,
                 title: item.name,
-                description: item.description || '',
+                category: readCategory(item.description),
+                description: readDetails(item.description),
             })));
 
             setExistingExpenses((expenseResult.items || []).map((item) => ({
@@ -73,16 +89,12 @@ export const FinanceHeadsSetup = () => {
                 title: item.name,
                 category: readCategory(item.description),
                 budgetLimit: readBudgetLimit(item.description),
-                description: item.description || '',
+                description: readDetails(item.description),
             })));
             const nextCategories = categoryResult.items?.length
                 ? categoryResult.items
                 : DEFAULT_EXPENSE_CATEGORIES.map((name) => ({ id: name, name }));
             setExpenseCategories(nextCategories);
-            setExpenseHeads((prev) => prev.map((row) => ({
-                ...row,
-                category: row.category || nextCategories[0]?.name || DEFAULT_EXPENSE_CATEGORIES[0],
-            })));
         } catch (loadError) {
             setError(loadError.message || 'مالیاتی اقسام لوڈ نہیں ہو سکیں۔');
         } finally {
@@ -193,7 +205,7 @@ export const FinanceHeadsSetup = () => {
             await Promise.all(validRows.map((item) => createFinanceHead({
                 name: item.title.trim(),
                 type: activeTab,
-                description: activeTab === 'income' ? item.description || '' : buildExpenseDescription(item),
+                description: activeTab === 'income' ? buildIncomeDescription(item) : buildExpenseDescription(item),
             })));
 
             setSuccess(activeTab === 'income' ? 'آمدنی کی اقسام کامیابی سے محفوظ ہو گئیں۔' : 'اخراجات کی اقسام کامیابی سے محفوظ ہو گئیں۔');
@@ -230,7 +242,7 @@ export const FinanceHeadsSetup = () => {
             await updateFinanceHead(editingId, {
                 name: editForm.title.trim(),
                 type: activeTab,
-                description: activeTab === 'income' ? editForm.description || '' : buildExpenseDescription(editForm),
+                description: activeTab === 'income' ? buildIncomeDescription(editForm) : buildExpenseDescription(editForm),
             });
             setSuccess(activeTab === 'income' ? 'آمدنی کی قسم کامیابی سے تبدیل ہو گئی۔' : 'خرچ کی قسم کامیابی سے تبدیل ہو گئی۔');
             cancelEdit();
@@ -266,13 +278,13 @@ export const FinanceHeadsSetup = () => {
     return (
         <div className="finance-heads-page p-6 min-h-screen text-[var(--color-text)] bg-[var(--color-bg)]" >
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 p-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-                <div className="flex flex-row-reverse items-center gap-4 text-right">
+                <div className="flex items-center gap-4 text-right" dir="rtl">
                     <div className="p-3 rounded-2xl" style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)', color: 'var(--color-primary)' }}>
                         {activeTab === 'income' ? <Wallet size={28} /> : <Receipt size={28} />}
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold">{activeTab === 'income' ? 'آمدنی کی اقسام' : 'اخراجات کی اقسام'}</h1>
-                        <p className="text-gray-400 text-sm mt-4">مالیاتی کیٹیگریز کی سیٹنگ یہاں سے کریں</p>
+                        <p className="text-gray-400 text-sm mt-4">مالیاتی اقسام کی ترتیب یہاں سے کریں</p>
                     </div>
                 </div>
 
@@ -351,7 +363,7 @@ export const FinanceHeadsSetup = () => {
 
             <div className="max-w-6xl mx-auto space-y-4 mb-12">
                 <h2 className="text-lg font-semibold mb-4 text-right border-r-4 border-[var(--color-primary)] pr-3">
-                    نئی {activeTab === 'income' ? 'آمدنی' : 'اخراجات'} شامل کریں <span className="text-red-500">*</span>
+                    {activeTab === 'income' ? 'نئی آمدنی شامل کریں' : 'نئے اخراجات شامل کریں'}
                 </h2>
 
                 {activeNewRows.map((item, index) => (
@@ -360,7 +372,7 @@ export const FinanceHeadsSetup = () => {
                             {index + 1}
                         </div>
 
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className={`flex-1 grid grid-cols-1 gap-4 ${activeTab === 'income' ? 'md:grid-cols-3' : 'md:grid-cols-4'}`}>
                             <input dir="rtl" type="text" required
                                 placeholder={activeTab === 'income' ? 'آمدنی کا نام' : 'خرچ کا نام'}
                                 value={item.title}
@@ -368,24 +380,20 @@ export const FinanceHeadsSetup = () => {
                                 className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                             />
 
+                            <input dir="rtl" type="text" placeholder="Sub-category (اختیاری)" value={item.category}
+                                onChange={(e) => handleInputChange(item.id, 'category', e.target.value)}
+                                className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                            />
+                            <input dir="rtl" type="text" placeholder="تفصیلات" value={item.description}
+                                onChange={(e) => handleInputChange(item.id, 'description', e.target.value)}
+                                className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                            />
                             {activeTab === 'expense' ? (
-                                <>
-                                    <CategoryDropdown
-                                        value={item.category}
-                                        categories={expenseCategories}
-                                        onChange={(value) => handleInputChange(item.id, 'category', value)}
-                                    />
-                                    <input dir="rtl" type="number" placeholder="بجٹ لمٹ" value={item.budgetLimit}
-                                        onChange={(e) => handleInputChange(item.id, 'budgetLimit', e.target.value)}
-                                        className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
-                                    />
-                                </>
-                            ) : (
-                                <input dir="rtl" type="text" placeholder="تفصیل (اختیاری)" value={item.description}
-                                    onChange={(e) => handleInputChange(item.id, 'description', e.target.value)}
-                                    className="md:col-span-2 border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                <input dir="rtl" type="number" placeholder="خرچ کی حد" value={item.budgetLimit}
+                                    onChange={(e) => handleInputChange(item.id, 'budgetLimit', e.target.value)}
+                                    className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                                 />
-                            )}
+                            ) : null}
                         </div>
 
                         <button onClick={() => setNewRowDeleteTarget({ id: item.id, type: activeTab, title: item.title })}
@@ -396,9 +404,14 @@ export const FinanceHeadsSetup = () => {
                     </div>
                 ))}
 
-                <button onClick={addRow} className="flex items-center gap-2 border-2 border-dashed px-6 py-2 rounded-xl transition-all text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]">
-                    <Plus size={18} /> مزید سطر شامل کریں
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <button onClick={addRow} className="flex items-center gap-2 border-2 border-dashed px-6 py-2 rounded-xl transition-all text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]">
+                        <Plus size={18} /> مزید سطر شامل کریں
+                    </button>
+                    <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-6 py-2 font-bold text-[var(--color-bg)] transition-all disabled:opacity-60">
+                        <Save size={18} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
+                    </button>
+                </div>
             </div>
 
             <div className="max-w-6xl mx-auto space-y-4">
@@ -408,14 +421,16 @@ export const FinanceHeadsSetup = () => {
                         <thead className="bg-black/20 text-gray-400 text-xs uppercase">
                             <tr>
                                 <th className="p-4">نمبر</th>
-                                <th className="p-4">نام</th>
-                                {activeTab === 'expense' ? <th className="p-4">کیٹیگری / بجٹ</th> : <th className="p-4">تفصیل</th>}
+                                <th className="p-4">{activeTab === 'income' ? 'آمدنی کا نام' : 'خرچ کا نام'}</th>
+                                <th className="p-4">Sub-category</th>
+                                <th className="p-4">تفصیلات</th>
+                                {activeTab === 'expense' ? <th className="p-4">خرچ کی حد</th> : null}
                                 <th className="p-4 text-center">کارروائی</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm">
                             {isLoading ? (
-                                <tr><td className="p-6 text-center text-gray-400" colSpan={4}>مالیاتی اقسام لوڈ ہو رہی ہیں...</td></tr>
+                                <tr><td className="p-6 text-center text-gray-400" colSpan={activeTab === 'expense' ? 6 : 5}>مالیاتی اقسام لوڈ ہو رہی ہیں...</td></tr>
                             ) : activeExistingRows.length ? activeExistingRows.map((item, idx) => (
                                 <tr key={item.id} className="border-t border-white/5 hover:bg-white/5 transition-colors">
                                     <td className="p-4 text-gray-500">{idx + 1}</td>
@@ -425,29 +440,22 @@ export const FinanceHeadsSetup = () => {
                                         ) : item.title}
                                     </td>
                                     <td className="p-4">
-                                        {activeTab === 'expense' ? (
-                                            editingId === item.id ? (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                    <CategoryDropdown
-                                                        value={editForm.category}
-                                                        categories={expenseCategories}
-                                                        onChange={(value) => setEditForm((prev) => ({ ...prev, category: value }))}
-                                                        compact
-                                                    />
-                                                    <input dir="rtl" type="number" className="border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.budgetLimit} onChange={(e) => setEditForm((prev) => ({ ...prev, budgetLimit: e.target.value }))} />
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col">
-                                                    <span>{item.category}</span>
-                                                    <span className="text-xs text-gray-500">لمٹ: {item.budgetLimit || 'مقرر نہیں'}</span>
-                                                </div>
-                                            )
-                                        ) : editingId === item.id ? (
-                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.description} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} />
-                                        ) : (
-                                            <span className="text-gray-400">{item.description || '---'}</span>
-                                        )}
+                                        {editingId === item.id ? (
+                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.category || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))} />
+                                        ) : item.category || '---'}
                                     </td>
+                                    <td className="p-4">
+                                        {editingId === item.id ? (
+                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.description || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} />
+                                        ) : <span className="text-gray-400">{item.description || '---'}</span>}
+                                    </td>
+                                    {activeTab === 'expense' ? (
+                                        <td className="p-4">
+                                            {editingId === item.id ? (
+                                                <input dir="rtl" type="number" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.budgetLimit || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, budgetLimit: e.target.value }))} />
+                                            ) : item.budgetLimit || '---'}
+                                        </td>
+                                    ) : null}
                                     <td className="p-4">
                                         <div className="flex justify-center gap-2">
                                             {editingId === item.id ? (
@@ -465,7 +473,7 @@ export const FinanceHeadsSetup = () => {
                                     </td>
                                 </tr>
                             )) : (
-                                <tr><td className="p-6 text-center text-gray-400" colSpan={4}>کوئی ریکارڈ موجود نہیں۔</td></tr>
+                                <tr><td className="p-6 text-center text-gray-400" colSpan={activeTab === 'expense' ? 6 : 5}>کوئی ریکارڈ موجود نہیں۔</td></tr>
                             )}
                         </tbody>
                     </table>

@@ -211,7 +211,7 @@ export const DailyJaizaEntry = () => {
         manzilAfterMistake: toOptionalNumber(entry.manzil_2.mistake),
         manzilAfterAtkann: toOptionalNumber(entry.manzil_2.atkann),
         lessonDetail: entry.remarks || undefined,
-        performanceStatus: entry.quality || 'جید',
+        performanceStatus: entry.quality,
         remarks: entry.remarks || undefined,
         status: 'active',
     });
@@ -400,18 +400,17 @@ export const DailyJaizaEntry = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-black text-[var(--color-text-muted)]">کیفیت (Quality)<span className="text-red-500"> *</span></label>
-                                <div className="flex flex-wrap gap-3">
-                                    {qualityOptions.map((q) => (
-                                        <button
-                                            key={`${entry.id}-${q}`}
-                                            type="button"
-                                            onClick={() => handleEntryFieldChange(entry.id, 'quality', q)}
-                                            className={`px-4 py-2 rounded-xl border border-[var(--color-border)] text-xs font-bold transition-colors ${entry.quality === q ? 'bg-[var(--color-primary)] text-[#0b1120]' : 'hover:bg-[var(--color-primary)] hover:text-[#0b1120]'}`}
-                                        >
-                                            {q}
-                                        </button>
+                                <select
+                                    required
+                                    value={entry.quality}
+                                    onChange={(event) => handleEntryFieldChange(entry.id, 'quality', event.target.value)}
+                                    className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                                >
+                                    <option value="">کیفیت منتخب کریں</option>
+                                    {qualityOptions.map((quality) => (
+                                        <option key={`${entry.id}-${quality}`} value={quality}>{quality}</option>
                                     ))}
-                                </div>
+                                </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-black text-[var(--color-text-muted)]">ریمارکس / ڈائری</label>

@@ -19,7 +19,7 @@ const reportOptions = [
 
 const columnsByReport = {
     dailyStock: [
-        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['stockValue', 'مالیت'],
+        ['itemName', 'شے'], ['category', 'قسم'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['stockValue', 'مالیت'],
     ],
     monthlyStock: [
         ['monthLabel', 'مہینہ'], ['purchaseQuantity', 'خریداری'], ['issueQuantity', 'اجراء'], ['returnQuantity', 'واپسی'], ['damagedQuantity', 'خراب'],
@@ -37,13 +37,13 @@ const columnsByReport = {
         ['department', 'شعبہ'], ['totalIssues', 'کل اجراء'], ['totalQuantity', 'کل مقدار'],
     ],
     lowStock: [
-        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['stockValue', 'مالیت'],
+        ['itemName', 'شے'], ['category', 'قسم'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['stockValue', 'مالیت'],
     ],
     damagedStock: [
         ['date', 'تاریخ'], ['itemName', 'شے'], ['quantity', 'مقدار'], ['reason', 'وجہ'], ['responsiblePerson', 'ذمہ دار'], ['amountLoss', 'نقصان رقم'], ['approvalStatus', 'حالت'],
     ],
     storeValue: [
-        ['itemName', 'شے'], ['category', 'کیٹیگری'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['totalValue', 'کل مالیت'],
+        ['itemName', 'شے'], ['category', 'قسم'], ['unit', 'اکائی'], ['currentStock', 'موجودہ اسٹاک'], ['purchasePrice', 'فی اکائی قیمت'], ['totalValue', 'کل مالیت'],
     ],
     itemLedger: [
         ['ledgerDate', 'تاریخ'], ['sourceType', 'قسم'], ['referenceNo', 'حوالہ'], ['inQuantity', 'آمد'], ['outQuantity', 'رفت'], ['balanceQuantity', 'بیلنس'], ['note', 'نوٹ'],
@@ -239,7 +239,7 @@ export const StoreReports = () => {
                 <input type="date" value={filters.fromDate} onChange={(event) => setFilters((prev) => ({ ...prev, fromDate: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
                 <input type="date" value={filters.toDate} onChange={(event) => setFilters((prev) => ({ ...prev, toDate: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
                 <select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">
-                    <option value="">تمام کیٹیگریز</option>
+                    <option value="">تمام اقسام</option>
                     {categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
                 </select>
                 <select value={filters.supplierId} onChange={(event) => setFilters((prev) => ({ ...prev, supplierId: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">

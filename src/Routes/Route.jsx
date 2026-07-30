@@ -10,6 +10,7 @@ import { HRManagement } from '../Pages/HRManagement/HRManagement';
 import { TeachersList } from '../Pages/Teachers/TeacherList/TeachersList';
 import { TeacherAttendance } from '../Pages/Teachers/TeacherAttendance/TeacherAttendance';
 import { TeacherAttendanceHistory } from '../Pages/Teachers/AttendanceHistory/AttendanceHistory';
+import { TeacherAssignments } from '../Pages/Teachers/Assignments/TeacherAssignments';
 import { SalaryIncrements } from '../Pages/Teachers/SalaryIncrements/SalaryIncrements';
 import { SalaryEntry } from '../Pages/Finance/Expence/Salary/salary';
 import { SettingRoutes } from './SettingRoutes';
@@ -109,6 +110,7 @@ export const AppRoutes = () => {
         <Route path="HRManagement" element={<RequirePermission anyPermissions={['teachers.create', 'staff.create']}><HRManagement /></RequirePermission>} />
         <Route path="staff/list" element={withPermission(<TeachersList staffType="staff" />, 'staff.view')} />
         <Route path="staff/attendance" element={withPermission(<TeacherAttendance staffType="staff" />, 'attendance.view')} />
+        <Route path="staff/assignments" element={withPermission(<TeacherAssignments staffType="staff" />, 'teachers.assignments.view')} />
         <Route path="staff/attendance-history/:id" element={withPermission(<TeacherAttendanceHistory />, 'attendance.view')} />
         <Route path="staff/salary-increments" element={withPermission(<SalaryIncrements staffType="staff" />, 'teachers.salary_increments.view')} />
         <Route path="staff/salary" element={withPermission(<SalaryEntry staffType="staff" />, 'salary.view')} />

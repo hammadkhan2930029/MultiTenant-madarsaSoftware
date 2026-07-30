@@ -31,6 +31,7 @@ const getRemarkValue = (remarks = '', label) => {
 
 const buildRemarks = (row) => {
     const parts = [
+        row.gregorianMonth ? `عیسوی مہینہ: ${row.gregorianMonth}` : '',
         row.sabaqNama ? `سبق ناغہ: ${row.sabaqNama}` : '',
         row.sabqiNama ? `سبقی ناغہ: ${row.sabqiNama}` : '',
         row.manzilNama ? `منزل ناغہ: ${row.manzilNama}` : '',
@@ -46,9 +47,9 @@ const mapEntryToRow = (entry) => ({
     id: String(entry.id),
     apiId: entry.id,
     studentId: entry.studentId,
-    studentNo: entry.student?.admissionNumber || '-',
     studentName: entry.student?.fullName || '-',
     month: String(entry.month || ''),
+    gregorianMonth: getRemarkValue(entry.remarks, 'عیسوی مہینہ'),
     year: toInputValue(entry.year),
     sabaqStart: entry.startSabq || '',
     sabaqEnd: entry.endSabq || '',
@@ -118,9 +119,9 @@ export const MonthlyJaizaList = () => {
 
         return savedRows.filter((row) => {
             const searchableText = [
-                row.studentNo,
                 row.studentName,
                 getMonthName(row.month),
+                row.gregorianMonth,
                 row.year,
                 row.sabaqStart,
                 row.sabaqEnd,
@@ -228,7 +229,7 @@ export const MonthlyJaizaList = () => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="طالب علم، داخلہ نمبر یا سال تلاش کریں"
+                                    placeholder="طالب علم یا سال تلاش کریں"
                                     className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-12 pl-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                                 />
                             </div>
@@ -272,9 +273,9 @@ export const MonthlyJaizaList = () => {
                         <table className="w-full min-w-[2050px] border-collapse text-center text-sm">
                             <thead>
                                 <tr className="bg-[var(--color-bg)]">
-                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">طالب علم نمبر</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[220px]">نام مع ولدیت</th>
-                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[150px]">مہینہ</th>
+                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[150px]">مرکزی مہینہ</th>
+                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[120px]">عیسوی مہینہ</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[90px]">سال</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[130px]">آغاز سبق</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[130px]">اختتام سبق</th>
@@ -303,7 +304,6 @@ export const MonthlyJaizaList = () => {
 
                                         return (
                                             <tr key={row.id} className={index % 2 === 0 ? 'bg-transparent' : 'bg-[var(--color-bg)]/40'}>
-                                                <td className="border border-[var(--color-border)] px-2 py-3 font-bold text-[var(--color-primary)]">{row.studentNo}</td>
                                                 <td className="border border-[var(--color-border)] px-2 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <UserRound size={15} className="text-[var(--color-primary)]" />
@@ -311,6 +311,7 @@ export const MonthlyJaizaList = () => {
                                                     </div>
                                                 </td>
                                                 <td className="border border-[var(--color-border)] px-2 py-3">{renderEditableCell(row, 'month')}</td>
+                                                <td className="border border-[var(--color-border)] px-2 py-3">{renderEditableCell(row, 'gregorianMonth')}</td>
                                                 <td className="border border-[var(--color-border)] px-2 py-3">{renderEditableCell(row, 'year', 'number')}</td>
                                                 <td className="border border-[var(--color-border)] px-2 py-3">{renderEditableCell(row, 'sabaqStart')}</td>
                                                 <td className="border border-[var(--color-border)] px-2 py-3">{renderEditableCell(row, 'sabaqEnd')}</td>

@@ -220,7 +220,7 @@ export const StoreReturns = () => {
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹاک میں شامل</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">نوٹ</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>

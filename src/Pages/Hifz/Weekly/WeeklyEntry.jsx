@@ -110,11 +110,18 @@ export const WeeklyJaizaForm = () => {
     }, []);
 
     const studentOptions = useMemo(
-        () => students.map((student) => ({
+        () => students
+        .filter((student) => (
+            formData.className
+            && formData.section
+            && student.className === formData.className
+            && student.sectionName === formData.section
+        ))
+        .map((student) => ({
             ...student,
             label: `${student.fullName} - ${student.admissionNumber}`,
         })),
-        [students],
+        [formData.className, formData.section, students],
     );
 
     const classOptions = useMemo(
@@ -126,15 +133,17 @@ export const WeeklyJaizaForm = () => {
 
     const sectionOptions = useMemo(
         () => {
+            if (!formData.className) return [];
+
             const setupSections = sections
-                .filter((section) => !formData.className || section.class?.name === formData.className)
+                .filter((section) => section.class?.name === formData.className)
                 .map((section) => section.name)
                 .filter(Boolean);
 
             if (setupSections.length) return [...new Set(setupSections)];
 
             return getUniqueOptions(
-                students.filter((student) => !formData.className || student.className === formData.className),
+                students.filter((student) => student.className === formData.className),
                 'sectionName',
             );
         },
@@ -152,7 +161,8 @@ export const WeeklyJaizaForm = () => {
         setFormData((prev) => ({
             ...prev,
             [field]: value,
-            ...(field === 'className' ? { section: '' } : {}),
+            ...(field === 'className' ? { section: '', rows: prev.rows.map((row) => ({ ...row, studentId: '', studentName: '' })) } : {}),
+            ...(field === 'section' ? { rows: prev.rows.map((row) => ({ ...row, studentId: '', studentName: '' })) } : {}),
         }));
     };
 
@@ -327,7 +337,7 @@ export const WeeklyJaizaForm = () => {
                                 onChange={(e) => handleFormChange('className', e.target.value)}
                                 className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm leading-7 font-bold outline-none focus:border-[var(--color-primary)]"
                             >
-                                <option value="">مثلاً حفظ اول</option>
+                                <option value="">کلاس منتخب کریں</option>
                                 {classOptions.map((className) => (
                                     <option key={className} value={className}>{className}</option>
                                 ))}
@@ -342,7 +352,7 @@ export const WeeklyJaizaForm = () => {
                                 onChange={(e) => handleFormChange('section', e.target.value)}
                                 className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm leading-7 font-bold outline-none focus:border-[var(--color-primary)]"
                             >
-                                <option value="">A / B</option>
+                                <option value="">سیکشن منتخب کریں</option>
                                 {sectionOptions.map((sectionName) => (
                                     <option key={sectionName} value={sectionName}>{sectionName}</option>
                                 ))}

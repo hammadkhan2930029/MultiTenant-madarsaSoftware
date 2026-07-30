@@ -197,6 +197,10 @@ select:disabled,
   line-height: 1.8 !important;
 }
 
+#root table.settings-management-table th {
+  font-size: 26px !important;
+}
+
 #root table td {
   font-size: 18px !important;
   line-height: 1.75 !important;

@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle, Clock, CreditCard, Eye, Filter, Printer, ReceiptText, Search, Wallet } from 'lucide-react';
+import { CheckCircle, Clock, CreditCard, Edit2, Eye, Filter, Printer, ReceiptText, Search, Wallet } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { generateStudentFees, getStudentFees, saveStudentFeePayment } from '../../../Constant/StudentFeesApi';
@@ -760,6 +760,11 @@ export const FeesCollection = () => {
                                                     <button onClick={() => navigate(`/students/details/${voucher.id}`)} className="rounded-xl bg-sky-500/10 p-2.5 text-sky-500 transition-all hover:bg-sky-500 hover:text-white">
                                                         <Eye size={16} />
                                                     </button>
+                                                    <Can permission="fees.create">
+                                                        <button onClick={() => navigate(`/students/details/${voucher.id}?edit=true`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="تبدیل کریں">
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                    </Can>
                                                     <Can permission="fees.create">
                                                         <button onClick={() => openPaymentModal(voucher)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white">
                                                             <Wallet size={16} />

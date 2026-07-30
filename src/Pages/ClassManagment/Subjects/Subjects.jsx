@@ -115,15 +115,17 @@ export const CreateSubjects = () => {
     };
 
     const validateSubjectRows = () => {
-        const existingNames = new Set(subjects.map((subject) => String(subject.name || '').trim().toLowerCase()).filter(Boolean));
-        const seenNames = new Set();
+        const existingSubjects = new Set(subjects.map((subject) =>
+            `${String(subject.name || '').trim().toLowerCase()}::${String(subject.detail || '').trim().toLowerCase()}`,
+        ));
+        const seenSubjects = new Set();
         const validRows = [];
         let hasError = false;
 
         const nextRows = subjectRows.map((row) => {
             const name = row.name.trim();
             const detail = row.detail.trim();
-            const key = name.toLowerCase();
+            const key = `${name.toLowerCase()}::${detail.toLowerCase()}`;
             let rowError = '';
 
             if (!name && !detail) {
@@ -132,12 +134,10 @@ export const CreateSubjects = () => {
 
             if (!name) {
                 rowError = 'مضمون کا نام درج کرنا ضروری ہے۔';
-            } else if (seenNames.has(key)) {
-                rowError = 'یہ مضمون اسی فارم میں دوبارہ درج ہے۔';
-            } else if (existingNames.has(key)) {
-                rowError = 'یہ مضمون پہلے سے موجود ہے۔';
+            } else if (seenSubjects.has(key) || existingSubjects.has(key)) {
+                rowError = 'یہ مضمون پہلے سے موجود ہے۔ تفصیل منفرد ہونی چاہیے ہے۔';
             } else {
-                seenNames.add(key);
+                seenSubjects.add(key);
                 validRows.push({ name, detail });
             }
 
@@ -432,7 +432,7 @@ export const CreateSubjects = () => {
                                             <div className="flex items-center justify-start gap-2">
                                                 <button
                                                     onClick={() => handleEdit(sub)}
-                                                    className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] shadow-sm transition-all hover:bg-[#00d094] hover:text-white"
+                                                    className="rounded-xl bg-blue-500/10 text-blue-500 p-2.5  shadow-sm transition-all hover:bg-[#00d094] hover:text-white"
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>

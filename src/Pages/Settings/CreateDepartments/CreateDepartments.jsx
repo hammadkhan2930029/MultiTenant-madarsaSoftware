@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, Plus, Edit2, Trash2, Users, Target, Shield, Save, ChevronDown, X } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, Users, Shield, Save, ChevronDown, X } from 'lucide-react';
 import { InputField } from '../../../Components/HR/FormElements';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -12,6 +12,7 @@ const emptyForm = {
     head: '',
     headTeacherId: '',
     headSearch: '',
+    status: 'active',
 };
 
 const createEmptyDepartmentRow = () => ({
@@ -65,8 +66,11 @@ export const DepartmentManagement = () => {
     const loadDepartments = useCallback(async () => {
         try {
             setIsLoading(true);
-            const result = await getDepartments('page=1&limit=100');
-            setDepartments(result.items || []);
+            const [activeResult, inactiveResult] = await Promise.all([
+                getDepartments('page=1&limit=100&status=active'),
+                getDepartments('page=1&limit=100&status=inactive'),
+            ]);
+            setDepartments([...(activeResult.items || []), ...(inactiveResult.items || [])]);
         } catch (loadError) {
             setError(loadError.message || 'شعبہ جات لوڈ نہیں ہو سکے۔');
         } finally {
@@ -205,9 +209,10 @@ export const DepartmentManagement = () => {
                     code: formData.code.trim(),
                     head: formData.headTeacherId ? '' : formData.head.trim(),
                     headTeacherId: formData.headTeacherId ? Number(formData.headTeacherId) : null,
+                    status: formData.status,
                 };
                 await updateDepartment(editMode, payload);
-                setSuccess('شعبہ کامیابی سے تبدیل ہو گیا۔');
+                setSuccess('شعبہ کامیابی سے تبدیل ہو گیا ہے۔');
             } else {
                 await createDepartments({
                     departments: validRows.map((row) => ({
@@ -236,6 +241,7 @@ export const DepartmentManagement = () => {
             head: department.legacyHead || (!department.headTeacherId ? department.head || '' : ''),
             headTeacherId: department.headTeacherId ? String(department.headTeacherId) : '',
             headSearch: department.headTeacher?.fullName || department.head || '',
+            status: department.status || 'active',
         });
         setEditMode(department.id);
         setError('');
@@ -265,13 +271,13 @@ export const DepartmentManagement = () => {
     return (
         <div className="space-y-8 animate-in fade-in duration-700  lg:pt-0 md:pt-0 pt-6" dir="rtl">
 
-            <div className="flex flex-row justify-between items-center gap-6 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
-                <div>
-                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-2xl font-black">شعبہ جات کا انتظام</h1>
-                    <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-7">نئے شعبے بنائیں اور ٹیم کی ساخت کو منظم کریں</p>
-                </div>
-                <div style={{ backgroundColor: 'var(--color-primary)' }} className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#00d094]/20">
+            <div className="flex items-center gap-3 bg-[var(--color-surface)] p-4 md:p-6 rounded-[3rem] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border border-[var(--color-border)]">
+                <div className="rounded-2xl bg-emerald-500/10 p-3 text-[var(--color-primary)]">
                     <Building2 size={24} />
+                </div>
+                <div>
+                    <h1 style={{ color: 'var(--color-text-main)' }} className="text-3xl font-black">شعبہ جات کا انتظام</h1>
+                    <p style={{ color: 'var(--color-text-muted)' }} className="text-sm font-medium mt-5">نئے شعبے بنائیں اور ٹیم کی ساخت کو منظم کریں</p>
                 </div>
             </div>
 
@@ -280,8 +286,12 @@ export const DepartmentManagement = () => {
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                 className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
             >
+                <div className="mb-6 flex items-center gap-2 font-black text-[var(--color-primary)]">
+                    {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
+                    <span>{editMode ? 'شعبہ تبدیل کریں' : 'نیا شعبہ شامل کریں'}</span>
+                </div>
                 {editMode ? (
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] xl:items-end">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_180px_auto] xl:items-end">
                         <div className="min-w-0 space-y-2">
                             <InputField
                                 type="text"
@@ -292,6 +302,17 @@ export const DepartmentManagement = () => {
                                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                                 className="h-[74px] px-5 py-0 text-base font-bold"
                             />
+                        </div>
+                        <div className="min-w-0 space-y-2">
+                            <label className="text-sm font-bold text-[var(--color-text-muted)]">حالت</label>
+                            <select
+                                value={formData.status}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                                className="h-[74px] w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                            >
+                                <option value="active">فعال</option>
+                                <option value="inactive">غیر فعال</option>
+                            </select>
                         </div>
                         <div className="min-w-0 space-y-2">
                             <InputField
@@ -334,7 +355,7 @@ export const DepartmentManagement = () => {
                             <button
                                 type="button"
                                 onClick={resetForm}
-                                className="h-[74px] rounded-2xl border border-[var(--color-border)] px-6 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] md:min-w-[120px]"
+                                className="h-[58px] rounded-2xl border border-[var(--color-border)] px-6 text-base font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] md:min-w-[120px]"
                             >
                                 منسوخ
                             </button>
@@ -342,7 +363,7 @@ export const DepartmentManagement = () => {
                                 onClick={handleSubmit}
                                 disabled={isSaving}
                                 style={{ backgroundColor: 'var(--color-primary)' }}
-                                className="flex h-[74px] min-w-[180px] items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-8 text-base font-black text-white shadow-lg shadow-[#00d094]/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70"
+                                className="flex h-[58px] min-w-[180px] items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-8 text-base font-black text-white shadow-lg shadow-[#00d094]/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70"
                             >
                                 <Save size={20} />
                                 <span>{isSaving ? 'محفوظ ہو رہا ہے...' : 'تبدیل کریں'}</span>
@@ -360,8 +381,8 @@ export const DepartmentManagement = () => {
                             removeLabel="شعبہ حذف کریں"
                             rowClassName="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_220px_1fr_auto] xl:items-start"
                             actionsClassName="flex items-center justify-end gap-2 pt-0 xl:pt-8"
-                            addButtonClassName="grid h-[74px] w-[74px] place-items-center rounded-2xl bg-[#00d094] text-white shadow-lg shadow-[#00d094]/20 transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-                            removeButtonClassName="grid h-[74px] w-[74px] place-items-center rounded-2xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            addButtonClassName="grid h-[58px] w-[58px] place-items-center rounded-2xl bg-[#00d094] text-white shadow-lg shadow-[#00d094]/20 transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                            removeButtonClassName="grid h-[58px] w-[58px] place-items-center rounded-2xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                             getRowError={(row) => rowErrors[row.id]}
                             renderFields={(row) => (
                                 <>
@@ -412,7 +433,7 @@ export const DepartmentManagement = () => {
                                 onClick={handleSubmit}
                                 disabled={isSaving}
                                 style={{ backgroundColor: 'var(--color-primary)' }}
-                                className="flex h-[74px] min-w-[220px] items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-8 text-base font-black text-white shadow-lg shadow-[#00d094]/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70"
+                                className="flex h-[58px] min-w-[220px] items-center justify-center gap-3 whitespace-nowrap rounded-2xl px-8 text-base font-black text-white shadow-lg shadow-[#00d094]/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-70"
                             >
                                 <Plus size={20} />
                                 <span>{isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}</span>
@@ -434,7 +455,7 @@ export const DepartmentManagement = () => {
                     <div style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                         className="border rounded-[2rem] overflow-hidden shadow-sm">
                         <div className="w-full overflow-x-auto">
-                            <table dir="rtl" className="w-full min-w-[750px] table-fixed">
+                            <table dir="rtl" className="settings-management-table w-full min-w-[750px] table-fixed">
                                 <thead>
                                     <tr
                                         style={{
@@ -445,42 +466,49 @@ export const DepartmentManagement = () => {
                                     >
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[35%] px-6 py-4 text-right text-sm font-bold"
+                                            className="w-[16%] px-6 py-4 text-center text-lg font-bold"
                                         >
                                             شعبہ
                                         </th>
 
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[20%] px-6 py-4 text-right text-sm font-bold"
+                                            className="w-[16%] px-6 py-4 text-center text-xl font-bold"
                                         >
                                             شعبہ کوڈ
                                         </th>
 
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[20%] px-6 py-4 text-right text-sm font-bold"
+                                            className="w-[16%] px-6 py-4 text-center text-xl font-bold"
                                         >
                                             شعبہ ہیڈ
                                         </th>
 
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[12%] px-6 py-4 text-right text-sm font-bold"
+                                            className="w-[16%] px-6 py-4 text-center text-xl font-bold"
                                         >
                                             ممبرز
                                         </th>
 
                                         <th
                                             style={{ color: 'var(--color-text-muted)' }}
-                                            className="w-[13%] px-6 py-4 text-right text-sm font-bold"
+                                            className="w-[16%] px-6 py-4 text-center text-xl font-bold"
                                         >
-                                            ایکشنز
+                                            حالت
+                                        </th>
+
+                                        <th
+                                            style={{ color: 'var(--color-text-muted)' }}
+                                            className="w-[16%] px-6 py-4 text-center text-2xl font-bold"
+                                        >
+                                            ایکشن
                                         </th>
                                     </tr>
                                 </thead>
 
-                                <tbody>
+                                <tbody className="font-bold text-[var(--color-text-main)]">
                                     {departments.map((dept) => (
                                         <tr
                                             key={dept.id}
@@ -490,17 +518,8 @@ export const DepartmentManagement = () => {
                                             }}
                                             className="group border-b last:border-b-0 hover:bg-[var(--color-input)] transition-all"
                                         >
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div
-                                                        style={{
-                                                            backgroundColor: 'var(--color-input)',
-                                                        }}
-                                                        className="w-12 h-12 rounded-xl flex items-center justify-center text-[var(--color-primary)]"
-                                                    >
-                                                        <Target size={24} />
-                                                    </div>
-
+                                            <td className="px-6 py-4 text-center font-bold text-[var(--color-text-main)]">
+                                                <div>
                                                     <span
                                                         style={{ color: 'var(--color-text-main)' }}
                                                         className="font-bold text-lg"
@@ -511,35 +530,41 @@ export const DepartmentManagement = () => {
                                             </td>
 
                                             <td
-                                              
-                                                style={{ color: 'var(--color-text-muted)' }}
-                                                className="px-6 py-4 font-bold"
+
+                                                style={{ color: 'var(--color-text-main)' }}
+                                                className="px-6 py-4 text-center font-bold text-[var(--color-text-main)]"
                                             >
                                                 #{dept.code || '-'}
                                             </td>
 
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center font-bold text-[var(--color-text-main)]">
                                                 <div
-                                                    style={{ color: 'var(--color-text-muted)' }}
-                                                    className="flex items-center gap-2"
+                                                    style={{ color: 'var(--color-text-main)' }}
+                                                    className="flex items-center justify-center gap-2"
                                                 >
                                                     <Shield size={16} />
                                                     {dept.head || '-'}
                                                 </div>
                                             </td>
 
-                                            <td className="px-6 py-4">
+                                            <td className="px-6 py-4 text-center font-bold text-[var(--color-text-main)]">
                                                 <div
-                                                    style={{ color: 'var(--color-text-muted)' }}
-                                                    className="flex items-center gap-2"
+                                                    style={{ color: 'var(--color-text-main)' }}
+                                                    className="flex items-center justify-center gap-2"
                                                 >
                                                     <Users size={16} />
                                                     {dept.members || 0}
                                                 </div>
                                             </td>
 
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${dept.status === 'inactive' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                    {dept.status === 'inactive' ? 'غیر فعال' : 'فعال'}
+                                                </span>
+                                            </td>
+
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => handleEdit(dept)}
                                                         className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"

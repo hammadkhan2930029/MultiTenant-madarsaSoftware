@@ -216,7 +216,7 @@ export const CreateClasses = () => {
 
             if (editMode) {
                 await updateClass(editMode, payload);
-                setSuccess('جماعت کامیابی سے اپڈیٹ ہو گئی۔');
+                setSuccess('جماعت کامیابی سے تبدیل ہو گئی ہے۔');
             } else {
                 const validation = validateClassRows(branchId);
                 const result = await createClassesBulk({
@@ -289,7 +289,7 @@ export const CreateClasses = () => {
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredClasses.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row">
+                <div className="flex w-full flex-row flex-wrap items-center gap-3 md:w-auto">
                     <ExportExcelButton rows={filteredClasses} columns={exportColumns} fileName="classes-list" className="w-full md:w-auto" />
                     <select
                         value={statusFilter}
@@ -368,6 +368,9 @@ export const CreateClasses = () => {
                                 disabled={isSaving}
                                 addLabel="نئی جماعت کی قطار شامل کریں"
                                 removeLabel="جماعت کی قطار حذف کریں"
+                                rowClassName="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-start"
+                                actionsClassName="flex items-center justify-end gap-2 pt-0 md:pt-8"
+                                addButtonClassName="grid h-14 w-14 place-items-center rounded-2xl bg-[#00d094] text-white transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                                 renderFields={(row, index) => (
                                     <div className="space-y-2">
                                         <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
@@ -415,9 +418,9 @@ export const CreateClasses = () => {
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشن</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">سیکشن</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">حالت</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -432,24 +435,24 @@ export const CreateClasses = () => {
                                     <tr key={academicClass.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
-                                        <td className="px-6 py-4">
+                                                <td className="px-6 py-4 text-center">
                                             <span className={`rounded-xl px-3 py-1 text-xs font-black ${academicClass.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                                 {academicClass.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-start gap-2">
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
                                                 <button
                                                     onClick={() => handleEdit(academicClass)}
-                                                    className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                                                        className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
                                                 >
-                                                    <Edit2 size={16} />
+                                                        <Edit2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteTarget(academicClass)}
-                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white"
+                                                        className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
                                                 >
-                                                    <Trash2 size={16} />
+                                                        <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         </td>

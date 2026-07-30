@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Save, ChevronRight, Edit2, ChevronDown } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Save, Edit2 } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { DateField } from '../../../Components/HR/FormElements';
 import { deleteTeacherAttendance, getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { getTeacherById } from '../../../Constant/TeachersApi';
 import { getTeacherAssignments } from '../../../Constant/TeacherAssignmentApi';
@@ -11,8 +12,6 @@ const monthsUrdu = [
     'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون',
     'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر',
 ];
-
-const years = [2024, 2025, 2026, 2027];
 
 const formatDateKey = (date) => {
     const year = date.getFullYear();
@@ -164,18 +163,6 @@ export const TeacherAttendanceHistory = () => {
         shift: formatShiftTime(teacher?.shift),
     }), [teacher, teacherAssignments]);
 
-    const updateCalendar = (year, month) => {
-        setSelectedYear(year);
-        setSelectedMonth(month);
-        setRange({
-            startDate: formatDateKey(new Date(year, month, 1)),
-            endDate: formatDateKey(new Date(year, month + 1, 0)),
-        });
-        setActivePreset('custom');
-        setSuccessMessage('');
-        setError('');
-    };
-
     const applyPreset = (preset) => {
         const nextRange = getPresetRange(preset);
         const [year, month] = nextRange.startDate.split('-').map(Number);
@@ -245,48 +232,12 @@ export const TeacherAttendanceHistory = () => {
     return (
         <div className="p-4 md:p-6 space-y-6 bg-[var(--color-bg)] min-h-screen pb-24" dir="rtl">
             <div className="sticky top-0 z-10 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]/5 no-print">
-                <div className="flex justify-between items-center gap-4">
-                    <button
-                        onClick={() => window.history.back()}
-                        className="flex items-center gap-2 text-[var(--color-text)] opacity-70 hover:opacity-100 font-bold transition-all"
-                    >
-                        <div className="bg-[var(--color-surface)] p-2 rounded-xl shadow-md border border-[var(--color-border)]/10">
-                            <ChevronRight size={20} className="text-[var(--color-primary)]" />
-                        </div>
-                    </button>
-
-                    <div className="flex gap-2 items-center bg-[var(--color-surface)] p-1 rounded-2xl border border-[var(--color-border)]/10">
-                        <div className="relative">
-                            <select
-                                value={selectedMonth}
-                                onChange={(e) => updateCalendar(selectedYear, Number(e.target.value))}
-                                className="appearance-none bg-transparent pr-8 pl-4 py-2 text-[14px] font-bold text-[var(--color-text)] outline-none cursor-pointer"
-                            >
-                                {monthsUrdu.map((month, index) => (
-                                    <option key={month} value={index} className="bg-[var(--color-surface)]">
-                                        {month}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
-                        </div>
-
-                        <div className="w-[1px] h-4 bg-[var(--color-border)]/20" />
-
-                        <div className="relative">
-                            <select
-                                value={selectedYear}
-                                onChange={(e) => updateCalendar(Number(e.target.value), selectedMonth)}
-                                className="appearance-none bg-transparent pr-8 pl-4 py-2 text-[12px] font-bold text-[var(--color-text)] outline-none cursor-pointer"
-                            >
-                                {years.map((year) => (
-                                    <option key={year} value={year} className="bg-[var(--color-surface)] text-[12px]">
-                                        {year}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none" />
-                        </div>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="grid flex-1 grid-cols-2 gap-3 md:grid-cols-4">
+                        <StatBox label="حاضری" value={String(stats.present).padStart(2, '0')} color="text-emerald-500" bg="bg-emerald-500/10" />
+                        <StatBox label="غیر حاضری" value={String(stats.absent).padStart(2, '0')} color="text-red-500" bg="bg-red-500/10" />
+                        <StatBox label="رخصت" value={String(stats.leave).padStart(2, '0')} color="text-amber-500" bg="bg-amber-500/10" />
+                        <StatBox label="تاخیر" value={String(stats.late).padStart(2, '0')} color="text-sky-500" bg="bg-sky-500/10" />
                     </div>
 
                     <button
@@ -300,7 +251,8 @@ export const TeacherAttendanceHistory = () => {
                 </div>
             </div>
 
-            <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="order-2 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm xl:col-span-2">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                     {[
                         ['current-month', 'موجودہ مہینہ'],
@@ -319,10 +271,22 @@ export const TeacherAttendanceHistory = () => {
                         </button>
                     ))}
                 </div>
+
+                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <DateField label="شروع تاریخ" value={range.startDate} onChange={(value) => {
+                        const [year, month] = value.split('-').map(Number);
+                        setRange((current) => ({ ...current, startDate: value }));
+                        setActivePreset('custom');
+                        if (year && month) {
+                            setSelectedYear(year);
+                            setSelectedMonth(month - 1);
+                        }
+                    }} />
+                    <DateField label="اختتامی تاریخ" value={range.endDate} onChange={(value) => { setRange((current) => ({ ...current, endDate: value })); setActivePreset('custom'); }} />
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-1 bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-xl flex flex-col items-center text-center">
+                <div className="order-1 xl:col-span-1 bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-xl flex flex-col items-center text-center">
                     <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[#00d094] to-[#008a63] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-[#00d094]/20 mb-4">
                         {teacher?.fullName?.charAt(0) || 'T'}
                     </div>
@@ -336,15 +300,10 @@ export const TeacherAttendanceHistory = () => {
                         <ProfileInfo label="شفٹ کا وقت" value={teacherInfo.shift} className="sm:col-span-2" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 w-full mt-6 border-t border-[var(--color-border)]/10 pt-6">
-                        <StatBox label="حاضری" value={String(stats.present).padStart(2, '0')} color="text-emerald-500" bg="bg-emerald-500/10" />
-                        <StatBox label="غیر حاضری" value={String(stats.absent).padStart(2, '0')} color="text-red-500" bg="bg-red-500/10" />
-                        <StatBox label="رخصت" value={String(stats.leave).padStart(2, '0')} color="text-amber-500" bg="bg-amber-500/10" />
-                        <StatBox label="تاخیر" value={String(stats.late).padStart(2, '0')} color="text-sky-500" bg="bg-sky-500/10" />
-                    </div>
                 </div>
+            </div>
 
-                <div className="xl:col-span-2 bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-xl">
+                <div className="bg-[var(--color-surface)] p-6 rounded-[2.5rem] border border-[var(--color-border)]/10 shadow-xl">
                     <div className="flex justify-between items-center mb-5">
                         <h3 className="font-bold text-[var(--color-text)] flex items-center gap-2">
                             <Calendar size={18} className="text-[var(--color-primary)]" />
@@ -372,7 +331,6 @@ export const TeacherAttendanceHistory = () => {
                         ))}
                     </div>
                 </div>
-            </div>
 
             <div className="pt-4">
                 <h2 className="text-xl font-black text-[var(--color-text)] mb-6 flex items-center gap-3">

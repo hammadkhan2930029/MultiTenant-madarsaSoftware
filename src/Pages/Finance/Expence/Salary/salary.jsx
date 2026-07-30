@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X, Eye } from 'lucide-react';
+import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X, Eye, FileDown } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { DateField } from '../../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { getFinanceHeads } from '../../../../Constant/FinanceHeadsApi';
@@ -32,6 +34,59 @@ const readMonthParts = (value) => {
     return { salaryYear: year, salaryMonth: month };
 };
 const paymentMethods = ['Cash', 'Online', 'Cheque', 'Bank Transfer'];
+
+const getStaffResponsibilities = (teacher) => Array.from(new Set([
+    teacher?.subject,
+    ...(teacher?.teachingAssignments || []).map((assignment) => assignment.responsibility?.name),
+].map((value) => String(value || '').trim()).filter(Boolean)));
+
+const exportSalaryEntryPdf = async (entry) => {
+    const printable = document.createElement('div');
+    printable.dir = 'rtl';
+    printable.style.cssText = 'position:fixed;left:-10000px;top:0;width:900px;padding:48px;background:#fff;color:#111;font-family:Arial,sans-serif;';
+    const heading = document.createElement('h1');
+    heading.textContent = 'تنخواہ کا اندراج';
+    heading.style.cssText = 'margin:0 0 8px;text-align:center;font-size:28px;';
+    printable.appendChild(heading);
+    const subHeading = document.createElement('p');
+    subHeading.textContent = 'منتخب تنخواہ ریکارڈ';
+    subHeading.style.cssText = 'margin:0 0 28px;text-align:center;color:#555;';
+    printable.appendChild(subHeading);
+    const fields = [
+        ['عملہ', entry.teacher?.fullName || '---'],
+        ['مہینہ', formatMonth(entry.salaryMonth, entry.salaryYear)],
+        ['ادائیگی کی تاریخ', formatDate(entry.paymentDate)],
+        ['طریقہ ادائیگی', entry.paymentMethod || 'Cash'],
+        ['تنخواہ', formatAmount(entry.amount)],
+        ['حالت', entry.status === 'active' ? 'فعال' : 'غیر فعال'],
+        ['تفصیل / نوٹ', entry.remarks || '---'],
+    ];
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%;border-collapse:collapse;font-size:18px;';
+    fields.forEach(([label, value]) => {
+        const row = table.insertRow();
+        const labelCell = document.createElement('th');
+        labelCell.textContent = label;
+        labelCell.style.cssText = 'width:35%;border:1px solid #bbb;padding:14px;text-align:right;background:#f3f4f6;';
+        row.appendChild(labelCell);
+        const valueCell = row.insertCell();
+        valueCell.textContent = value;
+        valueCell.style.cssText = 'border:1px solid #bbb;padding:14px;text-align:right;';
+    });
+    printable.appendChild(table);
+    document.body.appendChild(printable);
+    try {
+        const canvas = await html2canvas(printable, { scale: 2, backgroundColor: '#ffffff' });
+        const pdf = new jsPDF({ orientation: 'portrait' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const imageWidth = pageWidth - 20;
+        const imageHeight = (canvas.height * imageWidth) / canvas.width;
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, imageWidth, imageHeight);
+        pdf.save(`salary-entry-${entry.id}.pdf`);
+    } finally {
+        printable.remove();
+    }
+};
 
 const parseDateOnly = (value) => {
     if (!value) return null;
@@ -96,6 +151,10 @@ export const SalaryEntry = ({ staffType = '' }) => {
     const selectedTeacher = useMemo(
         () => teachers.find((teacher) => String(teacher.id) === String(formData.teacherId)),
         [teachers, formData.teacherId]
+    );
+    const selectedStaffResponsibilities = useMemo(
+        () => getStaffResponsibilities(selectedTeacher),
+        [selectedTeacher],
     );
 
     const filteredEntries = useMemo(
@@ -267,6 +326,12 @@ export const SalaryEntry = ({ staffType = '' }) => {
             <div className="max-w-6xl mx-auto space-y-5">
                 <div>
                     <div className="p-4 md:p-5 rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl">
+                        {staffType === 'staff' ? (
+                            <div className="mb-5">
+                                <h1 className="text-3xl font-black text-[var(--color-text-main)]">عملے کی تنخواہ</h1>
+                                <p className="mt-2 text-base font-bold text-[var(--color-text-muted)]">عملے کی ماہانہ تنخواہ کا اندراج اور ریکارڈ یہاں سے منظم کریں۔</p>
+                            </div>
+                        ) : null}
                         <div className="flex items-center justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-[var(--color-primary)] rounded-lg text-[#0b1120]">
@@ -289,13 +354,13 @@ export const SalaryEntry = ({ staffType = '' }) => {
                         </div>
 
                         <div className="mb-4 relative">
-                            <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">عملہ / استاد تلاش کریں<span className="text-red-500"> *</span></label>
+                            <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">{staffType === 'staff' ? 'عملہ تلاش کریں' : 'عملہ / استاد تلاش کریں'}<span className="text-red-500"> *</span></label>
                             <div className="relative">
                                 <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                                 <input
                                     type="text"
                                     className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-[var(--color-primary)] bg-[var(--color-input)] text-base focus:outline-none"
-                                    placeholder="نام، مضمون یا نمبر..."
+                                    placeholder={staffType === 'staff' ? 'عملہ تلاش کریں' : 'نام، مضمون یا نمبر...'}
                                     value={searchQuery}
                                     onChange={(event) => {
                                         setSearchQuery(event.target.value);
@@ -326,9 +391,16 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
                         <form onSubmit={handleSave} noValidate className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <div className="p-3 rounded-xl bg-[var(--color-bg)] border border-dashed border-[var(--color-border)]">
-                                <p className="text-lg font-bold text-[var(--color-text-muted)] mb-1">منتخب عملہ / استاد:</p>
+                                <p className="text-lg font-bold text-[var(--color-text-muted)] mb-1">{staffType === 'staff' ? 'منتخب عملہ:' : 'منتخب عملہ / استاد:'}</p>
                                 <p className="text-lg font-bold text-[var(--color-primary)]">{selectedTeacher?.fullName || searchQuery || '---'}</p>
-                                <p className="text-sm text-[var(--color-text-muted)] mt-1">{selectedTeacher?.subject || '---'}</p>
+                                {staffType === 'staff' ? (
+                                    <div className="mt-2">
+                                        <p className="text-sm font-bold text-[var(--color-text-muted)]">ذمہ داریاں:</p>
+                                        <p className="mt-1 text-sm text-[var(--color-text-muted)]">{selectedStaffResponsibilities.join('، ') || '---'}</p>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-[var(--color-text-muted)] mt-1">{selectedTeacher?.subject || '---'}</p>
+                                )}
                             </div>
 
                             <div>
@@ -456,7 +528,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
                         </div>
                     </div>
 
-                    <div className="mb-2 hidden grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_120px] gap-3 rounded-[1rem] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-base font-black text-[var(--color-text-muted)] sm:grid">
+                    <div className={`mb-2 hidden gap-3 rounded-[1rem] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-base font-black text-[var(--color-text-muted)] sm:grid ${staffType === 'staff' ? 'grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_160px]' : 'grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_120px]'}`}>
                         <span className="text-center">نام</span>
                         <span className="text-center">مہینہ</span>
                         <span className="text-center">ادائیگی کی تاریخ</span>
@@ -471,7 +543,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 تنخواہ ریکارڈز لوڈ ہو رہے ہیں...
                             </div>
                         ) : filteredEntries.length ? filteredEntries.map((entry) => (
-                            <div key={entry.id} className="grid grid-cols-1 gap-4 rounded-[1.2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all hover:border-[var(--color-primary)]/50 sm:grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_120px] sm:items-center sm:gap-3">
+                            <div key={entry.id} className={`grid grid-cols-1 gap-4 rounded-[1.2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all hover:border-[var(--color-primary)]/50 sm:items-center sm:gap-3 ${staffType === 'staff' ? 'sm:grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_160px]' : 'sm:grid-cols-[1.3fr_0.75fr_1fr_0.85fr_0.7fr_120px]'}`}>
                                 <div className="flex min-w-0 items-center gap-4 sm:justify-center">
                                     <div className="p-3 rounded-xl bg-emerald-500/10 text-[var(--color-primary)]">
                                         <User size={20} />
@@ -533,6 +605,17 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                     >
                                         <Trash2 size={16} />
                                     </button>
+                                    {staffType === 'staff' ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => exportSalaryEntryPdf(entry)}
+                                            className="p-2 rounded-xl bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
+                                            aria-label="PDF Export"
+                                            title="PDF Export"
+                                        >
+                                            <FileDown size={16} />
+                                        </button>
+                                    ) : null}
                                 </div>
                             </div>
                         )) : (

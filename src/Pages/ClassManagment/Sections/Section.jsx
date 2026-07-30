@@ -185,7 +185,7 @@ export const CreateSections = () => {
 
             if (validation.hasError) {
                 setError('');
-                notify.error('درج کردہ سیکشنز کی معلومات درست کریں۔', 'نامکمل معلومات');
+                notify.error('درج کردہ سیکشن کی معلومات درست کریں۔', 'نامکمل معلومات');
                 return;
             }
         }
@@ -203,7 +203,7 @@ export const CreateSections = () => {
 
             if (editMode) {
                 await updateSection(editMode, payload);
-                setSuccess('سیکشن کامیابی سے اپڈیٹ ہو گیا۔');
+                setSuccess('سیکشن کامیابی سے تبدیل ہو گیا ہے۔');
             } else {
                 const validation = validateSectionRows(formData.classId);
                 const result = await createSectionsBulk({
@@ -271,13 +271,13 @@ export const CreateSections = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-700 p-2" dir="rtl">
-            <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-row items-center justify-between gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                 <div className="text-right">
                     <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت سیکشن مینجمنٹ</h2>
                     <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSections.length}</p>
                 </div>
 
-                <div className="flex w-full flex-col items-center gap-3 md:w-auto md:flex-row">
+                <div className="flex w-auto flex-row flex-wrap items-center gap-3">
                     <ExportExcelButton rows={filteredSections} columns={exportColumns} fileName="sections-list" className="w-full md:w-auto" />
                     <select
                         value={statusFilter}
@@ -326,7 +326,7 @@ export const CreateSections = () => {
                 <div ref={formRef} className="rounded-[2.5rem] border border-[#00d094]/20 bg-[var(--color-surface)] p-8 shadow-xl">
                     <div className="mb-6 flex items-center gap-2 font-black text-[#00d094]">
                         {editMode ? <Edit2 size={20} /> : <Plus size={20} />}
-                        <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نیا سیکشن کا اندراج'}</span>
+                        <span className='text-3xl'>{editMode ? 'تبدیل کریں' : 'نئے سیکشن کا اندراج'}</span>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -346,9 +346,7 @@ export const CreateSections = () => {
                                 ))}
                             </select>
                         </div>
-                    </div>
-
-                    <div className="mt-6 space-y-4">
+                    <div className="space-y-4">
                         {editMode ? (
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
@@ -385,6 +383,9 @@ export const CreateSections = () => {
                                 disabled={isSaving}
                                 addLabel="نیا سیکشن شامل کریں"
                                 removeLabel="سیکشن قطار حذف کریں"
+                                rowClassName="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-start"
+                                actionsClassName="flex items-center justify-end gap-2 pt-0 md:pt-8"
+                                addButtonClassName="grid h-14 w-14 place-items-center rounded-2xl bg-[#00d094] text-white transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                                 renderFields={(row, index) => (
                                     <div className="space-y-2">
                                         <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
@@ -403,6 +404,7 @@ export const CreateSections = () => {
                                 )}
                             />
                         )}
+                    </div>
                     </div>
 
                     <div className="mt-8 flex justify-end gap-3">
@@ -429,9 +431,9 @@ export const CreateSections = () => {
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشن</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">جماعت</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">حالت</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -449,25 +451,25 @@ export const CreateSections = () => {
                                                 {section.name}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text)]">{section.class?.name || '-'}</td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-center text-sm font-bold text-[var(--color-text)]">{section.class?.name || '-'}</td>
+                                        <td className="px-6 py-4 text-center">
                                             <span className={`rounded-xl px-3 py-1 text-xs font-black ${section.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                                 {section.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-start gap-2">
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-2">
                                                 <button
                                                     onClick={() => handleEdit(section)}
-                                                    className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                                                    className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
                                                 >
-                                                    <Edit2 size={16} />
+                                                    <Edit2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteTarget(section)}
-                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white"
+                                                    className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         </td>

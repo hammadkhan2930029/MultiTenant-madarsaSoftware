@@ -175,7 +175,7 @@ export const StoreUnits = () => {
                             <textarea value={formData.description} onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))} placeholder="اختیاری تفصیل" rows={3} className="w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
 
-                        <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                        {editMode ? <div className="flex items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
                             <div className="text-right">
                                 <p className="text-sm font-black text-[var(--color-text)]">حالت</p>
                                 <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{formData.status === 'active' ? 'فعال اکائی' : 'غیر فعال اکائی'}</p>
@@ -183,7 +183,7 @@ export const StoreUnits = () => {
                             <button type="button" onClick={() => setFormData((prev) => ({ ...prev, status: prev.status === 'active' ? 'inactive' : 'active' }))} className={`rounded-xl p-2 transition-all ${formData.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-slate-500/10 text-[var(--color-text-muted)]'}`} title="حالت تبدیل کریں">
                                 {formData.status === 'active' ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                             </button>
-                        </div>
+                        </div> : null}
                     </div>
 
                     <div className="mt-8 flex justify-end gap-3">
@@ -205,7 +205,7 @@ export const StoreUnits = () => {
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">مختصر نام</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">تفصیل</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">حالت</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>

@@ -127,7 +127,7 @@ export const CreateSessions = () => {
 
             if (editMode) {
                 await updateSession(editMode, payload);
-                setSuccess('سیشن کامیابی سے اپڈیٹ ہو گیا۔');
+                setSuccess('سیشن کامیابی سے تبدیل ہو گیا ہے۔');
             } else {
                 await createSession(payload);
                 setSuccess('سیشن کامیابی سے شامل ہو گیا۔');
@@ -210,9 +210,8 @@ export const CreateSessions = () => {
 
                     <button
                         onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))}
-                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all ${
-                            isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white'
-                        }`}
+                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all ${isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white'
+                            }`}
                     >
                         {isFormOpen ? 'بند کریں' : 'نیا سیشن'}
                         {isFormOpen ? <X size={18} /> : <Plus size={18} />}
@@ -302,11 +301,11 @@ export const CreateSessions = () => {
                     <table className="w-full text-right">
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیشن</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">شروع تاریخ</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اختتام تاریخ</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
+                                <th className="w-[20%]  px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیشن</th>
+                                <th className="w-[20%]  px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">شروع تاریخ</th>
+                                <th className="w-[20%]  px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">اختتام تاریخ</th>
+                                <th className="w-[20%]  px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">حالت</th>
+                                <th className="w-[20%]  px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -319,19 +318,19 @@ export const CreateSessions = () => {
                             ) : filteredSessions.length ? (
                                 filteredSessions.map((session) => (
                                     <tr key={session.id} className="border-t border-[var(--color-border)]/60">
-                                        <td className="px-6 py-4 font-black text-[var(--color-text)]">{session.name}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.startDate)}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.endDate)}</td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-center align-middle font-black text-[var(--color-text)] ">{session.name}</td>
+                                        <td className="px-6 py-4 text-center align-middle text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.startDate)}</td>
+                                        <td className="px-6 py-4 text-center align-middle text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.endDate)}</td>
+                                        <td className="px-6 py-4 text-center align-middle">
                                             <span className={`rounded-xl px-3 py-1 text-xs font-black ${session.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                                                 {session.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-center align-middle flex justify-center">
                                             <div className="flex items-center justify-start gap-2">
                                                 <button
                                                     onClick={() => handleEdit(session)}
-                                                    className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white"
+                                                    className="rounded-xl   p-2.5 bg-blue-500/10 text-blue-500 transition-all hover:bg-[#00d094] hover:text-white"
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>

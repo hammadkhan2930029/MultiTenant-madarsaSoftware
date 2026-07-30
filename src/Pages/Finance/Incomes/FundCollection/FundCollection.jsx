@@ -364,7 +364,7 @@ export const FundCollection = () => {
                     <div className="p-3 rounded-2xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20">
                         <Wallet size={28} />
                     </div>
-                    <h1 className="text-3xl font-bold text-[var(--color-text-main)]">فنڈ کلیکشن فارم</h1>
+                    <h1 className="text-3xl font-bold text-[var(--color-text-main)]">فنڈ وصولی کا فارم</h1>
                 </div>
 
                 {/* Section 1: Personal Info - ORIGINAL UI */}

@@ -315,7 +315,7 @@ export const SideBar = () => {
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
                 { id: 't_attendance', label: 'اساتذہ کی حاضری', path: '/teachers/attendance' },
-                { id: 't_assignments', label: 'مضامین اور ذمہ داریاں', path: '/teachers/assignments', permissions: ['teachers.assignments.view'] },
+                { id: 't_assignments', label: 'مضامین', path: '/teachers/assignments', permissions: ['teachers.assignments.view'] },
                 { id: 't_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
                 { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/teachers/salary' },
             ]
@@ -411,6 +411,7 @@ export const SideBar = () => {
                 { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
                 { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
                 { id: 'staff_attendance', label: 'عملہ کی حاضری', path: '/staff/attendance', permissions: ['attendance.view'] },
+                { id: 'staff_assignments', label: 'ذمہ داریاں', path: '/staff/assignments', permissions: ['teachers.assignments.view'] },
                 { id: 'staff_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/staff/salary-increments' },
                 { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/staff/salary', permissions: ['salary.view'] }
             ]
@@ -434,7 +435,7 @@ export const SideBar = () => {
             path: '/store',
             subMenu: [
                 { id: 'store_dashboard', label: 'ڈیش بورڈ', path: '/store/dashboard' },
-                { id: 'store_categories', label: 'کیٹیگریز', path: '/store/categories' },
+                { id: 'store_categories', label: 'اقسام', path: '/store/categories' },
                 { id: 'store_items', label: 'اشیاء', path: '/store/items' },
                 { id: 'store_units', label: 'اکائیاں', path: '/store/units' },
                 { id: 'store_purchases', label: 'خریداری', path: '/store/purchases' },
@@ -504,6 +505,7 @@ export const SideBar = () => {
                 { id: 'role_management', label: 'کردار مینجمنٹ', path: '/role-management', permissions: ['roles.view', 'roles.manage'] },
                 { id: 'user_management', label: 'صارفین مینجمنٹ', path: '/role-management/users', permissions: ['users.view', 'users.manage'] },
                 { id: 'tenant_management', label: 'مدارس کا انتظام', path: '/tenant-management', permission: 'tenant_management.view' },
+                { id: 'result_grades', label: 'رزلٹ فیصد رینج', path: '/exams/result-grades', permissions: ['result_grades.view'] },
 
             ]
         }
@@ -572,7 +574,7 @@ export const SideBar = () => {
         store_dashboard: 'ڈیش بورڈ',
         store_items: 'اشیاء',
         store_units: 'اکائیاں',
-        store_categories: 'کیٹیگریز',
+        store_categories: 'اقسام',
         store_purchases: 'خریداری',
         store_stock_issues: 'اسٹاک اجراء',
         store_returns: 'واپسی',
@@ -643,14 +645,17 @@ export const SideBar = () => {
         ...(item.subSubMenu ? { subSubMenu: applyUrduLabels(item.subSubMenu) } : {}),
     }));
 
-    const visibleMenuItems = filterMenuItems(applyUrduLabels([...menuItems, ...setting]));
+    const primaryMenuOrder = ['class_mgmt', 'students', 'hifz', 'exams', 'teachers', 'HRManagement', 'finance', 'store'];
+    const firstPrimaryIndex = menuItems.findIndex((item) => primaryMenuOrder.includes(item.id));
+    const orderedMenuItems = firstPrimaryIndex < 0 ? menuItems : [
+        ...menuItems.slice(0, firstPrimaryIndex).filter((item) => !primaryMenuOrder.includes(item.id)),
+        ...primaryMenuOrder.map((id) => menuItems.find((item) => item.id === id)).filter(Boolean),
+        ...menuItems.slice(firstPrimaryIndex).filter((item) => !primaryMenuOrder.includes(item.id)),
+    ];
+    const visibleMenuItems = filterMenuItems(applyUrduLabels([...orderedMenuItems, ...setting]));
     const visibleProfileMenuItems = filterMenuItems(applyUrduLabels(profileMenuItems));
     const visibleSetting = filterMenuItems(applyUrduLabels(setting));
-    const canViewResultGrades = hasPermission('result_grades.view');
-    const quickMenuItems = [
-        ...(visibleSetting[0]?.subMenu || []).filter((sub) => sub?.path && sub?.label),
-        ...(canViewResultGrades ? [{ id: 'result_grades_quick', path: '/exams/result-grades', label: 'رزلٹ فیصد رینج' }] : []),
-    ];
+    const quickMenuItems = (visibleSetting[0]?.subMenu || []).filter((sub) => sub?.path && sub?.label);
 
     //----------------------------------------------------------------------
 
@@ -680,13 +685,18 @@ export const SideBar = () => {
                 </button>
 
                 <div className="flex items-center gap-3 mb-8 px-2 py-4">
-                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/10 shadow-lg shrink-0 flex items-center justify-center">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/Profile/setting')}
+                        className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 backdrop-blur-md border border-white/10 shadow-lg shrink-0 flex items-center justify-center"
+                        aria-label="پروفائل سیٹنگ"
+                    >
                         {hasMadrassaLogo ? (
                             <img src={avatarSrc} alt={sidebarTitle} className="h-full w-full object-cover" />
                         ) : (
                             <GraduationCap className="text-[#00d094]" size={26} />
                         )}
-                    </div>
+                    </button>
                     <div className="min-w-0 flex-1">
                         <h1 className="text-white text-[24px] font-black text-base leading-tight break-words" title={sidebarTitle}>{sidebarTitle}</h1>
                         <p className="text-[18px] text-[#00d094] font-bold tracking-[0.16em] uppercase truncate" title={sidebarBadge}>{sidebarBadge}</p>

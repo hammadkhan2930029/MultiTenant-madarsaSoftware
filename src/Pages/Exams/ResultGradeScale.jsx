@@ -117,7 +117,7 @@ export const ResultGradeScale = () => {
         try {
             const savedGrade = editId ? await updateResultGrade(editId, payload) : await createResultGrade(payload);
             setGrades((current) => sortGrades(editId ? current.map((grade) => (grade.id === editId ? savedGrade : grade)) : [...current, savedGrade]));
-            setSuccess(editId ? 'رینج اپڈیٹ ہو گئی۔' : 'نئی رینج شامل ہو گئی۔');
+            setSuccess(editId ? 'رینج تبدیل ہو گئی ہے۔' : 'نئی رینج شامل ہو گئی۔');
             resetForm();
         } catch (saveError) {
             setError(saveError.message || 'رینج محفوظ نہیں ہو سکی۔');
@@ -135,7 +135,7 @@ export const ResultGradeScale = () => {
                             <Award size={24} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-[var(--color-primary)] md:text-3xl">رزلٹ فیصد رینج</h1>
+                            <h1 className="text-2xl font-black text-black">رزلٹ فیصد رینج</h1>
                             <p className="mt-5 text-sm font-bold text-[var(--color-text-muted)]">یہاں منتظم طے کرے گا کہ کس فیصد سے کس فیصد تک کون سا درجہ دکھانا ہے۔</p>
                         </div>
                     </div>
@@ -147,7 +147,7 @@ export const ResultGradeScale = () => {
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                     <div className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xl lg:col-span-4">
                         <div className="mb-5 flex items-center justify-between">
-                            <h2 className="text-lg font-black">{editId ? 'رینج اپڈیٹ کریں' : 'نئی رینج شامل کریں'}</h2>
+                            <h2 className="text-lg font-black">{editId ? 'رینج تبدیل کریں' : 'نئی رینج شامل کریں'}</h2>
                             {editId ? (
                                 <button type="button" onClick={resetForm} className="rounded-xl bg-rose-500/10 p-2 text-rose-500">
                                     <X size={18} />
@@ -204,10 +204,10 @@ export const ResultGradeScale = () => {
                                 type="button"
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-sm font-black text-[#0b1120] disabled:cursor-not-allowed disabled:opacity-70"
+                                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-lg font-black text-white disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {editId ? <Save size={17} /> : <Plus size={17} />}
-                                {isSaving ? 'محفوظ ہو رہا ہے...' : editId ? 'رینج تبدیل کریں' : 'رینج شامل کریں'}
+                                {isSaving ? 'محفوظ ہو رہا ہے...' : editId ? 'تبدیل کریں' : 'رینج شامل کریں'}
                             </button>
                         </div>
                     </div>
@@ -234,17 +234,17 @@ export const ResultGradeScale = () => {
                                         </tr>
                                     ) : grades.length ? grades.map((grade) => (
                                         <tr key={grade.id}>
-                                            <td className="p-4 font-black text-[var(--color-primary)]">{grade.title}</td>
-                                            <td className="p-4 text-left font-sans font-black" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{grade.code || '---'}</td>
+                                            <td className="p-4 text-lg font-black text-[var(--color-primary)]">{grade.title}</td>
+                                            <td className="p-4 font-sans font-black" dir="ltr" style={{ unicodeBidi: 'isolate' }}>{grade.code || '---'}</td>
                                             <td className="p-4 font-sans font-black">{grade.from}%</td>
                                             <td className="p-4 font-sans font-black">{grade.to}%</td>
                                             <td className="p-4">
                                                 <div className="flex justify-center gap-2">
-                                                    <button type="button" onClick={() => handleEdit(grade)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-[#0b1120]">
-                                                        <Edit2 size={16} />
+                                                    <button type="button" onClick={() => handleEdit(grade)} className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all">
+                                                        <Edit2 size={18} />
                                                     </button>
-                                                    <button type="button" onClick={() => setDeleteTarget(grade)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 hover:bg-rose-500 hover:text-white">
-                                                        <Trash2 size={16} />
+                                                    <button type="button" onClick={() => setDeleteTarget(grade)} className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                                                        <Trash2 size={18} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -303,7 +303,7 @@ export const ResultGradeScale = () => {
 
 const FormField = ({ label, children, required = false }) => (
     <label className="block">
-        <span className="mb-2 mr-2 block text-[11px] font-black text-[var(--color-text-muted)]">
+        <span className="mb-2 mr-2 block text-sm font-black text-[var(--color-text-muted)]">
             {label}{required ? <span className="text-red-500"> *</span> : null}
         </span>
         {children}

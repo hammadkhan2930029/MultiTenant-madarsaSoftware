@@ -78,8 +78,8 @@ export const StoreSuppliers = () => {
     };
 
     const handleSubmit = async () => {
-        if (!formData.supplierName.trim()) {
-            setError('سپلائر کا نام درج کرنا ضروری ہے۔');
+        if (!formData.supplierName.trim() || !formData.mobileNumber.trim()) {
+            setError('سپلائر کا نام اور موبائل نمبر درج کرنا ضروری ہے۔');
             return;
         }
 
@@ -175,7 +175,7 @@ export const StoreSuppliers = () => {
                             <input value={formData.supplierName} onChange={(event) => setFormData((prev) => ({ ...prev, supplierName: event.target.value }))} placeholder="سپلائر کا نام" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
                         <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">موبائل نمبر</label>
+                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">موبائل نمبر<span className="text-red-500"> *</span></label>
                             <input value={formData.mobileNumber} onChange={(event) => setFormData((prev) => ({ ...prev, mobileNumber: event.target.value }))} placeholder="موبائل نمبر" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
                         <div className="space-y-2">
@@ -211,7 +211,7 @@ export const StoreSuppliers = () => {
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">موبائل</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">دکان</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">بیلنس</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>

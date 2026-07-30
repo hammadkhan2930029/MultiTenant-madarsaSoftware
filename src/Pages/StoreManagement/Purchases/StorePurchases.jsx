@@ -463,7 +463,7 @@ export const StorePurchases = () => {
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">کل رقم</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ادا شدہ</th>
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">باقی</th>
-                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">عمل</th>
+                                <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody>

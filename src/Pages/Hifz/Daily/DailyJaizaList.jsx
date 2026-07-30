@@ -14,9 +14,6 @@ const registerMeta = {
     reportTitle: 'یومیہ رپورٹ',
 };
 
-const monthOptions = ['محرم', 'صفر', 'ربیع الاول', 'ربیع الثانی', 'جمادی الاول', 'جمادی الثانی', 'رجب', 'شعبان', 'رمضان', 'شوال', 'ذوالقعدہ', 'ذوالحجہ'];
-const yearOptions = ['1446ھ', '1447ھ', '1448ھ', '2025', '2026', '2027'];
-
 // eslint-disable-next-line no-unused-vars
 const filledRows = [
     {
@@ -99,14 +96,12 @@ const normalizeRows = (entries) => entries;
 const getDayName = (date) => (date ? new Date(date).toLocaleDateString('ur-PK', { weekday: 'long' }) : '');
 const toInputValue = (value) => (value === null || value === undefined ? '' : String(value));
 
-const mapDailyEntryToRow = (entry, selectedMonth, selectedYear) => ({
+const mapDailyEntryToRow = (entry) => ({
     id: String(entry.id),
     apiId: entry.id,
     studentId: entry.studentId,
     studentName: entry.student?.fullName || '',
     admissionNumber: entry.student?.admissionNumber || '',
-    month: selectedMonth,
-    year: selectedYear,
     date: formatDateForInput(entry.date),
     day: getDayName(entry.date),
     sabak: entry.sabq || '',
@@ -177,7 +172,7 @@ const buildUpdatePayload = (row) => ({
     manzilAfterAtkann: toOptionalNumber(row.manzilAfterAtkann),
     lessonDetail: row.lessonDetail || undefined,
     count: toOptionalNumber(row.count),
-    performanceStatus: row.quality || 'جید',
+    performanceStatus: row.quality,
     remarks: row.lessonDetail || undefined,
     status: 'active',
 });
@@ -193,8 +188,10 @@ export const DailyJaizaList = () => {
     const [deleteRow, setDeleteRow] = useState(null);
     const [studentSearch, setStudentSearch] = useState('');
     const [selectedStudentId, setSelectedStudentId] = useState('');
-    const [selectedMonth, setSelectedMonth] = useState('شعبان');
-    const [selectedYear, setSelectedYear] = useState('1447ھ');
+    const [selectedTeacher, setSelectedTeacher] = useState('');
+    const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSection, setSelectedSection] = useState('');
+    const [selectedQuality, setSelectedQuality] = useState('');
     const [showStudentResults, setShowStudentResults] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -236,7 +233,7 @@ export const DailyJaizaList = () => {
         };
     }, []);
 
-    const loadDailyEntries = useCallback(async (studentId = selectedStudentId) => {
+    const loadDailyEntries = useCallback(async () => {
         try {
             setIsLoading(true);
             const params = new URLSearchParams({
@@ -245,18 +242,14 @@ export const DailyJaizaList = () => {
                 status: 'active',
             });
 
-            if (studentId) {
-                params.set('studentId', String(studentId));
-            }
-
             const result = await getDailyHifzEntries(params.toString());
-            setSavedRows((result.items || []).map((entry) => mapDailyEntryToRow(entry, selectedMonth, selectedYear)));
+            setSavedRows((result.items || []).map(mapDailyEntryToRow));
         } catch (error) {
             notify.error(error?.message || 'یومیہ جائزے کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
-    }, [selectedMonth, selectedStudentId, selectedYear]);
+    }, [notify]);
 
     useEffect(() => {
         let isMounted = true;
@@ -270,7 +263,7 @@ export const DailyJaizaList = () => {
 
                 if (isMounted) {
                     setStudents(mapStudentsForHifz(studentsResult.items || []));
-                    setSavedRows((dailyResult.items || []).map((entry) => mapDailyEntryToRow(entry, selectedMonth, selectedYear)));
+                    setSavedRows((dailyResult.items || []).map(mapDailyEntryToRow));
                 }
             } catch (error) {
                 notify.error(error?.message || 'یومیہ جائزے کا ڈیٹا لوڈ نہیں ہو سکا۔');
@@ -282,29 +275,45 @@ export const DailyJaizaList = () => {
         return () => {
             isMounted = false;
         };
-    }, [selectedMonth, selectedYear]);
-
-    useEffect(() => {
-        loadDailyEntries(selectedStudentId);
-    }, [loadDailyEntries, selectedStudentId]);
+    }, []);
 
     const registerRows = useMemo(() => normalizeRows(savedRows), [savedRows]);
 
     const filteredStudents = useMemo(() => {
         const query = studentSearch.trim().toLowerCase();
 
-        if (!query) {
-            return students.slice(0, 8);
-        }
-
         return students.filter((student) => {
+            if (selectedClass && student.className !== selectedClass) return false;
+            if (selectedSection && student.sectionName !== selectedSection) return false;
             const fullName = student.fullName?.toLowerCase() || '';
             const fatherName = student.fatherName?.toLowerCase() || '';
             const idNo = student.admissionNumber?.toLowerCase() || '';
 
-            return fullName.includes(query) || fatherName.includes(query) || idNo.includes(query);
+            return !query || fullName.includes(query) || fatherName.includes(query) || idNo.includes(query);
         }).slice(0, 8);
-    }, [studentSearch, students]);
+    }, [selectedClass, selectedSection, studentSearch, students]);
+
+    const classOptions = useMemo(
+        () => [...new Set(students.map((student) => student.className).filter(Boolean))],
+        [students],
+    );
+
+    const sectionOptions = useMemo(
+        () => selectedClass
+            ? [...new Set(students.filter((student) => student.className === selectedClass).map((student) => student.sectionName).filter(Boolean))]
+            : [],
+        [selectedClass, students],
+    );
+
+    const teacherOptions = useMemo(
+        () => [...new Set(savedRows.map((row) => row.sabakTeacher).filter(Boolean))],
+        [savedRows],
+    );
+
+    const qualityOptions = useMemo(
+        () => [...new Set(savedRows.map((row) => row.quality).filter(Boolean))],
+        [savedRows],
+    );
 
     const selectedStudent = useMemo(() => (
         students.find((student) => String(student.id) === String(selectedStudentId) || student.admissionNumber === selectedStudentId) || null
@@ -313,9 +322,14 @@ export const DailyJaizaList = () => {
     const visibleRows = useMemo(() => {
         return registerRows.filter((row) => {
             const matchesStudent = selectedStudentId ? String(row.studentId) === String(selectedStudentId) : true;
-            return matchesStudent;
+            const student = students.find((item) => String(item.id) === String(row.studentId));
+            const matchesTeacher = selectedTeacher ? row.sabakTeacher === selectedTeacher : true;
+            const matchesClass = selectedClass ? student?.className === selectedClass : true;
+            const matchesSection = selectedSection ? student?.sectionName === selectedSection : true;
+            const matchesQuality = selectedQuality ? row.quality === selectedQuality : true;
+            return matchesStudent && matchesTeacher && matchesClass && matchesSection && matchesQuality;
         });
-    }, [registerRows, selectedStudentId]);
+    }, [registerRows, selectedClass, selectedQuality, selectedSection, selectedStudentId, selectedTeacher, students]);
 
     const startEditing = (row) => {
         setEditingRowId(row.id);
@@ -340,8 +354,6 @@ export const DailyJaizaList = () => {
             const nextRow = {
                 ...draftRow,
                 studentId: selectedStudentId || draftRow.studentId,
-                month: selectedMonth,
-                year: selectedYear,
             };
             await updateDailyHifzEntry(nextRow.apiId || nextRow.id, buildUpdatePayload(nextRow));
             cancelEditing();
@@ -420,7 +432,50 @@ export const DailyJaizaList = () => {
                         </div>
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm font-bold">
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 text-sm font-bold">
+                        <div className="relative">
+                            <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none" size={18} />
+                            <select
+                                value={selectedTeacher}
+                                onChange={(event) => setSelectedTeacher(event.target.value)}
+                                className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-4 pl-10 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                            >
+                                <option value="">تمام اساتذہ</option>
+                                {teacherOptions.map((teacher) => <option key={teacher} value={teacher}>{teacher}</option>)}
+                            </select>
+                        </div>
+                        <div className="relative">
+                            <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none" size={18} />
+                            <select
+                                value={selectedClass}
+                                onChange={(event) => {
+                                    setSelectedClass(event.target.value);
+                                    setSelectedSection('');
+                                    setSelectedStudentId('');
+                                    setStudentSearch('');
+                                }}
+                                className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-4 pl-10 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                            >
+                                <option value="">تمام جماعتیں</option>
+                                {classOptions.map((className) => <option key={className} value={className}>{className}</option>)}
+                            </select>
+                        </div>
+                        <div className="relative">
+                            <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none" size={18} />
+                            <select
+                                value={selectedSection}
+                                disabled={!selectedClass}
+                                onChange={(event) => {
+                                    setSelectedSection(event.target.value);
+                                    setSelectedStudentId('');
+                                    setStudentSearch('');
+                                }}
+                                className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-4 pl-10 text-sm font-bold outline-none focus:border-[var(--color-primary)] disabled:opacity-60"
+                            >
+                                <option value="">تمام سیکشن</option>
+                                {sectionOptions.map((section) => <option key={section} value={section}>{section}</option>)}
+                            </select>
+                        </div>
                         <div className="relative">
                             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                             <input
@@ -457,26 +512,12 @@ export const DailyJaizaList = () => {
                         <div className="relative">
                             <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none" size={18} />
                             <select
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                value={selectedQuality}
+                                onChange={(event) => setSelectedQuality(event.target.value)}
                                 className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-4 pl-10 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                             >
-                                {monthOptions.map((month) => (
-                                    <option key={month} value={month}>{`مہینہ: ${month}`}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="relative">
-                            <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)] pointer-events-none" size={18} />
-                            <select
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(e.target.value)}
-                                className="w-full h-14 appearance-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-4 pl-10 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
-                            >
-                                {yearOptions.map((year) => (
-                                    <option key={year} value={year}>{`سال: ${year}`}</option>
-                                ))}
+                                <option value="">تمام کیفیت</option>
+                                {qualityOptions.map((quality) => <option key={quality} value={quality}>{quality}</option>)}
                             </select>
                         </div>
 
