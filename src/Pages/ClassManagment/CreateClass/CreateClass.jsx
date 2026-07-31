@@ -18,6 +18,9 @@ const createEmptyClassRow = () => ({
     error: '',
 });
 
+const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
+const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+
 export const CreateClasses = () => {
     const [classes, setClasses] = useState([]);
     const [search, setSearch] = useState('');
@@ -43,9 +46,9 @@ export const CreateClasses = () => {
         return getSelectedBranchContext(session).branchId || null;
     };
 
-    const buildClassesQuery = () => {
+    const buildClassesQuery = (status) => {
         const selectedBranchId = getActiveBranchId();
-        const params = new URLSearchParams({ page: '1', limit: '100', status: statusFilter || 'active' });
+        const params = new URLSearchParams({ page: '1', limit: '100', status });
         if (selectedBranchId) params.set('branchId', String(selectedBranchId));
         return params.toString();
     };
@@ -74,9 +77,15 @@ export const CreateClasses = () => {
         setError('');
 
         try {
-            const classesResult = await getClasses(buildClassesQuery());
+            const [activeResult, inactiveResult] = await Promise.all([
+                getClasses(buildClassesQuery('active')),
+                getClasses(buildClassesQuery('inactive')),
+            ]);
 
-            setClasses(onlyActiveBranchClasses(classesResult.items || []));
+            setClasses(onlyActiveBranchClasses([
+                ...(activeResult.items || []),
+                ...(inactiveResult.items || []),
+            ]));
         } catch (loadError) {
             setError(loadError.message || 'جماعتوں کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
@@ -135,11 +144,11 @@ export const CreateClasses = () => {
     };
 
     const validateClassRows = (branchId) => {
-        const existingNames = new Set(
+        const existingNames = new Map(
             classes
                 .filter((item) => !branchId || String(item.branchId || '') === String(branchId))
-                .map((item) => String(item.name || '').trim().toLowerCase())
-                .filter(Boolean),
+                .map((item) => [String(item.name || '').trim().toLowerCase(), item.status || 'active'])
+                .filter(([name]) => name),
         );
         const seenNames = new Set();
         let hasError = false;
@@ -171,7 +180,10 @@ export const CreateClasses = () => {
 
             if (existingNames.has(key)) {
                 hasError = true;
-                return { ...row, error: 'یہ جماعت پہلے سے موجود ہے۔' };
+                return {
+                    ...row,
+                    error: existingNames.get(key) === 'inactive' ? inactiveDuplicateMessage : activeDuplicateMessage,
+                };
             }
 
             return row;
@@ -198,7 +210,7 @@ export const CreateClasses = () => {
             setClassRows(validation.rows);
 
             if (validation.hasError) {
-                setError('درج کردہ جماعتوں کی معلومات درست کریں۔');
+                setError(validation.rows.find((row) => row.error)?.error || 'درج کردہ جماعتوں کی معلومات درست کریں۔');
                 return;
             }
         }
@@ -265,6 +277,7 @@ export const CreateClasses = () => {
     };
 
     const filteredClasses = classes.filter((academicClass) => {
+        if (academicClass.status !== statusFilter) return false;
         const query = search.trim().toLowerCase();
         const matchesSearch = !query
             ? true
@@ -414,7 +427,7 @@ export const CreateClasses = () => {
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right">
+                    <table className="class-management-table w-full text-right">
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
@@ -436,7 +449,7 @@ export const CreateClasses = () => {
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
                                                 <td className="px-6 py-4 text-center">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${academicClass.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${academicClass.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
                                                 {academicClass.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>

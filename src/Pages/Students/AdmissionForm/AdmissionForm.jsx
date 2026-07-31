@@ -169,6 +169,26 @@ const admissionValidationMessages = {
     cnic: 'شناختی کارڈ نمبر 00000-0000000-0 کے فارمیٹ میں درج کریں۔',
 };
 
+const mandatoryAdmissionFields = [
+    'idNo',
+    'admissionDate',
+    'admissionFee',
+    'fullName',
+    'fatherName',
+    'gender',
+    'dob',
+    'currentAddress',
+    'permanentAddress',
+    'guardianName',
+    'relation',
+    'guardianMobile',
+    'monthlyFee',
+];
+
+const userEnteredMandatoryFields = mandatoryAdmissionFields.filter(
+    (fieldName) => fieldName !== 'idNo' && fieldName !== 'gender',
+);
+
 const validateAdmissionForm = (values) => {
     const errors = {};
 
@@ -219,20 +239,32 @@ const collectErrorMessages = (errorValue, messages = []) => {
 };
 
 const AdmissionValidationSummary = () => {
-    const { errors, submitCount } = useFormikContext();
+    const { errors, submitCount, values } = useFormikContext();
     const [visibleErrors, setVisibleErrors] = useState([]);
 
     useEffect(() => {
         if (!submitCount) return undefined;
 
-        const messages = Array.from(new Set(collectErrorMessages(errors)));
+        const hasMissingMandatoryInformation = mandatoryAdmissionFields.some(
+            (fieldName) => isBlank(values[fieldName]),
+        );
+        const hasAnyUserEnteredMandatoryInformation = userEnteredMandatoryFields.some(
+            (fieldName) => !isBlank(values[fieldName]),
+        );
+        const messages = hasMissingMandatoryInformation
+            ? [
+                hasAnyUserEnteredMandatoryInformation
+                    ? 'درج کردہ معلومات مکمل نہیں ہیں۔ براہ کرام معلومات مکمل کیجیے۔'
+                    : 'کوئی معلومات پہلے سے موجود نہیں ہے۔',
+            ]
+            : Array.from(new Set(collectErrorMessages(errors)));
         if (!messages.length) return undefined;
 
         setVisibleErrors(messages.map((message, index) => ({ id: `${submitCount}-${index}`, message })));
         const timeoutId = window.setTimeout(() => setVisibleErrors([]), 5000);
 
         return () => window.clearTimeout(timeoutId);
-    }, [errors, submitCount]);
+    }, [errors, submitCount, values]);
 
     if (!visibleErrors.length) return null;
 

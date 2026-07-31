@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Book, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
+import { Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createSubjectsBulk, deleteSubject, getSubjects, updateSubject } from '../../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
@@ -18,6 +18,9 @@ const createEmptySubjectRow = () => ({
     detail: '',
     error: '',
 });
+
+const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
+const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
 
 export const CreateSubjects = () => {
     const [subjects, setSubjects] = useState([]);
@@ -47,8 +50,11 @@ export const CreateSubjects = () => {
         setError('');
 
         try {
-            const result = await getSubjects(`page=1&limit=100&status=${statusFilter || 'active'}`);
-            setSubjects(result.items || []);
+            const [activeResult, inactiveResult] = await Promise.all([
+                getSubjects('page=1&limit=100&status=active'),
+                getSubjects('page=1&limit=100&status=inactive'),
+            ]);
+            setSubjects([...(activeResult.items || []), ...(inactiveResult.items || [])]);
         } catch (loadError) {
             setError(loadError.message || 'مضامین کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
@@ -115,9 +121,10 @@ export const CreateSubjects = () => {
     };
 
     const validateSubjectRows = () => {
-        const existingSubjects = new Set(subjects.map((subject) =>
+        const existingSubjects = new Map(subjects.map((subject) => [
             `${String(subject.name || '').trim().toLowerCase()}::${String(subject.detail || '').trim().toLowerCase()}`,
-        ));
+            subject.status || 'active',
+        ]));
         const seenSubjects = new Set();
         const validRows = [];
         let hasError = false;
@@ -134,8 +141,10 @@ export const CreateSubjects = () => {
 
             if (!name) {
                 rowError = 'مضمون کا نام درج کرنا ضروری ہے۔';
-            } else if (seenSubjects.has(key) || existingSubjects.has(key)) {
-                rowError = 'یہ مضمون پہلے سے موجود ہے۔ تفصیل منفرد ہونی چاہیے ہے۔';
+            } else if (seenSubjects.has(key)) {
+                rowError = activeDuplicateMessage;
+            } else if (existingSubjects.has(key)) {
+                rowError = existingSubjects.get(key) === 'inactive' ? inactiveDuplicateMessage : activeDuplicateMessage;
             } else {
                 seenSubjects.add(key);
                 validRows.push({ name, detail });
@@ -151,7 +160,10 @@ export const CreateSubjects = () => {
         }
 
         setSubjectRows(nextRows);
-        return hasError ? null : validRows;
+        return {
+            validRows: hasError ? null : validRows,
+            errorMessage: nextRows.find((row) => row.error)?.error || '',
+        };
     };
 
     const handleSubmit = async () => {
@@ -174,13 +186,13 @@ export const CreateSubjects = () => {
                 status: formData.status || 'active',
             };
         } else {
-            const validRows = validateSubjectRows();
-            if (!validRows) {
-                setError('درج کردہ مضامین میں غلطی موجود ہے۔');
+            const validation = validateSubjectRows();
+            if (!validation.validRows) {
+                setError(validation.errorMessage || 'درج کردہ مضامین میں غلطی موجود ہے۔');
                 return;
             }
 
-            payload = { subjects: validRows };
+            payload = { subjects: validation.validRows };
         }
 
         setIsSaving(true);
@@ -190,7 +202,7 @@ export const CreateSubjects = () => {
         try {
             if (editMode) {
                 await updateSubject(editMode, payload);
-                setSuccess('مضمون کامیابی سے اپڈیٹ ہو گیا۔');
+                setSuccess('مضمون کامیابی سے تبدیل ہو گیا ہے۔');
             } else {
                 const result = await createSubjectsBulk(payload);
                 const createdCount = result?.createdCount || payload.subjects.length;
@@ -230,14 +242,15 @@ export const CreateSubjects = () => {
 
     const filteredSubjects = useMemo(() => {
         const query = search.trim().toLowerCase();
-        if (!query) return subjects;
+        return subjects.filter((subject) => {
+            if (subject.status !== statusFilter) return false;
+            if (!query) return true;
 
-        return subjects.filter((subject) =>
-            [subject.name, subject.detail]
+            return [subject.name, subject.detail]
                 .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query)),
-        );
-    }, [subjects, search]);
+                .some((value) => String(value).toLowerCase().includes(query));
+        });
+    }, [subjects, search, statusFilter]);
 
     const exportColumns = useMemo(() => [
         { header: 'Subject', accessor: 'name' },
@@ -341,7 +354,7 @@ export const CreateSubjects = () => {
                                 removeLabel="قطار ہٹائیں"
                                 helperText="مزید مضامین شامل کرنے کے لیے + دبائیں۔"
                                 rowClassName="rounded-2xl border border-[var(--color-border)]/70 bg-[var(--color-bg)]/40 p-4 grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_1fr_auto]"
-                                actionsClassName="flex items-end gap-2 pt-7"
+                                actionsClassName="flex items-center gap-2 self-end pb-[5px]"
                                 addButtonClassName="flex h-[54px] w-[54px] items-center justify-center rounded-2xl bg-[#00d094] text-white shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
                                 removeButtonClassName="flex h-[54px] w-[54px] items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                                 canRemoveRow={(row, _index, rows) => rows.length > 1 || row.name || row.detail}
@@ -395,12 +408,12 @@ export const CreateSubjects = () => {
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm backdrop-blur-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right">
+                    <table className="class-management-table w-full text-right">
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-right text-[11px] font-black uppercase tracking-widest">مضمون</th>
                                 <th className="px-6 py-4 text-right text-[11px] font-black uppercase tracking-widest">تفصیل</th>
-                                <th className="px-6 py-4 text-right text-[11px] font-black uppercase tracking-widest">اسٹیٹس</th>
+                                <th className="px-6 py-4 text-right text-[11px] font-black uppercase tracking-widest">حالت</th>
                                 <th className="px-6 py-4 pr-12 text-start text-[11px] font-black uppercase tracking-widest">ایکشن</th>
                             </tr>
                         </thead>
@@ -415,16 +428,11 @@ export const CreateSubjects = () => {
                                 filteredSubjects.map((sub) => (
                                     <tr key={sub.id} className={`border-t border-[var(--color-border)]/60 ${editMode === sub.id ? 'ring-2 ring-[#00d094]' : ''}`}>
                                         <td className="px-6 py-4 text-right font-black text-[var(--color-text)]">
-                                            <div className="flex items-center gap-3">
-                                                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-[var(--color-text-muted)]">
-                                                    <Book size={16} />
-                                                </div>
-                                                <span>{sub.name}</span>
-                                            </div>
+                                            <span>{sub.name}</span>
                                         </td>
                                         <td className="px-6 py-4 text-right font-bold text-[var(--color-text-muted)]">{sub.detail || '-'}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${sub.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${sub.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
                                                 {sub.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>
@@ -432,15 +440,15 @@ export const CreateSubjects = () => {
                                             <div className="flex items-center justify-start gap-2">
                                                 <button
                                                     onClick={() => handleEdit(sub)}
-                                                    className="rounded-xl bg-blue-500/10 text-blue-500 p-2.5  shadow-sm transition-all hover:bg-[#00d094] hover:text-white"
+                                                    className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
                                                 >
-                                                    <Edit2 size={16} />
+                                                    <Edit2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteTarget(sub)}
-                                                    className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 shadow-sm transition-all hover:bg-rose-500 hover:text-white"
+                                                    className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
                                                 >
-                                                    <Trash2 size={16} />
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         </td>

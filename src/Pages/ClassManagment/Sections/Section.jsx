@@ -18,6 +18,9 @@ const createEmptySectionRow = () => ({
     error: '',
 });
 
+const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
+const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+
 export const CreateSections = () => {
     const [classes, setClasses] = useState([]);
     const [sections, setSections] = useState([]);
@@ -54,13 +57,17 @@ export const CreateSections = () => {
         setError('');
 
         try {
-            const [classesResult, sectionsResult] = await Promise.all([
+            const [classesResult, activeSectionsResult, inactiveSectionsResult] = await Promise.all([
                 getClasses('page=1&limit=100&status=active'),
-                getSections(`page=1&limit=100&status=${statusFilter || 'active'}`),
+                getSections('page=1&limit=100&status=active'),
+                getSections('page=1&limit=100&status=inactive'),
             ]);
 
             setClasses(classesResult.items || []);
-            setSections(sectionsResult.items || []);
+            setSections([
+                ...(activeSectionsResult.items || []),
+                ...(inactiveSectionsResult.items || []),
+            ]);
         } catch (loadError) {
             setError(loadError.message || 'سیکشنز کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
@@ -108,11 +115,11 @@ export const CreateSections = () => {
     };
 
     const validateSectionRows = (classId) => {
-        const existingNames = new Set(
+        const existingNames = new Map(
             sections
                 .filter((item) => String(item.classId || '') === String(classId || ''))
-                .map((item) => String(item.name || '').trim().toLowerCase())
-                .filter(Boolean),
+                .map((item) => [String(item.name || '').trim().toLowerCase(), item.status || 'active'])
+                .filter(([name]) => name),
         );
         const seenNames = new Set();
         let hasError = false;
@@ -144,7 +151,10 @@ export const CreateSections = () => {
 
             if (existingNames.has(key)) {
                 hasError = true;
-                return { ...row, error: 'یہ سیکشن اس جماعت میں پہلے سے موجود ہے۔' };
+                return {
+                    ...row,
+                    error: existingNames.get(key) === 'inactive' ? inactiveDuplicateMessage : activeDuplicateMessage,
+                };
             }
 
             return row;
@@ -185,7 +195,7 @@ export const CreateSections = () => {
 
             if (validation.hasError) {
                 setError('');
-                notify.error('درج کردہ سیکشن کی معلومات درست کریں۔', 'نامکمل معلومات');
+                notify.error(validation.rows.find((row) => row.error)?.error || 'درج کردہ سیکشن کی معلومات درست کریں۔', 'نامکمل معلومات');
                 return;
             }
         }
@@ -252,6 +262,7 @@ export const CreateSections = () => {
     };
 
     const filteredSections = sections.filter((section) => {
+        if (section.status !== statusFilter) return false;
         const matchesClass = selectedClassFilter ? String(section.classId) === selectedClassFilter : true;
         const query = search.trim().toLowerCase();
         const matchesSearch = !query
@@ -427,7 +438,7 @@ export const CreateSections = () => {
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right">
+                    <table className="class-management-table w-full text-right">
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیکشن</th>
@@ -447,13 +458,13 @@ export const CreateSections = () => {
                                 filteredSections.map((section) => (
                                     <tr key={section.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4">
-                                            <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-xs font-black text-[#00d094]">
+                                            <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-xs font-black text-black">
                                                 {section.name}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center text-sm font-bold text-[var(--color-text)]">{section.class?.name || '-'}</td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${section.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${section.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
                                                 {section.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>

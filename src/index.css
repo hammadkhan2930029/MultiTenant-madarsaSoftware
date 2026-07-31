@@ -201,6 +201,10 @@ select:disabled,
   font-size: 26px !important;
 }
 
+#root table.class-management-table th {
+  font-size: 26px !important;
+}
+
 #root table td {
   font-size: 18px !important;
   line-height: 1.75 !important;

@@ -12,6 +12,9 @@ const emptyForm = {
     status: 'active',
 };
 
+const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
+const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+
 const formatDateInput = (value) => {
     if (!value) return '';
     const date = new Date(value);
@@ -46,8 +49,11 @@ export const CreateSessions = () => {
         setError('');
 
         try {
-            const result = await getSessions(`page=1&limit=100&status=${statusFilter || 'active'}`);
-            setSessions(result.items || []);
+            const [activeResult, inactiveResult] = await Promise.all([
+                getSessions('page=1&limit=100&status=active'),
+                getSessions('page=1&limit=100&status=inactive'),
+            ]);
+            setSessions([...(activeResult.items || []), ...(inactiveResult.items || [])]);
         } catch (loadError) {
             setError(loadError.message || 'سیشنز کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
@@ -113,6 +119,18 @@ export const CreateSessions = () => {
             return;
         }
 
+        if (!editMode) {
+            const normalizedName = formData.name.trim().toLowerCase();
+            const existingSession = sessions.find(
+                (session) => String(session.name || '').trim().toLowerCase() === normalizedName,
+            );
+
+            if (existingSession) {
+                setError(existingSession.status === 'inactive' ? inactiveDuplicateMessage : activeDuplicateMessage);
+                return;
+            }
+        }
+
         setIsSaving(true);
         setError('');
         setSuccess('');
@@ -165,6 +183,7 @@ export const CreateSessions = () => {
     };
 
     const filteredSessions = sessions.filter((session) => {
+        if (session.status !== statusFilter) return false;
         const query = search.trim().toLowerCase();
         if (!query) return true;
 
@@ -298,7 +317,7 @@ export const CreateSessions = () => {
 
             <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-right">
+                    <table className="class-management-table w-full text-right">
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="w-[20%]  px-6 py-4 text-[11px] font-black uppercase tracking-widest">سیشن</th>
@@ -322,7 +341,7 @@ export const CreateSessions = () => {
                                         <td className="px-6 py-4 text-center align-middle text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.startDate)}</td>
                                         <td className="px-6 py-4 text-center align-middle text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.endDate)}</td>
                                         <td className="px-6 py-4 text-center align-middle">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${session.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${session.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
                                                 {session.status === 'active' ? 'فعال' : 'غیر فعال'}
                                             </span>
                                         </td>

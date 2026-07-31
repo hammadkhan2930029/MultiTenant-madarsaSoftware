@@ -105,7 +105,6 @@ export const ParentsList = () => {
 
     useEffect(() => {
         let isMounted = true;
-        window.scrollTo(0, 0);
         Promise.resolve().then(() => {
             if (isMounted) {
                 loadParents();
@@ -116,6 +115,10 @@ export const ParentsList = () => {
             isMounted = false;
         };
     }, [loadParents]);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     const handleChange = (fieldName, fieldValue) => {
         setFormValues((currentValues) => ({
@@ -256,11 +259,11 @@ export const ParentsList = () => {
                         </h3>
                         <div className="flex items-center gap-3">
                             {editingParentId ? (
-                                <button type="button" onClick={resetForm} className="rounded-2xl border border-[var(--color-border)] px-4 py-3 font-bold text-[var(--color-text-main)]">
+                                <button type="button" onClick={resetForm} className="rounded-2xl border border-[var(--color-border)] px-4 py-3 font-bold text-white">
                                     منسوخ کریں
                                 </button>
                             ) : null}
-                            <button type="submit" className="inline-flex items-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-[#06211a] shadow-lg shadow-[var(--color-primary)]/20">
+                            <button type="submit" className="inline-flex items-center gap-2 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-white shadow-lg shadow-[var(--color-primary)]/20">
                                 <Plus size={18} /> {editingParentId ? 'تبدیل کریں' : 'شامل کریں'}
                             </button>
                         </div>
@@ -338,18 +341,18 @@ export const ParentsList = () => {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="min-h-[420px] max-h-[650px] overflow-auto">
                     <table className="w-full min-w-[1200px] text-right">
                         <thead className="border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                             <tr>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سرپرست</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فیملی نمبر</th>
-                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فون نمبر</th>
+                                <th className="p-5 text-center text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فون نمبر</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پیشہ</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">پتہ</th>
-                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">منسلک طلباء</th>
-                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت</th>
-                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ایکشن</th>
+                                <th className="p-5 text-center text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">منسلک طلباء</th>
+                                <th className="p-5 text-center text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت</th>
+                                <th className="p-5 text-center text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ایکشن</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
