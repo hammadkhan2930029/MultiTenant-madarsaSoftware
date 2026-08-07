@@ -27,7 +27,7 @@ export const PAGE_PERMISSIONS = {
   '/students/create-id-card': 'students.id_card.view',
   '/students/parents': 'parents.view',
   '/students/parents/profile/:id': 'parents.view',
-  '/students/attendance': 'attendance.view',
+  '/students/attendance': ['attendance.view', 'attendance.create', 'attendance.edit'],
   '/students/class_asign': 'students.assign_class',
   '/students/schedule': 'students.schedule.view',
   '/students/fees': 'fees.view',

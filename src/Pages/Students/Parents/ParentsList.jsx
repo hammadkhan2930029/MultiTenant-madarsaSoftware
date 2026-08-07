@@ -6,6 +6,7 @@ import { createParent, deleteParent, getParents, updateParent } from '../../../C
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
+import { usePermissions } from '../../../Hooks/usePermissions';
 
 const INITIAL_FORM = {
     fullName: '',
@@ -72,6 +73,11 @@ const mapParentForExport = (parent) => ({
 
 export const ParentsList = () => {
     const navigate = useNavigate();
+    const { hasPermission } = usePermissions();
+    const canCreateParent = hasPermission('parents.create');
+    const canEditParent = hasPermission('parents.edit');
+    const canDeleteParent = hasPermission('parents.delete');
+    const canExportParents = hasPermission('parents.export');
     const [parents, setParents] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
@@ -252,6 +258,7 @@ export const ParentsList = () => {
                     </div>
                 </div>
 
+                {canCreateParent || (editingParentId && canEditParent) ? (
                 <form noValidate onSubmit={handleSubmit} className="space-y-5 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-5 md:p-6">
                     <div className="flex items-center justify-between gap-4">
                         <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">
@@ -313,13 +320,14 @@ export const ParentsList = () => {
                         ) : null}
                     </div>
                 </form>
+                ) : null}
             </div>
 
             <div className="overflow-hidden rounded-[3rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.08)]">
                 <div className="flex flex-col items-start justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-5 md:flex-row md:items-center md:px-8">
                     <h3 className="text-lg font-black text-[var(--color-text-main)] md:text-xl">سرپرست</h3>
                     <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-                        <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="parents-complete-list" className="w-full md:w-auto" />
+                        {canExportParents ? <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="parents-complete-list" className="w-full md:w-auto" /> : null}
                         <select
                             value={statusFilter}
                             onChange={(event) => setStatusFilter(event.target.value)}
@@ -379,12 +387,12 @@ export const ParentsList = () => {
                                             <button type="button" onClick={() => navigate(`/students/parents/profile/${parent.id}`)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white">
                                                 <Eye size={16} />
                                             </button>
-                                            <button type="button" onClick={() => handleEdit(parent)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400 transition-all hover:bg-blue-500 hover:text-white">
+                                            {canEditParent ? <button type="button" onClick={() => handleEdit(parent)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-400 transition-all hover:bg-blue-500 hover:text-white">
                                                 <Pencil size={16} />
-                                            </button>
-                                            <button type="button" onClick={() => setDeleteTarget(parent)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white">
+                                            </button> : null}
+                                            {canDeleteParent ? <button type="button" onClick={() => setDeleteTarget(parent)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white">
                                                 <Trash2 size={16} />
-                                            </button>
+                                            </button> : null}
                                         </div>
                                     </td>
                                 </tr>

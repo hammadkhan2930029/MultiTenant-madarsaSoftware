@@ -36,7 +36,7 @@ export const usePermissions = () => {
   const hasPageAccess = useCallback(
     (path) => {
       const permission = getPagePermission(path);
-      return !permission || checkPermission(permission);
+      return !permission || (Array.isArray(permission) ? checkAnyPermission(permission) : checkPermission(permission));
     },
     [],
   );

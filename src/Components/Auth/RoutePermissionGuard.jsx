@@ -1,7 +1,8 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { can, canAccessBranchManagement, getAdminSession, isBranchScopedSession, isSuperAdmin } from '../../Constant/AdminAuth';
+import { can, canAny, canAccessBranchManagement, getAdminSession, isBranchScopedSession, isSuperAdmin } from '../../Constant/AdminAuth';
 import { getPagePermission } from '../../Constant/Permissions';
+import { getDefaultRouteForSession } from '../../Pages/Auth/authLandingRoutes';
 
 export const AccessDeniedPage = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export const AccessDeniedPage = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard', { replace: true })}
+            onClick={() => navigate(getDefaultRouteForSession(getAdminSession()), { replace: true })}
             className="min-w-32 rounded-xl px-5 py-3 text-sm font-black text-white transition-all hover:opacity-90"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
@@ -79,7 +80,11 @@ export const RoutePermissionGuard = ({ children }) => {
     return <AccessDeniedPage />;
   }
 
-  if (requiredPermission && !can(requiredPermission)) {
+  const hasRequiredPermission = Array.isArray(requiredPermission)
+    ? canAny(requiredPermission)
+    : can(requiredPermission);
+
+  if (requiredPermission && !hasRequiredPermission) {
     return <AccessDeniedPage />;
   }
 

@@ -184,7 +184,9 @@ export const SideBar = () => {
         if (item.permissions) return hasAnyPermission(item.permissions);
         if (item.path) {
             const permission = getPagePermission(item.path);
-            return permission ? hasPermission(permission) : false;
+            return permission
+                ? (Array.isArray(permission) ? hasAnyPermission(permission) : hasPermission(permission))
+                : false;
         }
         return false;
     };

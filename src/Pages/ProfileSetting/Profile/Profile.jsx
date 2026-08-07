@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import {
     Mail, Phone, MapPin,
-    Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2, ReceiptText
+    Edit3, Save, X, Camera, Map, CheckCircle2, ChevronDown, Search, Check, ClipboardList, Users2, ReceiptText, Copy
 } from 'lucide-react';
 import { AppImages } from '../../../Constant/AppImages';
 import { fetchMadrassaProfile, getAdminRole, getApiAssetUrl, isSuperAdmin as isSuperAdminSession, updateMadrassaProfile } from '../../../Constant/AdminAuth';
@@ -36,7 +36,9 @@ export const Profile = () => {
         city: 'کراچی',
         familyNoSeq: 'FAM-2026-001',
         regNo: 'REG-QA-9921',
-        feeVoucherNoSeq: 'FEE-0001'
+        feeVoucherNoSeq: 'FEE-0001',
+        referralCode: '',
+        referralLink: '',
     });
 
     const [tempData, setTempData] = useState({ ...madrassaData, logoUrl: '' });
@@ -61,6 +63,8 @@ export const Profile = () => {
                     familyNoSeq: profile.familyNoSeq || '',
                     regNo: profile.regNo || '',
                     feeVoucherNoSeq: profile.feeVoucherNoSeq || 'FEE-0001',
+                    referralCode: profile.referralCode || '',
+                    referralLink: profile.referralLink || '',
                     logoUrl: profile.logoUrl || '',
                     updatedAt: profile.updatedAt || '',
                 };
@@ -392,6 +396,50 @@ export const Profile = () => {
                             tempValue={tempData.feeVoucherNoSeq}
                             onChange={(v) => setTempData({ ...tempData, feeVoucherNoSeq: v })}
                         />
+                    </div>
+                    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                        <div className="space-y-3">
+                            <label className="mr-2 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                <ClipboardList size={16} className="text-[#00d094]" /> میرا ریفرل کوڈ
+                            </label>
+                            <div className="flex items-center justify-between gap-3 rounded-2xl border border-transparent bg-[var(--color-bg)] p-4">
+                                <span dir="ltr" className="font-black tracking-wider text-[var(--color-text)]">{madrassaData.referralCode || '-'}</span>
+                                {madrassaData.referralCode ? (
+                                    <button
+                                        type="button"
+                                        title="ریفرل کوڈ کاپی کریں"
+                                        onClick={async () => {
+                                            await navigator.clipboard.writeText(madrassaData.referralCode);
+                                            notify.success('ریفرل کوڈ کاپی ہو گیا۔', 'کاپی مکمل');
+                                        }}
+                                        className="rounded-xl bg-[#00d094]/10 p-2 text-[#00a878] transition-all hover:bg-[#00d094] hover:text-white"
+                                    >
+                                        <Copy size={17} />
+                                    </button>
+                                ) : null}
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <label className="mr-2 flex items-center gap-2 text-base font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                <ClipboardList size={16} className="text-[#00d094]" /> میرا ریفرل لنک
+                            </label>
+                            <div className="flex min-h-20 items-center justify-between gap-4 rounded-2xl border border-transparent bg-[var(--color-bg)] p-5">
+                                <span dir="ltr" className="min-w-0 break-all text-base font-bold leading-7 text-[var(--color-text)]">{madrassaData.referralLink || '-'}</span>
+                                {madrassaData.referralLink ? (
+                                    <button
+                                        type="button"
+                                        title="ریفرل لنک کاپی کریں"
+                                        onClick={async () => {
+                                            await navigator.clipboard.writeText(madrassaData.referralLink);
+                                            notify.success('ریفرل لنک کاپی ہو گیا۔', 'کاپی مکمل');
+                                        }}
+                                        className="shrink-0 rounded-xl bg-[#00d094]/10 p-2 text-[#00a878] transition-all hover:bg-[#00d094] hover:text-white"
+                                    >
+                                        <Copy size={17} />
+                                    </button>
+                                ) : null}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -24,12 +24,13 @@ import { getAdminSession, isAdminAuthenticated, refreshPermissions, validateCurr
 import { SESSION_EXPIRED_EVENT } from '../Constant/Api';
 import { StudentAttendanceHistory } from '../Pages/Students/AttendancePage/StudentAttendanceHistory';
 import { RequirePermission } from '../Components/Auth/RequirePermission';
-import { RoutePermissionGuard } from '../Components/Auth/RoutePermissionGuard';
 import { withPermission } from '../Components/Auth/permissionGuards';
 import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
 import { TenantManagement } from '../Pages/TenantManagement/TenantManagement';
 import { CreateBranch } from '../Pages/CreateBranches/CreateBranches';
+import FrontHome from '../frontweb/pages/Home';
+import PublicPage from '../frontweb/pages/PublicPage';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -87,18 +88,16 @@ const ProtectedAppShell = () => {
     return <Navigate to="/admin" replace state={{ from: location }} />;
   }
 
-  return (
-    <RoutePermissionGuard>
-      <SideBar />
-    </RoutePermissionGuard>
-  );
+  return <SideBar />;
 };
 
 export const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/admin" replace />} />
-      <Route path="/contact" element={<Navigate to="/admin" replace />} />
+      <Route path="/" element={<FrontHome />} />
+      {['about', 'programs', 'admission', 'faculty', 'dar-ul-ifta', 'news', 'gallery', 'contact'].map((page) => (
+        <Route key={page} path={`/${page}`} element={<PublicPage />} />
+      ))}
       <Route path="/admin" element={<LoginRoute />} />
       <Route path="/login" element={<UserLoginRoute />} />
 

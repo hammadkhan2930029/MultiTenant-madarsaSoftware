@@ -212,9 +212,21 @@ export const getAdminRole = () => {
   return normalizeRole(session?.role || session?.admin?.roleDetails || session?.user?.role || session?.admin?.role || null);
 };
 
+const GRANTED_PERMISSION_ALIASES = {
+  'admissions.create': ['students.create'],
+  'admissions.edit': ['students.edit', 'students.update'],
+  'admissions.update': ['students.edit', 'students.update'],
+};
+
+const expandPermissionAliases = (permissions = []) => Array.from(new Set(
+  permissions.flatMap((permission) => [permission, ...(GRANTED_PERMISSION_ALIASES[permission] || [])]),
+));
+
 export const getAdminPermissions = () => {
   const session = readSession();
-  return normalizePermissions(session?.permissions || session?.user?.permissions || session?.admin?.permissions || []);
+  return expandPermissionAliases(
+    normalizePermissions(session?.permissions || session?.user?.permissions || session?.admin?.permissions || []),
+  );
 };
 
 export const isSuperAdmin = () => {

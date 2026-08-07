@@ -1214,7 +1214,10 @@ export const RoleManagement = () => {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 lg:pt-0 md:pt-0 pt-6" dir="rtl">
+    <div
+      className={`space-y-8 animate-in fade-in duration-700 lg:pt-0 md:pt-0 pt-6 ${mode === 'create' ? 'max-h-[calc(100vh-2rem)] overflow-y-auto pl-2' : ''}`}
+      dir="rtl"
+    >
       {renderHeader()}
       {mode === 'list' ? renderList() : null}
       {mode === 'create' || mode === 'edit' ? renderForm() : null}

@@ -10,7 +10,7 @@ const permissionLandingRoutes = [
     { permission: 'funds.create', path: '/finance/income/fund-collection' },
     { permission: 'salary.view', path: '/finance/expenses/payroll' },
     { permission: 'students.view', path: '/students/list' },
-    { permission: 'students.create', path: '/students/admission' },
+    { permissions: ['students.create', 'admissions.create'], path: '/students/admission' },
     { permission: 'attendance.view', path: '/students/attendance' },
     { permission: 'hifz.view', path: '/hifz' },
     { permission: 'hifz.daily.view', path: '/hifz/daily/list' },
@@ -43,7 +43,11 @@ export const getDefaultRouteForSession = (session) => {
     }
 
     const permissions = Array.isArray(session?.permissions) ? session.permissions : [];
-    const firstAllowedRoute = permissionLandingRoutes.find((route) => permissions.includes(route.permission));
+    const firstAllowedRoute = permissionLandingRoutes.find((route) => (
+        route.permissions
+            ? route.permissions.some((permission) => permissions.includes(permission))
+            : permissions.includes(route.permission)
+    ));
 
     return firstAllowedRoute?.path || '/Profile/change-password';
 };

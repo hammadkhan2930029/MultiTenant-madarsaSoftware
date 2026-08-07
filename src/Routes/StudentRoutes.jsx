@@ -11,6 +11,7 @@ import { StudentProfile } from '../Pages/Students/StudentProfile/StudentProfile'
 import { ParentsList } from '../Pages/Students/Parents/ParentsList';
 import { ParentProfile } from '../Pages/Students/Parents/ParentProfile';
 import { withPermission } from '../Components/Auth/permissionGuards';
+import { RequirePermission } from '../Components/Auth/RequirePermission';
 
 
 export const StudentRoutes = (
@@ -20,7 +21,7 @@ export const StudentRoutes = (
         <Route path="create-id-card" element={withPermission(<CreateIdCard />, 'students.id_card.view')} />
         <Route path="parents" element={withPermission(<ParentsList />, 'parents.view')} />
         <Route path="parents/profile/:id" element={withPermission(<ParentProfile />, 'parents.view')} />
-        <Route path="attendance" element={withPermission(<AttendancePage />, 'attendance.view')} />
+        <Route path="attendance" element={<RequirePermission anyPermissions={['attendance.view', 'attendance.create', 'attendance.edit']}><AttendancePage /></RequirePermission>} />
         <Route path="class_asign" element={withPermission(<StudentAddToClass />, 'students.assign_class')} />
         <Route path="schedule" element={withPermission(<StudentScheduleManager />, 'students.schedule.view')} />
         <Route path="fees" element={withPermission(<FeesCollection />, 'fees.view')} />

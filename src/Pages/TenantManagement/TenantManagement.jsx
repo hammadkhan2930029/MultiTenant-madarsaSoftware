@@ -20,6 +20,7 @@ import { usePermissions } from '../../Hooks/usePermissions';
 
 const emptyForm = {
   tenantCode: '',
+  referredByCode: '',
   name: '',
   subdomain: '',
   customDomain: '',
@@ -85,6 +86,7 @@ const buildPayload = (formData, mode) => {
 
   if (mode === 'create') {
     payload.tenantCode = normalizeDomain(formData.tenantCode);
+    payload.referredByCode = formData.referredByCode.trim().toUpperCase() || undefined;
     payload.admin = {
       name: formData.adminName.trim(),
       phone: formData.adminPhone.trim(),
@@ -111,6 +113,7 @@ const buildPayload = (formData, mode) => {
   }
 
   if (mode === 'edit') {
+    payload.referredByCode = formData.referredByCode.trim().toUpperCase() || null;
     payload.admin = {
       name: formData.adminName.trim(),
       phone: formData.adminPhone.trim(),
@@ -260,6 +263,7 @@ export const TenantManagement = () => {
       const madrassaProfile = tenant?.madrassaProfile || {};
       setFormData({
         tenantCode: tenant?.tenantCode || '',
+        referredByCode: tenant?.referredBy?.referralCode || '',
         name: tenant?.name || tenant?.tenantName || '',
         subdomain: tenant?.subdomain || '',
         customDomain: tenant?.customDomain || '',
@@ -522,6 +526,7 @@ export const TenantManagement = () => {
     <div className="rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:p-8">
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <InputField label="مدرسہ کوڈ" required={mode === 'create'} disabled={mode === 'edit'} placeholder="madarsa_001" value={formData.tenantCode} onChange={(event) => setFormData((prev) => ({ ...prev, tenantCode: event.target.value }))} />
+        <InputField label="ریفر کیا گیا بذریعہ (اختیاری)" placeholder="MDS-ABCDEFGH" value={formData.referredByCode} onChange={(event) => setFormData((prev) => ({ ...prev, referredByCode: event.target.value.toUpperCase() }))} />
         <InputField label="سب ڈومین" placeholder="demo" value={formData.subdomain} onChange={(event) => setFormData((prev) => ({ ...prev, subdomain: event.target.value }))} />
         <InputField label="کسٹم ڈومین" placeholder="school.example.com" value={formData.customDomain} onChange={(event) => setFormData((prev) => ({ ...prev, customDomain: event.target.value }))} />
         <SelectField label="حالت" options={statusOptions} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
@@ -622,6 +627,10 @@ export const TenantManagement = () => {
         title: 'مدرسہ معلومات',
         rows: [
           ['مدرسہ کوڈ', currentTenant.tenantCode],
+          ['ریفرل کوڈ', currentTenant.referralCode || '-'],
+          ['ریفرل لنک', currentTenant.referralLink || '-'],
+          ['ریفر کیا گیا بذریعہ', currentTenant.referredBy ? `${currentTenant.referredBy.name} (${currentTenant.referredBy.referralCode})` : '-'],
+          ['کل ریفر کیے گئے مدارس', currentTenant.referredTenantsCount ?? 0],
           ['سب ڈومین', currentTenant.subdomain || '-'],
           ['کسٹم ڈومین', currentTenant.customDomain || '-'],
           ['حالت', currentTenant.status === 'active' ? 'فعال' : 'غیر فعال'],
@@ -815,6 +824,8 @@ export const TenantManagement = () => {
                       <td className="px-6 py-5">
                         <div className="break-words font-black leading-7 text-[var(--color-text-main)]">{tenant.tenantName || tenant.name}</div>
                         <div className="mt-1 break-all text-xs font-bold text-[var(--color-text-muted)]">{tenant.tenantCode}</div>
+                        <div className="mt-1 break-all text-xs font-bold text-[#00a878]">ریفرل: {tenant.referralCode || '-'}</div>
+                        {tenant.referredBy ? <div className="mt-1 break-words text-xs font-bold text-[var(--color-text-muted)]">بذریعہ: {tenant.referredBy.name}</div> : null}
                       </td>
                       <td className="px-6 py-5 text-sm font-bold text-[var(--color-text-main)]">
                         <span className="flex min-w-0 items-start gap-2 break-words leading-7">
