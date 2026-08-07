@@ -29,8 +29,6 @@ import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
 import { TenantManagement } from '../Pages/TenantManagement/TenantManagement';
 import { CreateBranch } from '../Pages/CreateBranches/CreateBranches';
-import FrontHome from '../frontweb/pages/Home';
-import PublicPage from '../frontweb/pages/PublicPage';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -94,9 +92,9 @@ const ProtectedAppShell = () => {
 export const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<FrontHome />} />
+      <Route path="/" element={<Navigate to="/admin" replace />} />
       {['about', 'programs', 'admission', 'faculty', 'dar-ul-ifta', 'news', 'gallery', 'contact'].map((page) => (
-        <Route key={page} path={`/${page}`} element={<PublicPage />} />
+        <Route key={page} path={`/${page}`} element={<Navigate to="/admin" replace />} />
       ))}
       <Route path="/admin" element={<LoginRoute />} />
       <Route path="/login" element={<UserLoginRoute />} />

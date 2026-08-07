@@ -27,6 +27,7 @@ const emptyForm = {
   ownerAdminId: '',
   status: 'active',
   branchEnabled: 'false',
+  publicWebsiteEnabled: 'false',
   branchLimit: '',
   adminName: '',
   adminPhone: '',
@@ -81,6 +82,7 @@ const buildPayload = (formData, mode) => {
     ownerAdminId: formData.ownerAdminId ? Number(formData.ownerAdminId) : null,
     status: formData.status,
     branchEnabled,
+    publicWebsiteEnabled: formData.publicWebsiteEnabled === 'true',
     branchLimit,
   };
 
@@ -270,6 +272,7 @@ export const TenantManagement = () => {
         ownerAdminId: tenant?.ownerAdminId ? String(tenant.ownerAdminId) : '',
         status: tenant?.status || 'active',
         branchEnabled: tenant?.branchEnabled ? 'true' : 'false',
+        publicWebsiteEnabled: tenant?.publicWebsiteEnabled ? 'true' : 'false',
         branchLimit: tenant?.branchLimit ?? '',
         adminName: tenantAdmin.name || '',
         adminPhone: tenantAdmin.phone || '',
