@@ -52,6 +52,8 @@ const INITIAL_VALUES = {
     secularEdu: '',
     religiousEdu: '',
     sessionId: '',
+    classId: '',
+    sectionId: '',
     requiredClass: '',
     requiredJamaat: '',
     teacherName: '',
@@ -322,6 +324,8 @@ const mapStudentToFormValues = (student) => {
         secularEdu: student?.secularEdu || '',
         religiousEdu: student?.religiousEdu || '',
         sessionId: activeAssignment?.sessionId ? String(activeAssignment.sessionId) : activeAssignment?.session?.id ? String(activeAssignment.session.id) : '',
+        classId: activeAssignment?.classId ? String(activeAssignment.classId) : activeAssignment?.class?.id ? String(activeAssignment.class.id) : '',
+        sectionId: activeAssignment?.sectionId ? String(activeAssignment.sectionId) : activeAssignment?.section?.id ? String(activeAssignment.section.id) : '',
         requiredClass: activeAssignment?.class?.name || student?.requiredClass || '',
         requiredJamaat: activeAssignment?.section?.name || student?.requiredJamaat || '',
         teacherName: student?.teacherName || '',
@@ -435,6 +439,7 @@ export const AdmissionForm = () => {
                 const primaryParentLink = student?.parents?.find((item) => item.isPrimary) || student?.parents?.[0];
 
                 setInitialFormValues(nextValues);
+                setSelectedRequiredClassId(nextValues.classId ? Number(nextValues.classId) : null);
                 setSelectedParentId(primaryParentLink?.parent?.id || null);
                 setSelectedParentName(primaryParentLink?.parent?.fullName || '');
                 setParentSearch(primaryParentLink?.parent?.fullName || '');
@@ -598,6 +603,11 @@ export const AdmissionForm = () => {
                 return;
             }
 
+            if (submittedValues.sessionId && (!submittedValues.classId || !submittedValues.sectionId)) {
+                setSubmitError('سیشن محفوظ کرنے کے لیے جماعت اور سیکشن بھی فہرست سے منتخب کریں۔');
+                return;
+            }
+
             const parents = [];
             const guardianRelation = submittedValues.relation?.trim() || 'father';
             const guardianIsFather =
@@ -654,6 +664,8 @@ export const AdmissionForm = () => {
                 secularEdu: submittedValues.secularEdu,
                 religiousEdu: submittedValues.religiousEdu,
                 sessionId: submittedValues.sessionId ? Number(submittedValues.sessionId) : undefined,
+                classId: submittedValues.classId ? Number(submittedValues.classId) : undefined,
+                sectionId: submittedValues.sectionId ? Number(submittedValues.sectionId) : undefined,
                 requiredClass: submittedValues.requiredClass,
                 requiredJamaat: submittedValues.requiredJamaat,
                 teacherName: submittedValues.teacherName,
@@ -929,9 +941,16 @@ export const AdmissionForm = () => {
                                                             meta: '',
                                                         }))}
                                                         placeholder="جماعت تلاش کریں"
-                                                        onChange={(nextValue) => form.setFieldValue('requiredClass', nextValue)}
+                                                        onChange={(nextValue) => {
+                                                            form.setFieldValue('requiredClass', nextValue);
+                                                            form.setFieldValue('classId', '');
+                                                            form.setFieldValue('sectionId', '');
+                                                            setSelectedRequiredClassId(null);
+                                                        }}
                                                         onSelectOption={(option) => {
                                                             setSelectedRequiredClassId(option?.id || null);
+                                                            form.setFieldValue('classId', option?.id ? String(option.id) : '');
+                                                            form.setFieldValue('sectionId', '');
                                                             form.setFieldValue('requiredClass', option?.label || '');
                                                             form.setFieldValue('requiredJamaat', '');
                                                         }}
@@ -946,8 +965,14 @@ export const AdmissionForm = () => {
                                                         value={field.value || ''}
                                                         options={filteredJamaatOptions}
                                                         placeholder="سیکشن تلاش کریں"
-                                                        onChange={(nextValue) => form.setFieldValue('requiredJamaat', nextValue)}
-                                                        onSelectOption={(option) => form.setFieldValue('requiredJamaat', option?.label || '')}
+                                                        onChange={(nextValue) => {
+                                                            form.setFieldValue('requiredJamaat', nextValue);
+                                                            form.setFieldValue('sectionId', '');
+                                                        }}
+                                                        onSelectOption={(option) => {
+                                                            form.setFieldValue('sectionId', option?.id ? String(option.id) : '');
+                                                            form.setFieldValue('requiredJamaat', option?.label || '');
+                                                        }}
                                                     />
                                                 )}
                                             </Field>

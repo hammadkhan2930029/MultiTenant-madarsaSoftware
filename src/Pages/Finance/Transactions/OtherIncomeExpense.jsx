@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 import { ChevronLeft, ChevronRight, Edit2, Receipt, Save, Search, Trash2, Wallet, X } from 'lucide-react';
 import { DateField, InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -499,7 +500,7 @@ export const OtherIncomeExpense = () => {
                                             </td>
                                             <td className="p-4 font-bold">{entry.financeHead?.name || '---'}</td>
                                             <td className="p-4 text-sm">{entry.paymentMode || '---'}</td>
-                                            <td className="p-4 text-sm">{entry.paymentStatus || '---'}</td>
+                                            <td className="p-4 text-sm"><StatusBadge status={entry.paymentStatus} label={entry.paymentStatus || '---'} /></td>
                                             <td className="p-4 text-xs font-mono">{entry.slipNo || '---'}</td>
                                             <td className="p-4 font-black text-[var(--color-primary)]">{formatAmount(entry.amount)}/-</td>
                                             <td className="p-4 text-sm text-[var(--color-text-muted)]">{entry.details || '---'}</td>

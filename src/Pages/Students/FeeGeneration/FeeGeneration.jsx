@@ -7,6 +7,7 @@ import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../
 import { AppImages } from '../../../Constant/AppImages';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { Can } from '../../../Components/Auth/Can';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const monthNames = [
     'جنوری',
@@ -751,9 +752,9 @@ export const FeesCollection = () => {
                                             <td className="px-5 py-4 font-bold text-emerald-500">Rs {toMoney(voucher.paidAmount)}</td>
                                             <td className="px-5 py-4 font-bold text-rose-500">Rs {toMoney(voucher.dueAmount)}</td>
                                             <td className="px-5 py-4 text-center">
-                                                <span className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-black ${statusConfig[voucher.status]?.className || statusConfig.unpaid.className}`}>
+                                                <StatusBadge status={voucher.status}>
                                                     <StatusIcon size={14} /> {statusConfig[voucher.status]?.label || voucher.status}
-                                                </span>
+                                                </StatusBadge>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <div className="flex justify-center gap-2">

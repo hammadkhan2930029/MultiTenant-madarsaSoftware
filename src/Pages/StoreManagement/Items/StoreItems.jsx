@@ -5,6 +5,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { createStoreItem, deleteStoreItem, getStoreItems, updateStoreItem } from '../../../Constant/StoreApi';
 import { getStoreCategories } from '../../../Constant/StoreCategoriesApi';
 import { usePermissions } from '../../../Hooks/usePermissions';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     itemName: '',
@@ -207,9 +208,7 @@ export const StoreItems = () => {
     };
 
     const renderStatusBadge = (status = 'active') => (
-        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
-            {statusLabels[status] || status}
-        </span>
+        <StatusBadge status={status} label={statusLabels[status]} />
     );
 
     const renderActions = (item) => (

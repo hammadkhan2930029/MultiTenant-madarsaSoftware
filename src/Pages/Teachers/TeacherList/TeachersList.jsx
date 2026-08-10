@@ -6,6 +6,7 @@ import { deleteTeacher, getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { Can } from '../../../Components/Auth/Can';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const listConfig = {
     teacher: {
@@ -309,9 +310,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                         </span>
                                     </div>
                                 </div>
-                                <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${teacher.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
-                                    {teacher.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                </span>
+                                <StatusBadge status={teacher.status} />
                             </div>
 
                             <div className="grid grid-cols-2 gap-2 text-[13px] border-t border-[var(--color-border)] pt-4">
@@ -385,9 +384,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]">{getTeacherShiftLabel(teacher)}</td>
                                     <td className="p-5 text-[13px] font-medium text-[var(--color-text-main)]" dir="ltr">{teacher.phone || '---'}</td>
                                     <td className="p-5 text-center">
-                                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${teacher.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
-                                            {teacher.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                        </span>
+                                        <StatusBadge status={teacher.status} />
                                     </td>
                                     <td className="p-5">
                                         <div className="flex items-center justify-center gap-2">

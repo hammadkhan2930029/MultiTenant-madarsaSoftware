@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { DeleteConfirmationModal } from '../../Components/Common/DeleteConfirmationModal';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import StatusBadge from '../../Components/Common/StatusBadge';
 import { getCities } from '../../Constant/CityApi';
 import { getUsers } from '../../Constant/UserManagementApi';
 import {
@@ -750,9 +751,7 @@ export const TenantManagement = () => {
                     <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{branch.code || '-'}</td>
                     <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-main)]">{branch.creator?.name || '-'}</td>
                     <td className="px-6 py-4">
-                      <span className={`rounded-xl px-3 py-1 text-xs font-black ${branch.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
-                        {branch.status === 'active' ? 'فعال' : 'غیر فعال'}
-                      </span>
+                      <StatusBadge status={branch.status} />
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatDate(branch.createdAt)}</td>
                     <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">موجودہ کردار کے مطابق</td>
@@ -838,9 +837,7 @@ export const TenantManagement = () => {
                       </td>
                       <td className="px-6 py-5 text-sm font-bold leading-7 text-[var(--color-text-main)]">{owner ? getOwnerLabel(owner) : '-'}</td>
                       <td className="px-6 py-5">
-                        <span className={`inline-flex min-w-[72px] justify-center rounded-xl px-3 py-1 text-xs font-black ${tenant.status === 'active' ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>
-                          {tenant.status === 'active' ? 'فعال' : 'غیر فعال'}
-                        </span>
+                        <StatusBadge status={tenant.status} />
                       </td>
                       <td className="px-6 py-5">
                         <span className={`inline-flex min-w-[72px] justify-center rounded-xl px-3 py-1 text-xs font-black ${tenant.branchEnabled ? 'bg-emerald-500/10 text-[#00d094]' : 'bg-rose-500/10 text-rose-500'}`}>

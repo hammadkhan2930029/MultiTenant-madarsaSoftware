@@ -5,6 +5,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -432,9 +433,7 @@ export const CreateSubjects = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right font-bold text-[var(--color-text-muted)]">{sub.detail || '-'}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${sub.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
-                                                {sub.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                            </span>
+                                            <StatusBadge status={sub.status} />
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-start gap-2">

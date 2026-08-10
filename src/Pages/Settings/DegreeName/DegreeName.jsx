@@ -4,6 +4,7 @@ import { InputField } from '../../../Components/HR/FormElements';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createQualification, deleteQualification, getQualifications, updateQualification } from '../../../Constant/QualificationApi';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     title: '',
@@ -378,9 +379,7 @@ export const QualificationManagement = () => {
                                             </td>
 
                                             <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${edu.status === 'inactive' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                    {edu.status === 'inactive' ? 'غیر فعال' : 'فعال'}
-                                                </span>
+                                                <StatusBadge status={edu.status} />
                                             </td>
 
                                             {/* Actions */}

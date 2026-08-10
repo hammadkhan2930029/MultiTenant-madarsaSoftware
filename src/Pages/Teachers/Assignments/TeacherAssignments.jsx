@@ -12,6 +12,7 @@ import { canUseTenantBranchContext } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { Can } from '../../../Components/Auth/Can';
 import { ExportPdfButton } from '../../../Components/Export/ExportPdfButton';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
   teacherId: '',
@@ -404,9 +405,7 @@ export const TeacherAssignments = ({ staffType = 'teacher' }) => {
                   )}
                   <td className="px-5 py-4 text-sm font-bold text-[var(--color-text-muted)]">{assignment.note || '---'}</td>
                   <td className="px-5 py-4">
-                    <span className={`rounded-full px-3 py-1 text-xs font-black ${assignment.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                      {assignment.status === 'active' ? 'فعال' : 'غیر فعال'}
-                    </span>
+                    <StatusBadge status={assignment.status} />
                   </td>
                   <td className="px-5 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatDate(assignment.createdAt)}</td>
                   <td className="px-5 py-4">

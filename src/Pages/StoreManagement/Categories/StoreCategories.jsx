@@ -3,6 +3,7 @@ import { Edit2, FolderTree, PackageCheck, Plus, Save, Search, ToggleLeft, Toggle
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createStoreCategory, deleteStoreCategory, getStoreCategories, updateStoreCategory } from '../../../Constant/StoreCategoriesApi';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -221,7 +222,7 @@ export const StoreCategories = () => {
                                     <tr key={category.id} className={`border-t border-[var(--color-border)]/60 ${editMode === category.id ? 'bg-emerald-500/5' : ''}`}>
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{category.name}</td>
                                         <td className="max-w-md px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{category.description || '-'}</td>
-                                        <td className="px-6 py-4"><span className={`rounded-xl px-3 py-1 text-xs font-black ${category.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{category.status === 'active' ? 'فعال' : 'غیر فعال'}</span></td>
+                                        <td className="px-6 py-4"><StatusBadge status={category.status} /></td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-start gap-2">
                                                 <button type="button" onClick={() => handleEdit(category)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="ترمیم"><Edit2 size={16} /></button>

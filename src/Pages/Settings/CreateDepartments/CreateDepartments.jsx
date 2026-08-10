@@ -5,6 +5,7 @@ import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows'
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createDepartments, deleteDepartment, getDepartments, updateDepartment } from '../../../Constant/DepartmentApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -558,9 +559,7 @@ export const DepartmentManagement = () => {
                                             </td>
 
                                             <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${dept.status === 'inactive' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                    {dept.status === 'inactive' ? 'غیر فعال' : 'فعال'}
-                                                </span>
+                                                <StatusBadge status={dept.status} />
                                             </td>
 
                                             <td className="px-6 py-4 text-center">

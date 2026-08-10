@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, Edit2, FileImage, PackageMinus, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 import {
     approveStoreStockIssue,
     createStoreStockIssue,
@@ -342,9 +343,7 @@ export const StoreStockIssues = () => {
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{issue.department}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{issue.receiverName}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${issue.approvalStatus === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : issue.approvalStatus === 'rejected' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                                                {statusLabel[issue.approvalStatus] || issue.approvalStatus}
-                                            </span>
+                                            <StatusBadge status={issue.approvalStatus} label={statusLabel[issue.approvalStatus]} />
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-start gap-2">

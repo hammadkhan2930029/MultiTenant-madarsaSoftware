@@ -6,6 +6,7 @@ import { DateField } from '../../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { getFinanceHeads } from '../../../../Constant/FinanceHeadsApi';
 import { createSalaryEntry, deactivateSalaryEntry, getSalaryEntries, getSalaryTeachers, updateSalaryEntry } from '../../../../Constant/SalariesApi';
+import StatusBadge from '../../../../Components/Common/StatusBadge';
 
 const today = () => new Date().toISOString().split('T')[0];
 const currentMonth = () => {
@@ -574,10 +575,10 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                 </div>
                                 <div className="rounded-xl bg-[var(--color-bg)]/60 p-3 text-right sm:bg-transparent sm:p-0 sm:text-center">
                                     <p className="mb-1 text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">اسٹیٹس</p>
-                                    <span className={`inline-flex items-center gap-1 rounded-full px-4 py-1 text-sm font-bold ${entry.status === 'active' ? 'bg-[var(--color-primary)] text-[#0b1120]' : 'bg-rose-500/10 text-rose-500'}`}>
+                                    <StatusBadge status={entry.status}>
                                         <Wallet size={12} />
                                         {entry.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                    </span>
+                                    </StatusBadge>
                                 </div>
                                 <div className="flex items-center justify-end gap-2 sm:justify-center">
                                     <p className="ml-auto text-[10px] font-black text-[var(--color-text-muted)] sm:hidden">ایکشن</p>

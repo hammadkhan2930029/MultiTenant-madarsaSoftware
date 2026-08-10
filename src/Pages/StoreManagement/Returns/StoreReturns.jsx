@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PackageCheck, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 import { createStoreReturn, deleteStoreReturn, getStoreReturns, getStoreStockIssues } from '../../../Constant/StoreApi';
 
 const emptyForm = {
@@ -232,9 +233,7 @@ export const StoreReturns = () => {
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{item.itemName}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{formatNumber(item.returnQuantity)}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${item.condition === 'good' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                                {conditionLabel[item.condition] || item.condition}
-                                            </span>
+                                            <StatusBadge status={item.condition} label={conditionLabel[item.condition]} />
                                         </td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{item.addToStock ? 'ہاں' : 'نہیں'}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{item.note || '-'}</td>

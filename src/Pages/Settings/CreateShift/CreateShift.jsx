@@ -4,6 +4,7 @@ import { InputField } from '../../../Components/HR/FormElements';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createShifts, deleteShift, getShifts, updateShift } from '../../../Constant/ShiftApi';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -486,9 +487,7 @@ export const ShiftManagement = () => {
                                             </td>
 
                                             <td className="px-6 py-4 text-center align-middle">
-                                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${shift.status === 'inactive' ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                                    {shift.status === 'inactive' ? 'غیر فعال' : 'فعال'}
-                                                </span>
+                                                <StatusBadge status={shift.status} />
                                             </td>
 
                                             <td className="px-6 py-4 text-center align-middle">

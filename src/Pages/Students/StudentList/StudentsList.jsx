@@ -5,6 +5,7 @@ import { deleteStudent, getStudents } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { Can } from '../../../Components/Auth/Can';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyValue = '-';
 
@@ -490,9 +491,7 @@ export const StudentList = () => {
 
                         <div className="py-4 border-y border-[var(--color-border)]">
                             <div className="flex flex-wrap items-center gap-2 justify-end">
-                                <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20">
-                                    {student.statusLabel}
-                                </span>
+                                <StatusBadge status={student.status} label={student.statusLabel} />
                                 <div className="flex items-center gap-2">
                                     <Users size={16} className="text-[var(--color-primary)]" />
                                     <span className="text-[12px] font-bold text-[var(--color-text)]/80">
@@ -592,9 +591,7 @@ export const StudentList = () => {
                                     </span>
                                 </td>
                                 <td className="p-6">
-                                    <span className="text-[var(--color-primary)] font-bold text-xs bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full border border-[var(--color-primary)]/20 inline-block">
-                                        {student.statusLabel}
-                                    </span>
+                                    <StatusBadge status={student.status} label={student.statusLabel} />
                                 </td>
                                 <td className="p-6 text-center">
                                     <div className="flex justify-center gap-2">

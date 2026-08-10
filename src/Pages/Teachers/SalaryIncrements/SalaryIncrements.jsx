@@ -3,6 +3,7 @@ import { Edit2, Eye, Plus, Search, Trash2, TrendingUp, UserCheck, Wallet, X } fr
 import { useNavigate } from 'react-router-dom';
 import { createTeacherIncrement, deleteTeacherIncrement, getAllTeacherIncrements, getTeachers, updateTeacherIncrement } from '../../../Constant/TeachersApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 const formatCurrency = (value) => `روپے ${Number(value || 0).toLocaleString('en-PK')}`;
@@ -395,9 +396,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                             <span>{formatCurrency(item.previousSalary)}</span>
                             <span className="text-[var(--color-primary)]">{formatCurrency(item.incrementAmount)}</span>
                             <span>{formatCurrency(item.newSalary)}</span>
-                            <span className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-black ${item.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                {item.status === 'active' ? 'فعال' : 'غیر فعال'}
-                            </span>
+                            <StatusBadge status={item.status} />
                             <div className="flex items-center gap-2">
                                 <button
                                     type="button"

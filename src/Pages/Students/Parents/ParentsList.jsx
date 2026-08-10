@@ -7,6 +7,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
 import { usePermissions } from '../../../Hooks/usePermissions';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const INITIAL_FORM = {
     fullName: '',
@@ -378,9 +379,7 @@ export const ParentsList = () => {
                                     </td>
                                     <td className="p-5 text-sm font-bold text-[var(--color-text-main)]">{parent.students?.length || 0}</td>
                                     <td className="p-5">
-                                        <span className={`rounded-2xl px-4 py-2 text-xs font-black ${parent.status === 'inactive' ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                                            {parent.status === 'inactive' ? 'غیر فعال' : 'فعال'}
-                                        </span>
+                                        <StatusBadge status={parent.status} />
                                     </td>
                                     <td className="p-5">
                                         <div className="flex items-center justify-center gap-2">

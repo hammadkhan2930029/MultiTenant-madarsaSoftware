@@ -5,6 +5,7 @@ import { BRANCH_CONTEXT_UPDATED_EVENT, getAdminSession, getSelectedBranchContext
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -449,9 +450,7 @@ export const CreateClasses = () => {
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
                                                 <td className="px-6 py-4 text-center">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${academicClass.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
-                                                {academicClass.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                            </span>
+                                            <StatusBadge status={academicClass.status} />
                                         </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">

@@ -5,6 +5,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     classId: '',
@@ -464,9 +465,7 @@ export const CreateSections = () => {
                                         </td>
                                         <td className="px-6 py-4 text-center text-sm font-bold text-[var(--color-text)]">{section.class?.name || '-'}</td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${section.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
-                                                {section.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                            </span>
+                                            <StatusBadge status={section.status} />
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">

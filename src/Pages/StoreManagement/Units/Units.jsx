@@ -3,6 +3,7 @@ import { Edit2, PackageCheck, Plus, Ruler, Save, Search, ToggleLeft, ToggleRight
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createStoreUnit, deleteStoreUnit, getStoreUnits, updateStoreUnit } from '../../../Constant/StoreUnitsApi';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -217,7 +218,7 @@ export const StoreUnits = () => {
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{unit.name}</td>
                                         <td className="px-6 py-4 text-sm font-black text-[var(--color-text)]">{unit.shortName}</td>
                                         <td className="max-w-md px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{unit.description || '-'}</td>
-                                        <td className="px-6 py-4"><span className={`rounded-xl px-3 py-1 text-xs font-black ${unit.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>{unit.status === 'active' ? 'فعال' : 'غیر فعال'}</span></td>
+                                        <td className="px-6 py-4"><StatusBadge status={unit.status} /></td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-start gap-2">
                                                 <button type="button" onClick={() => handleEdit(unit)} className="rounded-xl bg-emerald-500/10 p-2.5 text-[#00d094] transition-all hover:bg-[#00d094] hover:text-white" title="ترمیم"><Edit2 size={16} /></button>

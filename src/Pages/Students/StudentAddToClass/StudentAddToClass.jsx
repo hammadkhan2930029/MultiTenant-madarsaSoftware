@@ -6,6 +6,7 @@ import { assignStudentClass, getStudents, removeStudentClassAssignment } from '.
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { DeleteConfirmationModal } from '../../../Components/Common/DeleteConfirmationModal';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -377,9 +378,7 @@ export const StudentAddToClass = () => {
                                     <td className="p-4 text-xs font-black text-center"><span className="bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-3 py-1 rounded-full">{item.className}</span></td>
                                     <td className="p-4 text-xs font-black text-center">{item.section}</td>
                                     <td className="p-4 text-xs font-black text-center">
-                                        <span className={`rounded-full px-3 py-1 ${item.status === 'inactive' ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
-                                            {item.status === 'inactive' ? 'غیر فعال' : 'فعال'}
-                                        </span>
+                                        <StatusBadge status={item.status} />
                                     </td>
                                     <td className="p-4 text-center">
                                         <div className="flex items-center justify-center gap-2">

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, PackageX, Plus, Search, Trash2, X } from 'lucide-react';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 import {
     approveStoreDamagedStock,
     createStoreDamagedStock,
@@ -267,9 +268,7 @@ export const StoreDamagedStock = () => {
                                         <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{record.responsiblePerson || '-'}</td>
                                         <td className="px-6 py-4 text-sm font-black text-[var(--color-text)]">روپے {formatNumber(record.amountLoss)}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black ${record.approvalStatus === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : record.approvalStatus === 'rejected' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                                                {statusLabel[record.approvalStatus] || record.approvalStatus}
-                                            </span>
+                                            <StatusBadge status={record.approvalStatus} label={statusLabel[record.approvalStatus]} />
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-start gap-2">

@@ -4,6 +4,7 @@ import { createSession, deleteSession, getSessions, updateSession } from '../../
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
+import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const emptyForm = {
     name: '',
@@ -341,9 +342,7 @@ export const CreateSessions = () => {
                                         <td className="px-6 py-4 text-center align-middle text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.startDate)}</td>
                                         <td className="px-6 py-4 text-center align-middle text-sm font-bold text-[var(--color-text-muted)]">{formatDateInput(session.endDate)}</td>
                                         <td className="px-6 py-4 text-center align-middle">
-                                            <span className={`rounded-xl px-3 py-1 text-xs font-black text-black ${session.status === 'active' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
-                                                {session.status === 'active' ? 'فعال' : 'غیر فعال'}
-                                            </span>
+                                            <StatusBadge status={session.status} />
                                         </td>
                                         <td className="px-6 py-4 text-center align-middle flex justify-center">
                                             <div className="flex items-center justify-start gap-2">
