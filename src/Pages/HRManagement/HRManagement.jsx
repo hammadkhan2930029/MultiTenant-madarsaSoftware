@@ -1,10 +1,11 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Briefcase, Camera, ChevronLeft, ChevronRight, GraduationCap, Save, User, UserPlus, Wallet } from 'lucide-react';
-import { InputField, SelectField } from '../../Components/HR/FormElements';
+import { DateField, InputField, SelectField } from '../../Components/HR/FormElements';
 import { createTeacher, getTeacherById, updateTeacher } from '../../Constant/TeachersApi';
 import { getQualifications } from '../../Constant/QualificationApi';
 import { getShifts } from '../../Constant/ShiftApi';
 import { getDepartments } from '../../Constant/DepartmentApi';
+import { getSubjects } from '../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../Utils/cnicFormat';
@@ -88,6 +89,8 @@ export const HRManagement = () => {
   const [isLoadingShifts, setIsLoadingShifts] = useState(true);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [isLoadingDepartments, setIsLoadingDepartments] = useState(true);
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
   useNotificationBridge({ error, success });
 
   const activeTabIndex = useMemo(() => tabs.findIndex((tab) => tab.id === activeTab), [activeTab]);
@@ -147,6 +150,24 @@ export const HRManagement = () => {
     };
 
     loadDepartments();
+  }, []);
+
+  useEffect(() => {
+    const loadSubjects = async () => {
+      setIsLoadingSubjects(true);
+
+      try {
+        const result = await getSubjects('page=1&limit=100&status=active');
+        setSubjectOptions(result.items || []);
+      } catch (loadError) {
+        setSubjectOptions([]);
+        setError(loadError.message || 'مضامین لوڈ نہیں ہو سکے۔');
+      } finally {
+        setIsLoadingSubjects(false);
+      }
+    };
+
+    loadSubjects();
   }, []);
 
   useEffect(() => {
@@ -405,6 +426,8 @@ export const HRManagement = () => {
             {activeTab === 'education' ? (
               <EducationStep
                 formData={formData}
+                subjectOptions={subjectOptions}
+                isLoadingSubjects={isLoadingSubjects}
                 qualificationOptions={qualificationOptions}
                 isLoadingQualifications={isLoadingQualifications}
                 onChange={handleChange}
@@ -541,17 +564,41 @@ const PersonalStep = ({ formData, imagePreview, imageFile, shiftOptions, isLoadi
   </div>
 );
 
-const EducationStep = ({ formData, qualificationOptions, isLoadingQualifications, onChange }) => (
+const EducationStep = ({ formData, subjectOptions, isLoadingSubjects, qualificationOptions, isLoadingQualifications, onChange }) => (
   <div className="space-y-6">
     <StepHeading title="تعلیمی معلومات" description="تعلیمی قابلیت، مضمون یا ذمہ داری اور تخصص درج کریں۔" />
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      <InputField
-        label="مضمون "
-        required
-        value={formData.subject}
-        onChange={(event) => onChange('subject', event.target.value)}
-        placeholder="مثلاً: حفظ استاد، اکاؤنٹنٹ، باورچی، چوکیدار"
-      />
+      {formData.staffType === 'teacher' ? (
+        <SelectField
+          label="مضمون "
+          required
+          value={formData.subject}
+          onChange={(event) => onChange('subject', event.target.value)}
+          disabled={isLoadingSubjects}
+          options={[
+            {
+              value: '',
+              label: isLoadingSubjects
+                ? 'مضامین لوڈ ہو رہے ہیں...'
+                : subjectOptions.length
+                  ? 'مضمون منتخب کریں'
+                  : 'کوئی فعال مضمون موجود نہیں',
+            },
+            ...(!subjectOptions.some((subject) => subject.name === formData.subject) && formData.subject
+              ? [{ value: formData.subject, label: formData.subject }]
+              : []),
+            ...subjectOptions.map((subject) => ({ value: subject.name, label: subject.name })),
+          ]}
+        />
+      ) : (
+        <InputField
+          label="مضمون "
+          required
+          value={formData.subject}
+          onChange={(event) => onChange('subject', event.target.value)}
+          placeholder="مثلاً: حفظ استاد، اکاؤنٹنٹ، باورچی، چوکیدار"
+        />
+      )}
       <SelectField
         label="تعلیمی قابلیت"
         value={formData.qualification}
@@ -609,8 +656,8 @@ const ServiceStep = ({ formData, departmentOptions, isLoadingDepartments, onChan
         onChange={(event) => onChange('employmentType', event.target.value)}
         options={['مستقل', 'عارضی', 'کنٹریکٹ', 'پارٹ ٹائم']}
       />
-      <InputField label="تاریخ تقرری" required type="date" value={formData.appointmentDate} onChange={(event) => onChange('appointmentDate', event.target.value)} />
-      <InputField label="تاریخ شمولیت" required type="date" value={formData.joiningDate} onChange={(event) => onChange('joiningDate', event.target.value)} />
+      <DateField label="تاریخ تقرری" required value={formData.appointmentDate} onChange={(value) => onChange('appointmentDate', value)} />
+      <DateField label="تاریخ شمولیت" required value={formData.joiningDate} onChange={(value) => onChange('joiningDate', value)} />
       <TextAreaField label="سابقہ تجربہ" value={formData.experienceSummary} onChange={(event) => onChange('experienceSummary', event.target.value)} />
       <TextAreaField label="نوٹس" value={formData.notes} onChange={(event) => onChange('notes', event.target.value)} className="md:col-span-2" />
     </div>

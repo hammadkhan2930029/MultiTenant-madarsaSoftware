@@ -32,6 +32,7 @@ const createEditForm = (fund) => ({
     receiptNo: fund.receiptNo || '',
     details: fund.details || '',
     paymentDate: toDateInputValue(fund.paymentDate),
+    chequeDate: toDateInputValue(fund.chequeDate),
     remarks: fund.remarks || '',
 });
 
@@ -156,6 +157,11 @@ export const FundList = () => {
             return;
         }
 
+        if (editForm.paymentMode === 'چیک' && !editForm.chequeDate) {
+            setError('براہ کرم چیک کی تاریخ درج کریں۔');
+            return;
+        }
+
         setIsSaving(true);
         try {
             await updateFundCollection(editingFund.id, {
@@ -167,6 +173,7 @@ export const FundList = () => {
                 amount: Number(editForm.amount),
                 receiptNo: editForm.receiptNo.trim(),
                 details: editForm.details.trim(),
+                chequeDate: editForm.paymentMode === 'چیک' ? editForm.chequeDate : null,
                 remarks: editForm.remarks.trim(),
                 status: 'active',
             });
@@ -260,10 +267,11 @@ export const FundList = () => {
 
             <div className="overflow-hidden rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl">
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[980px] text-right">
+                    <table className="w-full min-w-[1100px] text-right">
                         <thead className="bg-[var(--color-bg)] text-[11px] text-[var(--color-text-muted)]">
                             <tr>
-                                <th className="p-4">تاریخ</th>
+                                <th className="p-4">رسید کی تاریخ</th>
+                                <th className="p-4">چیک کی تاریخ</th>
                                 <th className="p-4">نام دہندہ</th>
                                 <th className="p-4">رابطہ</th>
                                 <th className="p-4">قسم</th>
@@ -276,11 +284,12 @@ export const FundList = () => {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={8} className="p-10 text-center text-[var(--color-text-muted)]">فہرست لوڈ ہو رہی ہے...</td>
+                                    <td colSpan={9} className="p-10 text-center text-[var(--color-text-muted)]">فہرست لوڈ ہو رہی ہے...</td>
                                 </tr>
                             ) : funds.length ? funds.map((fund) => (
                                 <tr key={fund.id} className="border-t border-[var(--color-border)] hover:bg-[var(--color-bg)]/50 transition-colors">
-                                    <td className="p-4 text-xs font-mono whitespace-nowrap">{formatDate(fund.paymentDate)}</td>
+                                    <td className="p-4 text-xs font-mono whitespace-nowrap">{formatDate(fund.createdAt)}</td>
+                                    <td className="p-4 text-xs font-mono whitespace-nowrap">{fund.paymentMode === 'چیک' ? formatDate(fund.chequeDate) : '---'}</td>
                                     <td className="p-4">
                                         <p className="font-bold text-[var(--color-text-main)]">{fund.donorName || '---'}</p>
                                         <p className="text-[10px] text-[var(--color-text-muted)]">{fund.careOf || '---'}</p>
@@ -316,7 +325,7 @@ export const FundList = () => {
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan={8} className="p-10 text-center text-[var(--color-text-muted)]">کوئی ریکارڈ نہیں ملا</td>
+                                    <td colSpan={9} className="p-10 text-center text-[var(--color-text-muted)]">کوئی ریکارڈ نہیں ملا</td>
                                 </tr>
                             )}
                         </tbody>
@@ -399,7 +408,8 @@ const ViewModal = ({ fund, onClose, onPrint }) => (
                 <DetailItem label="ذیلی قسم" value={fund.donationSubType} />
                 <DetailItem label="مقصد" value={fund.purpose} />
                 <DetailItem label="رسید نمبر" value={fund.receiptNo} />
-                <DetailItem label="تاریخ" value={formatDate(fund.paymentDate)} />
+                <DetailItem label="رسید کی تاریخ" value={formatDate(fund.createdAt)} />
+                <DetailItem label="چیک کی تاریخ" value={fund.paymentMode === 'چیک' ? formatDate(fund.chequeDate) : '---'} />
                 <DetailItem label="رقم" value={`${formatAmount(fund.amount)}/-`} />
                 <div className="sm:col-span-2">
                     <DetailItem label="تفصیل" value={fund.details || fund.remarks} />
@@ -447,6 +457,9 @@ const EditModal = ({ editForm, isSaving, onClose, onSubmit, onChange }) => (
                 </div>
 
                 <DateField label="تاریخ" required value={editForm.paymentDate} onChange={(nextValue) => onChange('paymentDate', nextValue)} />
+                {editForm.paymentMode === 'چیک' && (
+                    <DateField label="چیک کی تاریخ" required value={editForm.chequeDate} onChange={(nextValue) => onChange('chequeDate', nextValue)} />
+                )}
                 <InputField label="مقصد" value={editForm.purpose} onChange={(e) => onChange('purpose', e.target.value)} />
                 <InputField label="رسید نمبر" value={editForm.receiptNo} onChange={(e) => onChange('receiptNo', e.target.value)} />
                 <div className="md:col-span-2">

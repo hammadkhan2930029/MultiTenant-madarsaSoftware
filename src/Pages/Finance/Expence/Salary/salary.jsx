@@ -124,6 +124,7 @@ const toUrduSalaryError = (message, fallback) => {
     if (/teacher not found/i.test(message)) return 'منتخب استاد نہیں ملا۔';
     if (/finance head not found/i.test(message)) return 'تنخواہ محفوظ کرنے کے لیے پہلے مالیات میں تنخواہ یا خرچ کی مد شامل کریں۔';
     if (/expense head/i.test(message)) return 'منتخب مد خرچ کی مد ہونی چاہیے۔';
+    if (/permission|forbidden|access/i.test(message)) return 'آپ کو تنخواہ محفوظ کرنے کی اجازت نہیں ہے۔';
     if (/payment date/i.test(message)) return 'ادائیگی کی تاریخ ضروری ہے۔';
     if (/amount/i.test(message)) return 'رقم درست درج کریں۔';
     if (/not joined|not available|ابھی شامل/i.test(message)) return 'اس تاریخ یا مہینے میں منتخب استاد/عملہ ابھی شامل نہیں ہوا تھا۔';
@@ -255,7 +256,9 @@ export const SalaryEntry = ({ staffType = '' }) => {
         setError('');
         setSuccess('');
 
-        if (!formData.teacherId || !formData.amount || !formData.salaryMonth || !formData.paymentDate || !formData.paymentMethod) {
+        const monthParts = readMonthParts(formData.salaryMonth);
+        const amount = Number(formData.amount);
+        if (!selectedTeacher || !Number.isFinite(amount) || amount <= 0 || !monthParts.salaryMonth || !monthParts.salaryYear || !formData.paymentDate || !formData.paymentMethod) {
             setError('براہ کرم استاد، طریقہ ادائیگی، رقم، مہینہ اور ادائیگی کی تاریخ مکمل کریں۔');
             return;
         }
@@ -610,7 +613,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                         <button
                                             type="button"
                                             onClick={() => exportSalaryEntryPdf(entry)}
-                                            className="p-2 rounded-xl bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
+                                            className="hidden p-2 rounded-xl bg-violet-500/10 text-violet-500 hover:bg-violet-500 hover:text-white transition-all"
                                             aria-label="PDF Export"
                                             title="PDF Export"
                                         >

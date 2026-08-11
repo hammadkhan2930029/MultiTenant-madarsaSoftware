@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createTeacherIncrement, deleteTeacherIncrement, getAllTeacherIncrements, getTeachers, updateTeacherIncrement } from '../../../Constant/TeachersApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { DateField } from '../../../Components/HR/FormElements';
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 const formatCurrency = (value) => `روپے ${Number(value || 0).toLocaleString('en-PK')}`;
@@ -234,14 +235,7 @@ export const SalaryIncrements = ({ staffType: fixedStaffType = '' }) => {
                         />
                     </Field>
 
-                    <Field label="مؤثر تاریخ">
-                        <input
-                            type="date"
-                            value={formData.effectiveDate}
-                            onChange={(event) => setFormData((prev) => ({ ...prev, effectiveDate: event.target.value }))}
-                            className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
-                        />
-                    </Field>
+                    <DateField label="مؤثر تاریخ" value={formData.effectiveDate} onChange={(value) => setFormData((prev) => ({ ...prev, effectiveDate: value }))} />
 
                     <Field label="حالت">
                         <select

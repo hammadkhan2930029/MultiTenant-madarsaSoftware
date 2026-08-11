@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, PackageX, Plus, Search, Trash2, X } from 'lucide-react';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { DateField } from '../../../Components/HR/FormElements';
 import {
     approveStoreDamagedStock,
     createStoreDamagedStock,
@@ -205,10 +206,7 @@ export const StoreDamagedStock = () => {
                             <input type="number" min="0" value={formData.quantity} onChange={(event) => setFormData((prev) => ({ ...prev, quantity: event.target.value }))} placeholder="0" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تاریخ</label>
-                            <input type="date" value={formData.date} onChange={(event) => setFormData((prev) => ({ ...prev, date: event.target.value }))} className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
-                        </div>
+                        <DateField label="تاریخ" value={formData.date} onChange={(value) => setFormData((prev) => ({ ...prev, date: value }))} />
 
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">وجہ</label>

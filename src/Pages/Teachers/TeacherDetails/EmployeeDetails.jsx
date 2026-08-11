@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createTeacherIncrement, getTeacherById, getTeacherIncrements } from '../../../Constant/TeachersApi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 import { getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
+import { DateField } from '../../../Components/HR/FormElements';
 
 const statusLabel = (status) => (status === 'active' ? 'فعال' : 'غیر فعال');
 const getTeacherShiftLabel = (teacher) =>
@@ -600,15 +601,7 @@ export const EmployeeDetails = () => {
                                         />
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="mr-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">مؤثر تاریخ</label>
-                                        <input
-                                            type="date"
-                                            value={incrementForm.effectiveDate}
-                                            onChange={(event) => setIncrementForm((prev) => ({ ...prev, effectiveDate: event.target.value }))}
-                                            className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
-                                        />
-                                    </div>
+                                    <DateField label="مؤثر تاریخ" value={incrementForm.effectiveDate} onChange={(value) => setIncrementForm((prev) => ({ ...prev, effectiveDate: value }))} />
 
                                     <div className="space-y-2">
                                         <label className="mr-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">وجہ / نوٹ</label>

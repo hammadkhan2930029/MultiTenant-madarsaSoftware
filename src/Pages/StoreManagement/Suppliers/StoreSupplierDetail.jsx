@@ -9,6 +9,7 @@ import {
     getStoreSupplierPurchases,
 } from '../../../Constant/StoreApi';
 import { formatAmountInput, parseAmountInput } from '../storeAmountFormat';
+import { DateField } from '../../../Components/HR/FormElements';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const formatNumber = (value) => new Intl.NumberFormat('ur-PK', { maximumFractionDigits: 2 }).format(Number(value || 0));
@@ -197,10 +198,7 @@ export const StoreSupplierDetail = () => {
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">رقم</label>
                             <input type="text" inputMode="decimal" value={paymentForm.amount} onChange={(event) => setPaymentForm((prev) => ({ ...prev, amount: formatAmountInput(event.target.value) }))} placeholder="0" className="mt-2 h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
                         </div>
-                        <div>
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تاریخ</label>
-                            <input type="date" value={paymentForm.paymentDate} onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentDate: event.target.value }))} className="mt-2 h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
-                        </div>
+                        <DateField label="تاریخ" value={paymentForm.paymentDate} onChange={(value) => setPaymentForm((prev) => ({ ...prev, paymentDate: value }))} size="sm" />
                         <div>
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ادائیگی طریقہ</label>
                             <select value={paymentForm.paymentMethod} onChange={(event) => setPaymentForm((prev) => ({ ...prev, paymentMethod: event.target.value }))} className="mt-2 h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">

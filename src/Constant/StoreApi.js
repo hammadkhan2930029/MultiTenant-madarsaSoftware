@@ -349,5 +349,9 @@ export const getStoreReport = async ({ reportType, filters = {} }) => {
   const endpoint = reportPaths[reportType] || reportPaths.dailyStock;
   const query = params.toString();
   const result = await apiRequest(`${endpoint}${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
-  return result?.data || { items: [], summary: null };
+  const data = result?.data;
+  return {
+    items: Array.isArray(data?.items) ? data.items : [],
+    summary: data?.summary && typeof data.summary === 'object' ? data.summary : null,
+  };
 };

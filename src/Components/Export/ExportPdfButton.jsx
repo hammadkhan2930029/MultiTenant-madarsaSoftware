@@ -66,7 +66,7 @@ export const ExportPdfButton = ({ rows = [], columns = [], fileName = 'export', 
             type="button"
             onClick={handleExport}
             disabled={!rows.length || !columns.length}
-            className={`inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-5 py-3 text-sm font-black text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+            className={`hidden items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-5 py-3 text-sm font-black text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
         >
             <FileText size={18} />
             <span>PDF Export</span>

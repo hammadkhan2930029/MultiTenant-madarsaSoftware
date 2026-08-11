@@ -10,9 +10,8 @@ import {
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { createClientId } from '../../../../Utils/createClientId';
 
-const DEFAULT_EXPENSE_CATEGORIES = ['عام اخراجات', 'انتظامی اخراجات', 'مستقل اثاثے', 'عملے کے متعلق'];
 const createIncomeHead = () => ({ id: createClientId(), title: '', category: '', description: '' });
-const createExpenseHead = () => ({ id: createClientId(), title: '', category: '', description: '', budgetLimit: '' });
+const createExpenseHead = () => ({ id: createClientId(), title: '', categoryId: '', category: '', description: '', budgetLimit: '' });
 const createExpenseCategoryForm = () => ({ id: null, name: '' });
 
 const buildExpenseDescription = (item) => {
@@ -62,6 +61,7 @@ export const FinanceHeadsSetup = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isLoadingCategories, setIsLoadingCategories] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
@@ -74,7 +74,7 @@ export const FinanceHeadsSetup = () => {
             const [incomeResult, expenseResult, categoryResult] = await Promise.all([
                 getFinanceHeads('page=1&limit=100&type=income&status=active'),
                 getFinanceHeads('page=1&limit=100&type=expense&status=active'),
-                getFinanceExpenseCategories('page=1&limit=100&status=active').catch(() => ({ items: DEFAULT_EXPENSE_CATEGORIES.map((name) => ({ id: name, name })) })),
+                getFinanceExpenseCategories('page=1&limit=100&status=active'),
             ]);
 
             setExistingIncome((incomeResult.items || []).map((item) => ({
@@ -84,17 +84,20 @@ export const FinanceHeadsSetup = () => {
                 description: readDetails(item.description),
             })));
 
-            setExistingExpenses((expenseResult.items || []).map((item) => ({
+            const categories = categoryResult.items || [];
+            setExistingExpenses((expenseResult.items || []).map((item) => {
+                const legacyCategory = readCategory(item.description);
+                const matchedCategory = categories.find((category) => category.name === legacyCategory);
+                return {
                 id: item.id,
                 title: item.name,
-                category: readCategory(item.description),
+                categoryId: String(item.expenseCategory?.id || item.expenseCategoryId || matchedCategory?.id || ''),
+                category: item.expenseCategory?.name || legacyCategory,
                 budgetLimit: readBudgetLimit(item.description),
                 description: readDetails(item.description),
-            })));
-            const nextCategories = categoryResult.items?.length
-                ? categoryResult.items
-                : DEFAULT_EXPENSE_CATEGORIES.map((name) => ({ id: name, name }));
-            setExpenseCategories(nextCategories);
+                };
+            }));
+            setExpenseCategories(categories);
         } catch (loadError) {
             setError(loadError.message || 'مالیاتی اقسام لوڈ نہیں ہو سکیں۔');
         } finally {
@@ -105,6 +108,23 @@ export const FinanceHeadsSetup = () => {
     useEffect(() => {
         loadHeads();
     }, []);
+
+    const refreshExpenseCategories = async () => {
+        setIsLoadingCategories(true);
+        try {
+            const result = await getFinanceExpenseCategories('page=1&limit=100&status=active');
+            setExpenseCategories(result.items || []);
+        } catch (categoryError) {
+            setError(categoryError.message || 'اخراجات کی اقسام لوڈ نہیں ہو سکیں۔');
+            setExpenseCategories([]);
+        } finally {
+            setIsLoadingCategories(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'expense') refreshExpenseCategories();
+    }, [activeTab]);
 
     const addRow = () => {
         if (activeTab === 'income') {
@@ -127,9 +147,9 @@ export const FinanceHeadsSetup = () => {
 
     const handleInputChange = (id, field, value) => {
         if (activeTab === 'income') {
-            setIncomeHeads(incomeHeads.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+            setIncomeHeads((current) => current.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
         } else {
-            setExpenseHeads(expenseHeads.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+            setExpenseHeads((current) => current.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
         }
     };
 
@@ -205,6 +225,7 @@ export const FinanceHeadsSetup = () => {
             await Promise.all(validRows.map((item) => createFinanceHead({
                 name: item.title.trim(),
                 type: activeTab,
+                expenseCategoryId: activeTab === 'expense' && item.categoryId ? Number(item.categoryId) : null,
                 description: activeTab === 'income' ? buildIncomeDescription(item) : buildExpenseDescription(item),
             })));
 
@@ -242,6 +263,7 @@ export const FinanceHeadsSetup = () => {
             await updateFinanceHead(editingId, {
                 name: editForm.title.trim(),
                 type: activeTab,
+                expenseCategoryId: activeTab === 'expense' && editForm.categoryId ? Number(editForm.categoryId) : null,
                 description: activeTab === 'income' ? buildIncomeDescription(editForm) : buildExpenseDescription(editForm),
             });
             setSuccess(activeTab === 'income' ? 'آمدنی کی قسم کامیابی سے تبدیل ہو گئی۔' : 'خرچ کی قسم کامیابی سے تبدیل ہو گئی۔');
@@ -377,21 +399,33 @@ export const FinanceHeadsSetup = () => {
                                 placeholder={activeTab === 'income' ? 'آمدنی کا نام' : 'خرچ کا نام'}
                                 value={item.title}
                                 onChange={(e) => handleInputChange(item.id, 'title', e.target.value)}
-                                className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                             />
 
-                            <input dir="rtl" type="text" placeholder="Sub-category (اختیاری)" value={item.category}
-                                onChange={(e) => handleInputChange(item.id, 'category', e.target.value)}
-                                className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
-                            />
+                            {activeTab === 'expense' ? (
+                                <CategoryDropdown
+                                    value={item.categoryId}
+                                    categories={expenseCategories}
+                                    isLoading={isLoadingCategories}
+                                    onChange={(categoryId, category) => {
+                                        handleInputChange(item.id, 'categoryId', String(categoryId));
+                                        handleInputChange(item.id, 'category', category?.name || '');
+                                    }}
+                                />
+                            ) : (
+                                <input dir="rtl" type="text" placeholder="Sub-category (اختیاری)" value={item.category}
+                                    onChange={(e) => handleInputChange(item.id, 'category', e.target.value)}
+                                    className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                />
+                            )}
                             <input dir="rtl" type="text" placeholder="تفصیلات" value={item.description}
                                 onChange={(e) => handleInputChange(item.id, 'description', e.target.value)}
-                                className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                             />
                             {activeTab === 'expense' ? (
                                 <input dir="rtl" type="number" placeholder="خرچ کی حد" value={item.budgetLimit}
                                     onChange={(e) => handleInputChange(item.id, 'budgetLimit', e.target.value)}
-                                    className="border rounded-xl p-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                    className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                                 />
                             ) : null}
                         </div>
@@ -441,7 +475,17 @@ export const FinanceHeadsSetup = () => {
                                     </td>
                                     <td className="p-4">
                                         {editingId === item.id ? (
-                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.category || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))} />
+                                            activeTab === 'expense' ? (
+                                                <CategoryDropdown
+                                                    compact
+                                                    value={editForm.categoryId || ''}
+                                                    categories={expenseCategories}
+                                                    isLoading={isLoadingCategories}
+                                                    onChange={(categoryId, category) => setEditForm((prev) => ({ ...prev, categoryId: String(categoryId), category: category?.name || '' }))}
+                                                />
+                                            ) : (
+                                                <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.category || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))} />
+                                            )
                                         ) : item.category || '---'}
                                     </td>
                                     <td className="p-4">
@@ -586,11 +630,13 @@ export const FinanceHeadsSetup = () => {
     );
 };
 
-function CategoryDropdown({ value, categories, onChange, compact = false }) {
+function CategoryDropdown({ value, categories, onChange, compact = false, isLoading = false }) {
     const [isOpen, setIsOpen] = useState(false);
-    const selected = categories.find((category) => category.name === value);
-    const displayValue = selected?.name || value || categories[0]?.name || '';
+    const selected = categories.find((category) => String(category.id) === String(value));
     const hasOptions = categories.length > 0;
+    const displayValue = selected?.name || (isLoading
+        ? 'اخراجات کی اقسام لوڈ ہو رہی ہیں...'
+        : hasOptions ? 'خرچ کی قسم منتخب کریں' : 'کوئی فعال خرچ کی قسم موجود نہیں');
 
     return (
         <div
@@ -606,7 +652,7 @@ function CategoryDropdown({ value, categories, onChange, compact = false }) {
                 type="button"
                 disabled={!hasOptions}
                 onClick={() => hasOptions && setIsOpen((prev) => !prev)}
-                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${compact ? 'min-h-[42px] py-2' : 'min-h-[50px] py-3'}`}
+                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${compact ? 'min-h-[42px] py-2' : 'h-14'}`}
             >
                 <ChevronDown size={16} className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 <span className="min-w-0 flex-1 truncate">{displayValue}</span>
@@ -615,14 +661,14 @@ function CategoryDropdown({ value, categories, onChange, compact = false }) {
             {isOpen ? (
                 <div className="absolute right-0 top-[calc(100%+0.5rem)] z-[80] max-h-60 w-full overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-2xl">
                     {categories.map((category) => {
-                        const isSelected = category.name === value;
+                        const isSelected = String(category.id) === String(value);
                         return (
                             <button
                                 key={category.id || category.name}
                                 type="button"
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={() => {
-                                    onChange(category.name);
+                                    onChange(category.id, category);
                                     setIsOpen(false);
                                 }}
                                 className={`w-full rounded-lg px-3 py-3 text-right text-sm font-bold transition-colors ${isSelected

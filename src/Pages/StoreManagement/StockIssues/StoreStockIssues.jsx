@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Check, Edit2, FileImage, PackageMinus, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { DateField } from '../../../Components/HR/FormElements';
 import {
     approveStoreStockIssue,
     createStoreStockIssue,
@@ -240,8 +241,8 @@ export const StoreStockIssues = () => {
                         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="شے، شعبہ یا وصول کنندہ تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none" />
                     </div>
                     <input value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)} placeholder="شعبہ فلٹر کریں" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-44 xl:w-40" />
-                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
-                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none md:w-40" />
+                    <DateField value={fromDate} onChange={setFromDate} size="sm" className="md:w-40" />
+                    <DateField value={toDate} onChange={setToDate} size="sm" className="md:w-40" />
                     <button type="button" onClick={resetFilters} className="h-12 shrink-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text)]">
                         فلٹر صاف کریں
                     </button>
@@ -259,10 +260,7 @@ export const StoreStockIssues = () => {
                         <span>{editMode ? 'اسٹاک اجراء میں ترمیم' : 'نیا اسٹاک اجراء'}</span>
                     </div>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">تاریخ</label>
-                            <input type="date" value={formData.issueDate} onChange={(event) => setFormData((prev) => ({ ...prev, issueDate: event.target.value }))} className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
-                        </div>
+                        <DateField label="تاریخ" value={formData.issueDate} onChange={(value) => setFormData((prev) => ({ ...prev, issueDate: value }))} />
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">شے</label>
                             <select value={formData.itemId} onChange={(event) => setFormData((prev) => ({ ...prev, itemId: event.target.value }))} className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]">

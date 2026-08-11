@@ -90,8 +90,8 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
 
         try {
             const [teacherResult, attendanceResult] = await Promise.all([
-                getTeachers(`page=1&limit=100&status=active&staffType=${staffType}`),
-                getTeacherAttendance(`page=1&limit=100&branchId=${activeBranchId}&date=${selectedDate}`),
+                getTeachers(`page=1&limit=100&status=active&staffType=${staffType}&branchId=${activeBranchId}`),
+                getTeacherAttendance(`page=1&limit=400&branchId=${activeBranchId}&date=${selectedDate}`),
             ]);
 
             const attendanceMap = new Map(
@@ -261,8 +261,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         [assignmentsByTeacher, searchTerm, selectedClassId, selectedSectionId, selectedSubject, teachers],
     );
 
-    const hasSelectionFilter = Boolean(searchTerm.trim() || selectedSubject || selectedClassId || selectedSectionId);
-    const attendanceRows = hasSelectionFilter ? filteredTeachers : [];
+    const attendanceRows = filteredTeachers;
 
     const stats = useMemo(
         () => ({
@@ -404,14 +403,14 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]/5">
-                            {!hasSelectionFilter ? (
+                            {false ? (
                                 <tr>
                                     <td colSpan={8} className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         تلاش یا فلٹر کے ذریعے {entityPluralLabel} منتخب کریں۔
                                     </td>
                                 </tr>
                             ) : null}
-                            {hasSelectionFilter && !attendanceRows.length ? (
+                            {!attendanceRows.length ? (
                                 <tr>
                                     <td colSpan={8} className="p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         کوئی ریکارڈ نہیں ملا۔
@@ -448,12 +447,12 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                 </div>
 
                 <div className="lg:hidden p-4 space-y-4">
-                    {!hasSelectionFilter ? (
+                    {false ? (
                         <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center text-sm font-bold text-[var(--color-text-muted)]">
                             تلاش یا فلٹر کے ذریعے {entityPluralLabel} منتخب کریں۔
                         </div>
                     ) : null}
-                    {hasSelectionFilter && !attendanceRows.length ? (
+                    {!attendanceRows.length ? (
                         <div className="rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center text-sm font-bold text-[var(--color-text-muted)]">
                             کوئی ریکارڈ نہیں ملا۔
                         </div>

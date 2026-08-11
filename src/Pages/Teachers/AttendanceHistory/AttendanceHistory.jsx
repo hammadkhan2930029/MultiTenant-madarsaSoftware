@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Save, Edit2 } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { DateField } from '../../../Components/HR/FormElements';
@@ -113,19 +113,30 @@ export const TeacherAttendanceHistory = () => {
     const [isSaving, setIsSaving] = useState(false);
     useNotificationBridge({ error, success: successMessage });
 
+    const loadAttendanceForRange = useCallback(async (nextRange = range) => {
+        const query = new URLSearchParams({
+            page: '1',
+            limit: '400',
+            teacherId: String(teacherId),
+            startDate: nextRange.startDate,
+            endDate: nextRange.endDate,
+        });
+        if (branchIdFromQuery) query.set('branchId', branchIdFromQuery);
+
+        const result = await getTeacherAttendance(query.toString());
+        setAttendanceEntries(result.items || []);
+    }, [branchIdFromQuery, range, teacherId]);
+
     useEffect(() => {
         const loadTeacherAndAttendance = async () => {
             try {
-                const [teacherResult, attendanceResult, defaultBranch, assignmentsResult] = await Promise.all([
+                const [teacherResult, defaultBranch, assignmentsResult] = await Promise.all([
                     getTeacherById(teacherId),
-                    getTeacherAttendance(`page=1&limit=366&teacherId=${teacherId}`),
                     getDefaultBranch().catch(() => null),
                     getTeacherAssignments(`page=1&limit=100&status=active&teacherId=${teacherId}`).catch(() => ({ items: [] })),
                 ]);
 
-                const items = attendanceResult.items || [];
                 setTeacher(teacherResult);
-                setAttendanceEntries(items);
                 setTeacherAssignments(assignmentsResult.items || []);
                 setDefaultBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
             } catch (loadError) {
@@ -135,6 +146,12 @@ export const TeacherAttendanceHistory = () => {
 
         loadTeacherAndAttendance();
     }, [teacherId]);
+
+    useEffect(() => {
+        loadAttendanceForRange().catch((loadError) => {
+            setError(loadError.message || 'اساتذہ کی حاضری کی تفصیل لوڈ نہیں ہو سکی۔');
+        });
+    }, [loadAttendanceForRange]);
 
     useEffect(() => {
         const rangeEntries = attendanceEntries.filter((entry) => {
@@ -218,8 +235,7 @@ export const TeacherAttendanceHistory = () => {
                 ],
             );
 
-            const refreshed = await getTeacherAttendance(`page=1&limit=366&teacherId=${teacherId}`);
-            setAttendanceEntries(refreshed.items || []);
+            await loadAttendanceForRange(range);
             setIsEditMode(false);
             setSuccessMessage('استاد کی حاضری کی تفصیل کامیابی سے اپڈیٹ ہو گئی۔');
         } catch (saveError) {

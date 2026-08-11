@@ -28,7 +28,7 @@ const createFundEntry = () => ({
     bankName: '',
     branchCode: '',
     chequeNo: '',
-    chequeDate: new Date().toISOString().split('T')[0]
+    chequeDate: ''
 });
 
 const getPaymentModeLabel = (mode) => {
@@ -304,6 +304,11 @@ export const FundCollection = () => {
             return;
         }
 
+        if (funds.some((fund) => fund.paymentMode === 'چیک' && !fund.chequeDate)) {
+            setError('براہ کرم چیک کی تاریخ درج کریں۔');
+            return;
+        }
+
         try {
             setIsSaving(true);
             setError('');
@@ -323,7 +328,8 @@ export const FundCollection = () => {
                         amount: parseAmount(fund.amount),
                         receiptNo: fund.receiptNo.trim(),
                         details: fund.details.trim(),
-                        paymentDate: fund.chequeDate || new Date().toISOString().split('T')[0],
+                        paymentDate: new Date().toISOString().split('T')[0],
+                        chequeDate: fund.paymentMode === 'چیک' ? fund.chequeDate : null,
                         remarks: buildRemarks(fund),
                     })
                 )
@@ -342,7 +348,8 @@ export const FundCollection = () => {
                         careOf: donorInfo.careOf.trim(),
                         phone: normalizeContactNumber(donorInfo.number),
                         amount: parseAmount(fund.amount),
-                        paymentDate: fund.chequeDate || new Date().toISOString().split('T')[0],
+                        paymentDate: new Date().toISOString().split('T')[0],
+                        chequeDate: fund.paymentMode === 'چیک' ? fund.chequeDate : null,
                     })),
                 });
             }
@@ -448,7 +455,7 @@ export const FundCollection = () => {
                                     <BankSearchField label=" بینک کا نام" value={fund.bankName} options={pakistanBanks} isDark={true} onSelect={(bank) => updateFund(index, 'bankName', bank)} onChange={(val) => updateFund(index, 'bankName', val)} />
                                     <InputField label='برانچ کوڈ' type="number" placeholder="0021" value={fund.branchCode} onChange={(e) => updateFund(index, 'branchCode', e.target.value)} />
                                     <InputField label='چیک نمبر' type="number" placeholder="0021000" value={fund.chequeNo} onChange={(e) => updateFund(index, 'chequeNo', e.target.value)} />
-                                    <DateField label='تاریخ' value={fund.chequeDate} onChange={(e) => updateFund(index, 'chequeDate', e.target.value)} />
+                                    <DateField label='چیک کی تاریخ' required value={fund.chequeDate} onChange={(value) => updateFund(index, 'chequeDate', value)} />
                                 </motion.div>
                             )}
                         </motion.div>

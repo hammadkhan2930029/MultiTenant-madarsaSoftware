@@ -5,6 +5,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { DateField } from '../../../Components/HR/FormElements';
 
 const emptyForm = {
     name: '',
@@ -261,27 +262,9 @@ export const CreateSessions = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">شروع تاریخ<span className="text-red-500"> *</span></label>
-                            <input
-                                required
-                                type="date"
-                                value={formData.startDate}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
-                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                            />
-                        </div>
+                        <DateField label="شروع تاریخ" required value={formData.startDate} onChange={(value) => setFormData((prev) => ({ ...prev, startDate: value }))} />
 
-                        <div className="space-y-2">
-                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">اختتام تاریخ<span className="text-red-500"> *</span></label>
-                            <input
-                                required
-                                type="date"
-                                value={formData.endDate}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
-                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
-                            />
-                        </div>
+                        <DateField label="اختتام تاریخ" required value={formData.endDate} onChange={(value) => setFormData((prev) => ({ ...prev, endDate: value }))} />
 
                         {editMode ? (
                             <div className="space-y-2">

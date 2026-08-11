@@ -164,7 +164,7 @@ export const AttendancePage = () => {
 
             const attendanceQuery = new URLSearchParams({
                 page: '1',
-                limit: '100',
+                limit: '400',
                 branchId: String(selectedClass.branchId),
                 classId: searchFilters.classId,
                 sectionId: searchFilters.sectionId,

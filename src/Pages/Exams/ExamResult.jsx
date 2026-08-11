@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Award, BookOpen, Calculator, Save, Search, UserRound } from 'lucide-react';
+import { Award, BookOpen, Calculator, Plus, Save, Search, Trash2, UserRound } from 'lucide-react';
 import { getStudents } from '../../Constant/StudentsApi';
 import { getStudentExamResult, saveExamResult, updateExamResult } from '../../Constant/ExamResultsApi';
 import { getExamSchedules } from '../../Constant/ExamSchedulesApi';
@@ -8,9 +8,10 @@ import { defaultResultGrades, getResultGradeLabel } from '../../Constant/ResultG
 import { getResultGrades } from '../../Constant/ResultGradesApi';
 import { useNotifier } from '../../Components/Notifications/useNotifier';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { createClientId } from '../../Utils/createClientId';
 
 const emptySubjectRow = () => ({
-    id: 'schedule-empty',
+    id: createClientId(),
     subjectId: '',
     subjectName: '',
     totalMarks: '',
@@ -86,19 +87,26 @@ const buildScheduleGroups = (schedules = []) => {
     }));
 };
 
+const rowFromSchedule = (schedule, savedRow = null) => ({
+    id: savedRow?.id || createClientId(),
+    subjectId: String(schedule?.subject?.id || savedRow?.subjectId || ''),
+    subjectName: schedule?.subject?.name || savedRow?.subjectName || '',
+    totalMarks: String(schedule?.totalMarks || savedRow?.totalMarks || ''),
+    obtainedMarks: savedRow?.obtainedMarks || '',
+});
+
 const rowsFromScheduleGroup = (scheduleGroup, resultRows = []) => {
     const resultBySubjectId = new Map(resultRows.map((row) => [String(row.subjectId), row]));
-    return (scheduleGroup?.schedules || []).map((schedule) => {
-        const subjectId = String(schedule.subject?.id || '');
-        const savedRow = resultBySubjectId.get(subjectId);
-        return {
-            id: `schedule-${schedule.id}`,
-            subjectId,
-            subjectName: schedule.subject?.name || '',
-            totalMarks: String(schedule.totalMarks || ''),
-            obtainedMarks: savedRow?.obtainedMarks || '',
-        };
-    });
+    const schedules = scheduleGroup?.schedules || [];
+
+    if (resultRows.length) {
+        return resultRows.map((savedRow) => {
+            const schedule = schedules.find((item) => String(item.subject?.id || '') === String(savedRow.subjectId));
+            return rowFromSchedule(schedule, savedRow);
+        });
+    }
+
+    return schedules.length ? [rowFromSchedule(schedules[0])] : [emptySubjectRow()];
 };
 
 export const ExamResult = () => {
@@ -289,9 +297,39 @@ export const ExamResult = () => {
     const updateRow = (rowId, field, value) => {
         setRows((current) => current.map((row) => {
             if (row.id !== rowId) return row;
+
+            if (field === 'subjectId') {
+                const schedule = selectedScheduleGroup?.schedules?.find((item) => String(item.subject?.id || '') === String(value));
+                return {
+                    ...row,
+                    subjectId: value,
+                    subjectName: schedule?.subject?.name || '',
+                    totalMarks: String(schedule?.totalMarks || ''),
+                    obtainedMarks: '',
+                };
+            }
             return { ...row, [field]: value };
         }));
     };
+
+    const addRow = () => {
+        const selectedSubjectIds = new Set(rows.map((row) => String(row.subjectId)).filter(Boolean));
+        const nextSchedule = selectedScheduleGroup?.schedules?.find((schedule) => !selectedSubjectIds.has(String(schedule.subject?.id || '')));
+
+        if (!nextSchedule) {
+            setError('تمام دستیاب مضامین پہلے ہی شامل کیے جا چکے ہیں۔');
+            return;
+        }
+
+        setError('');
+        setRows((current) => [...current, rowFromSchedule(nextSchedule)]);
+    };
+
+    const deleteRow = (rowId) => {
+        setRows((current) => (current.length > 1 ? current.filter((row) => row.id !== rowId) : current));
+    };
+
+    const canAddSubject = Boolean(selectedScheduleGroup) && rows.filter((row) => row.subjectId).length < (selectedScheduleGroup?.schedules?.length || 0);
 
     const handleSave = async () => {
         setError('');
@@ -495,6 +533,9 @@ export const ExamResult = () => {
                                     مضامین اور نمبر
                                 </div>
                                 <div className="flex flex-wrap gap-2">
+                                    <button type="button" onClick={addRow} disabled={!canAddSubject || isResultLoading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-bg)] px-4 text-xs font-black text-[var(--color-text-main)] disabled:cursor-not-allowed disabled:opacity-50">
+                                        <Plus size={16} /> مضمون شامل کریں
+                                    </button>
                                     <button type="button" onClick={handleSave} disabled={isSaving || isResultLoading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 text-xs font-black text-[#0b1120] disabled:cursor-not-allowed disabled:opacity-70">
                                         <Save size={16} /> {isSaving ? 'محفوظ ہو رہا ہے...' : savedResultId ? 'رزلٹ تبدیل کریں' : 'رزلٹ محفوظ کریں'}
                                     </button>
@@ -509,12 +550,13 @@ export const ExamResult = () => {
                                             <th className="p-4">کل نمبر <span className="text-red-500">*</span></th>
                                             <th className="p-4">حاصل کردہ نمبر <span className="text-red-500">*</span></th>
                                             <th className="p-4">فیصد</th>
+                                            <th className="p-4 text-center">ایکشن</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--color-border)]">
                                         {isResultLoading ? (
                                             <tr>
-                                                <td colSpan="4" className="p-8 text-center font-black text-[var(--color-text-muted)]">محفوظ شدہ رزلٹ لوڈ ہو رہا ہے...</td>
+                                                <td colSpan="5" className="p-8 text-center font-black text-[var(--color-text-muted)]">محفوظ شدہ رزلٹ لوڈ ہو رہا ہے...</td>
                                             </tr>
                                         ) : rows.map((row) => {
                                             const rowTotal = toNumber(row.totalMarks);
@@ -523,9 +565,14 @@ export const ExamResult = () => {
                                             return (
                                                 <tr key={row.id}>
                                                     <td className="p-3">
-                                                        <div className="flex h-11 w-full items-center rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 font-black text-[var(--color-text-main)]">
-                                                            {row.subjectName || '---'}
-                                                        </div>
+                                                        <select value={row.subjectId} onChange={(event) => updateRow(row.id, 'subjectId', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 font-bold outline-none focus:border-[var(--color-primary)]">
+                                                            <option value="">مضمون منتخب کریں</option>
+                                                            {(selectedScheduleGroup?.schedules || []).map((schedule) => {
+                                                                const subjectId = String(schedule.subject?.id || '');
+                                                                const isUsedByAnotherRow = rows.some((item) => item.id !== row.id && String(item.subjectId) === subjectId);
+                                                                return <option key={schedule.id} value={subjectId} disabled={isUsedByAnotherRow}>{schedule.subject?.name || '---'}</option>;
+                                                            })}
+                                                        </select>
                                                     </td>
                                                     <td className="p-3">
                                                         <input type="number" min="1" value={row.totalMarks} readOnly required className="h-11 w-full cursor-not-allowed rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
@@ -534,6 +581,11 @@ export const ExamResult = () => {
                                                         <input type="number" min="0" max={row.totalMarks || undefined} value={row.obtainedMarks} onChange={(event) => updateRow(row.id, 'obtainedMarks', event.target.value)} required className="h-11 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-3 text-center font-bold outline-none focus:border-[var(--color-primary)]" />
                                                     </td>
                                                     <td className="p-3 font-sans font-black">{rowPercentage ? `${rowPercentage.toFixed(2)}%` : '---'}</td>
+                                                    <td className="p-3 text-center">
+                                                        <button type="button" onClick={() => deleteRow(row.id)} disabled={rows.length === 1} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-400 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40" aria-label="حذف کریں">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })}

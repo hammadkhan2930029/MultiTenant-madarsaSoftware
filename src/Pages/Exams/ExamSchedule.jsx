@@ -5,6 +5,7 @@ import { getClasses, getSections, getSessions, getSubjects } from '../../Constan
 import { createExamSchedule, deleteExamSchedule, getExamSchedules, updateExamSchedule } from '../../Constant/ExamSchedulesApi';
 import { getAdminSession } from '../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { getTeachers } from '../../Constant/TeachersApi';
 
 const text = {
     title: 'امتحانی نظام الاوقات',
@@ -66,7 +67,7 @@ const createEmptyForm = () => ({
     endTime: '',
     totalMarks: '',
     room: '',
-    invigilator: '',
+    invigilatorTeacherId: '',
     notes: '',
 });
 
@@ -82,6 +83,7 @@ const mapScheduleFromApi = (schedule) => ({
     endTime: schedule.endTime || '',
     totalMarks: schedule.totalMarks ? String(schedule.totalMarks) : '',
     room: schedule.room || '',
+    invigilatorTeacherId: String(schedule.invigilatorTeacherId || schedule.invigilatorTeacher?.id || ''),
     invigilator: schedule.invigilator || '',
     notes: schedule.notes || '',
     sessionName: schedule.session?.name || '',
@@ -97,6 +99,7 @@ export const ExamSchedule = () => {
     const [sectionOptions, setSectionOptions] = useState([]);
     const [sessionOptions, setSessionOptions] = useState([]);
     const [subjectOptions, setSubjectOptions] = useState([]);
+    const [teacherOptions, setTeacherOptions] = useState([]);
     const [filters, setFilters] = useState({ search: '', classId: '', sessionId: '' });
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
@@ -147,11 +150,12 @@ export const ExamSchedule = () => {
             setIsLoading(true);
             setError('');
             try {
-                const [classesResult, sectionsResult, sessionsResult, subjectsResult, schedulesResult] = await Promise.all([
+                const [classesResult, sectionsResult, sessionsResult, subjectsResult, teachersResult, schedulesResult] = await Promise.all([
                     getClasses('page=1&limit=100&status=active'),
                     getSections('page=1&limit=100&status=active'),
                     getSessions('page=1&limit=100&status=active'),
                     getSubjects('page=1&limit=100&status=active'),
+                    getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                     getExamSchedules('page=1&limit=100&status=active'),
                 ]);
 
@@ -159,6 +163,7 @@ export const ExamSchedule = () => {
                 setSectionOptions(activeOnly(sectionsResult.items));
                 setSessionOptions(activeOnly(sessionsResult.items));
                 setSubjectOptions(activeOnly(subjectsResult.items));
+                setTeacherOptions(activeOnly(teachersResult.items).map((teacher) => ({ id: teacher.id, name: teacher.fullName })));
                 setSchedules((schedulesResult.items || []).map(mapScheduleFromApi));
             } catch (loadError) {
                 setError(loadError.message || text.loadError);
@@ -198,7 +203,7 @@ export const ExamSchedule = () => {
                 endTime: formData.endTime.trim(),
                 totalMarks: Number(formData.totalMarks),
                 room: formData.room.trim() || undefined,
-                invigilator: formData.invigilator.trim() || undefined,
+                invigilatorTeacherId: formData.invigilatorTeacherId ? Number(formData.invigilatorTeacherId) : undefined,
                 notes: formData.notes.trim() || undefined,
                 status: 'active',
             };
@@ -240,7 +245,7 @@ export const ExamSchedule = () => {
             endTime: schedule.endTime,
             totalMarks: schedule.totalMarks,
             room: schedule.room,
-            invigilator: schedule.invigilator,
+            invigilatorTeacherId: schedule.invigilatorTeacherId || String(teacherOptions.find((teacher) => teacher.name === schedule.invigilator)?.id || ''),
             notes: schedule.notes,
         });
         setMessage('');
@@ -437,7 +442,10 @@ export const ExamSchedule = () => {
                             <TimeInput required label={text.endTime} value={formData.endTime} onChange={(value) => updateForm('endTime', value)} />
                             <TextInput required label={text.marks} value={formData.totalMarks} onChange={(value) => updateForm('totalMarks', value)} type="number" />
                             <TextInput label={text.room} value={formData.room} onChange={(value) => updateForm('room', value)} />
-                            <TextInput label={text.invigilator} value={formData.invigilator} onChange={(value) => updateForm('invigilator', value)} />
+                            <SelectField label={text.invigilator} value={formData.invigilatorTeacherId} onChange={(value) => updateForm('invigilatorTeacherId', value)} disabled={isLoading || teacherOptions.length === 0}>
+                                <option value="">{teacherOptions.length ? text.select : 'کوئی فعال استاد موجود نہیں'}</option>
+                                {teacherOptions.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+                            </SelectField>
                         </div>
 
                         <div>

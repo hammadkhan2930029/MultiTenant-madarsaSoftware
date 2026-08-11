@@ -8,6 +8,7 @@ import { AppImages } from '../../../Constant/AppImages';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { Can } from '../../../Components/Auth/Can';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { DateField } from '../../../Components/HR/FormElements';
 
 const monthNames = [
     'جنوری',
@@ -669,7 +670,7 @@ export const FeesCollection = () => {
                             <option value="">تمام</option>
                             {sections.filter((item) => item.status === 'active').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                         </Select>
-                        <Field label="آخری تاریخ" type="date" value={filters.dueDate} onChange={(value) => handleFilterChange('dueDate', value)} />
+                        <DateField label="آخری تاریخ" value={filters.dueDate} onChange={(value) => handleFilterChange('dueDate', value)} size="sm" />
                     </div>
                 </div>
 

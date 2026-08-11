@@ -173,7 +173,7 @@ export const StoreItems = () => {
                     itemName: row.itemName.trim(),
                     category: row.category.trim(),
                     description: row.description.trim(),
-                    status: 'active',
+                    status: row.status,
                 })));
                 setSuccess('نئی اشیاء کامیابی سے شامل ہو گئیں۔');
             }
@@ -320,10 +320,10 @@ export const StoreItems = () => {
                             </select>
                         </div>
 
-                        {editMode ? <div className="space-y-2">
+                        <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">شے کا نام<span className="text-red-500"> *</span></label>
                             <input value={formData.itemName} onChange={(event) => setFormData((prev) => ({ ...prev, itemName: event.target.value }))} placeholder="مثلاً کتاب" className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none focus:border-[#00d094]" />
-                        </div> : null}
+                        </div>
 
                         <div className="space-y-2">
                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">حالت<span className="text-red-500"> *</span></label>

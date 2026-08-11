@@ -3,6 +3,7 @@ import { Download, FileText, PackageCheck, Printer, Search, Wallet } from 'lucid
 import jsPDF from 'jspdf';
 import { downloadStoreExport, getStoreItems, getStoreReport, getStoreSuppliers, openStorePrintPage } from '../../../Constant/StoreApi';
 import { getStoreCategories } from '../../../Constant/StoreCategoriesApi';
+import { DateField } from '../../../Components/HR/FormElements';
 
 const reportOptions = [
     { value: 'dailyStock', label: 'روزانہ اسٹاک رپورٹ' },
@@ -59,6 +60,7 @@ const formatValue = (value) => {
 };
 
 const moneyText = (value) => `روپے ${formatValue(Number(value || 0))}`;
+const asArray = (value) => (Array.isArray(value) ? value : []);
 const formatReportCell = (row, key) => {
     if (key === 'purchasePrice') {
         return `${moneyText(row.purchasePrice)}${row.unit ? ` فی ${row.unit}` : ''}`;
@@ -116,9 +118,9 @@ export const StoreReports = () => {
     useEffect(() => {
         Promise.all([getStoreItems(), getStoreSuppliers(), getStoreCategories({ activeOnly: 'true' })])
             .then(([itemsResult, suppliersResult, categoryResult]) => {
-                setItems(itemsResult.items || []);
-                setSuppliers(suppliersResult.items || []);
-                setCategories(categoryResult.items || []);
+                setItems(asArray(itemsResult?.items));
+                setSuppliers(asArray(suppliersResult?.items));
+                setCategories(asArray(categoryResult?.items));
             })
             .catch(() => setError('فلٹر معلومات لوڈ نہیں ہو سکیں۔'));
     }, []);
@@ -128,6 +130,8 @@ export const StoreReports = () => {
             if (reportType === 'itemLedger' && !filters.itemId) {
                 setRows([]);
                 setSummary(null);
+                setError('');
+                setIsLoading(false);
                 return;
             }
 
@@ -135,9 +139,11 @@ export const StoreReports = () => {
             setError('');
             try {
                 const result = await getStoreReport({ reportType, filters });
-                setRows(result.items || []);
-                setSummary(result.summary || null);
+                setRows(asArray(result?.items));
+                setSummary(result?.summary && typeof result.summary === 'object' ? result.summary : null);
             } catch (loadError) {
+                setRows([]);
+                setSummary(null);
                 setError(loadError.message || 'رپورٹ لوڈ نہیں ہو سکی۔');
             } finally {
                 setIsLoading(false);
@@ -223,7 +229,7 @@ export const StoreReports = () => {
                     <button type="button" onClick={handlePrint} className="inline-flex items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 text-sm font-black text-[var(--color-text)]">
                         <Printer size={18} /> پرنٹ
                     </button>
-                    <button type="button" onClick={handlePdf} disabled={!rows.length} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-500 disabled:opacity-50">
+                    <button type="button" onClick={handlePdf} disabled={!rows.length} className="hidden items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-500 disabled:opacity-50">
                         <FileText size={18} /> پی ڈی ایف
                     </button>
                     <button type="button" onClick={handleExcel} disabled={!rows.length} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-3 text-sm font-black text-emerald-500 disabled:opacity-50">
@@ -236,8 +242,8 @@ export const StoreReports = () => {
                 <select value={reportType} onChange={(event) => setReportType(event.target.value)} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">
                     {reportOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
-                <input type="date" value={filters.fromDate} onChange={(event) => setFilters((prev) => ({ ...prev, fromDate: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
-                <input type="date" value={filters.toDate} onChange={(event) => setFilters((prev) => ({ ...prev, toDate: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none" />
+                <DateField value={filters.fromDate} onChange={(value) => setFilters((prev) => ({ ...prev, fromDate: value }))} size="sm" />
+                <DateField value={filters.toDate} onChange={(value) => setFilters((prev) => ({ ...prev, toDate: value }))} size="sm" />
                 <select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value }))} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none">
                     <option value="">تمام اقسام</option>
                     {categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}

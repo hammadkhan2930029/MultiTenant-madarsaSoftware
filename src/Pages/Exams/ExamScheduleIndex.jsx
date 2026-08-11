@@ -4,6 +4,8 @@ import { getClasses, getSessions, getSubjects } from '../../Constant/AcademicSet
 import { deleteExamSchedule, getExamSchedules, updateExamSchedule } from '../../Constant/ExamSchedulesApi';
 import { getAdminSession } from '../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { DateField } from '../../Components/HR/FormElements';
+import { getTeachers } from '../../Constant/TeachersApi';
 
 const text = {
     title: 'امتحان کی فہرست',
@@ -34,13 +36,14 @@ const createEmptyForm = () => ({
     examName: '',
     sessionId: '',
     classId: '',
+    sectionId: '',
     subjectId: '',
     examDate: today(),
     startTime: '',
     endTime: '',
     totalMarks: '',
     room: '',
-    invigilator: '',
+    invigilatorTeacherId: '',
     notes: '',
 });
 
@@ -49,12 +52,14 @@ const mapScheduleFromApi = (schedule) => ({
     examName: schedule.examName || '',
     sessionId: String(schedule.session?.id || ''),
     classId: String(schedule.class?.id || ''),
+    sectionId: String(schedule.section?.id || ''),
     subjectId: String(schedule.subject?.id || ''),
     examDate: toDateInputValue(schedule.examDate),
     startTime: schedule.startTime || '',
     endTime: schedule.endTime || '',
     totalMarks: schedule.totalMarks ? String(schedule.totalMarks) : '',
     room: schedule.room || '',
+    invigilatorTeacherId: String(schedule.invigilatorTeacherId || schedule.invigilatorTeacher?.id || ''),
     invigilator: schedule.invigilator || '',
     notes: schedule.notes || '',
     sessionName: schedule.session?.name || '',
@@ -66,13 +71,14 @@ const buildPayload = (formData) => ({
     examName: formData.examName.trim(),
     sessionId: Number(formData.sessionId),
     classId: Number(formData.classId),
+    sectionId: Number(formData.sectionId),
     subjectId: Number(formData.subjectId),
     examDate: formData.examDate,
     startTime: formData.startTime.trim(),
     endTime: formData.endTime.trim(),
     totalMarks: formData.totalMarks ? Number(formData.totalMarks) : undefined,
     room: formData.room.trim() || undefined,
-    invigilator: formData.invigilator.trim() || undefined,
+    invigilatorTeacherId: formData.invigilatorTeacherId ? Number(formData.invigilatorTeacherId) : undefined,
     notes: formData.notes.trim() || undefined,
     status: 'active',
 });
@@ -91,6 +97,7 @@ export const ExamScheduleIndex = () => {
     const [classOptions, setClassOptions] = useState([]);
     const [sessionOptions, setSessionOptions] = useState([]);
     const [subjectOptions, setSubjectOptions] = useState([]);
+    const [teacherOptions, setTeacherOptions] = useState([]);
     const [filters, setFilters] = useState({ search: '', classId: '', sessionId: '' });
     const [editTarget, setEditTarget] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -127,15 +134,17 @@ export const ExamScheduleIndex = () => {
         setIsLoading(true);
         setError('');
         try {
-            const [classesResult, sessionsResult, subjectsResult, schedulesResult] = await Promise.all([
+            const [classesResult, sessionsResult, subjectsResult, teachersResult, schedulesResult] = await Promise.all([
                 getClasses('page=1&limit=100&status=active'),
                 getSessions('page=1&limit=100&status=active'),
                 getSubjects('page=1&limit=100&status=active'),
+                getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 getExamSchedules('page=1&limit=100&status=active'),
             ]);
             setClassOptions(activeOnly(classesResult.items));
             setSessionOptions(activeOnly(sessionsResult.items));
             setSubjectOptions(activeOnly(subjectsResult.items));
+            setTeacherOptions(activeOnly(teachersResult.items).map((teacher) => ({ id: teacher.id, name: teacher.fullName })));
             setSchedules((schedulesResult.items || []).map(mapScheduleFromApi));
         } catch (loadError) {
             setError(loadError.message || text.loadError);
@@ -156,13 +165,14 @@ export const ExamScheduleIndex = () => {
             examName: schedule.examName,
             sessionId: schedule.sessionId,
             classId: schedule.classId,
+            sectionId: schedule.sectionId,
             subjectId: schedule.subjectId,
             examDate: schedule.examDate,
             startTime: schedule.startTime,
             endTime: schedule.endTime,
             totalMarks: schedule.totalMarks,
             room: schedule.room,
-            invigilator: schedule.invigilator,
+            invigilatorTeacherId: schedule.invigilatorTeacherId || String(teacherOptions.find((teacher) => teacher.name === schedule.invigilator)?.id || ''),
             notes: schedule.notes,
         });
     };
@@ -455,12 +465,12 @@ const EditModal = ({ formData, setFormData, sessionOptions, classOptions, subjec
                     <FormSelect label="سیشن" value={formData.sessionId} onChange={(value) => updateField('sessionId', value)} options={sessionOptions} required />
                     <FormSelect label="کلاس" value={formData.classId} onChange={(value) => updateField('classId', value)} options={classOptions} required />
                     <FormSelect label="مضمون" value={formData.subjectId} onChange={(value) => updateField('subjectId', value)} options={subjectOptions} required />
-                    <FormInput label="تاریخ" type="date" value={formData.examDate} onChange={(value) => updateField('examDate', value)} required />
+                    <DateField label="تاریخ" value={formData.examDate} onChange={(value) => updateField('examDate', value)} required size="sm" />
                     <FormInput label="شروع وقت" type="time" value={formData.startTime} onChange={(value) => updateField('startTime', value)} required />
                     <FormInput label="اختتام وقت" type="time" value={formData.endTime} onChange={(value) => updateField('endTime', value)} required />
                     <FormInput label="کل نمبر" type="number" value={formData.totalMarks} onChange={(value) => updateField('totalMarks', value)} />
                     <FormInput label="کمرہ" value={formData.room} onChange={(value) => updateField('room', value)} />
-                    <FormInput label="نگران" value={formData.invigilator} onChange={(value) => updateField('invigilator', value)} />
+                    <FormSelect label="نگران" value={formData.invigilatorTeacherId} onChange={(value) => updateField('invigilatorTeacherId', value)} options={teacherOptions} emptyLabel={teacherOptions.length ? 'منتخب کریں' : 'کوئی فعال استاد موجود نہیں'} disabled={!teacherOptions.length} />
                     <div className="md:col-span-3">
                         <FieldLabel>نوٹ</FieldLabel>
                         <textarea value={formData.notes} onChange={(event) => updateField('notes', event.target.value)} rows={3} className="w-full resize-none rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-3 text-sm font-bold outline-none focus:border-[var(--color-primary)]" />
@@ -548,14 +558,12 @@ const FormInput = ({ label, value, onChange, type = 'text', icon, className = ''
     </div>
 );
 
-const FormSelect = ({ label, value, onChange, options, required = false }) => (
+const FormSelect = ({ label, value, onChange, options, required = false, emptyLabel = 'منتخب کریں', disabled = false }) => (
     <div>
         <FieldLabel required={required}>{label}</FieldLabel>
-        <select value={value} onChange={(event) => onChange(event.target.value)} required={required} className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]">
-            <option value="">منتخب کریں</option>
+        <select value={value} onChange={(event) => onChange(event.target.value)} required={required} disabled={disabled} className="h-12 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 text-sm font-bold outline-none focus:border-[var(--color-primary)] disabled:opacity-60">
+            <option value="">{emptyLabel}</option>
             {options.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
     </div>
 );
-
-
