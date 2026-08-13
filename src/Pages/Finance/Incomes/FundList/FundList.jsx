@@ -164,7 +164,7 @@ export const FundList = () => {
 
         setIsSaving(true);
         try {
-            await updateFundCollection(editingFund.id, {
+            const savedFund = await updateFundCollection(editingFund.id, {
                 ...editForm,
                 donorName: editForm.donorName.trim(),
                 careOf: editForm.careOf.trim(),
@@ -177,9 +177,13 @@ export const FundList = () => {
                 remarks: editForm.remarks.trim(),
                 status: 'active',
             });
-            setSuccess('عطیہ کا ریکارڈ کامیابی سے تبدیل ہو گیا۔');
             closeEdit();
-            await loadFunds(page);
+            try {
+                await loadFunds(page);
+            } catch {
+                setFunds((current) => current.map((fund) => fund.id === savedFund.id ? savedFund : fund));
+            }
+            setSuccess('عطیہ کا ریکارڈ کامیابی سے تبدیل ہو گیا۔');
         } catch (err) {
             setError(toUrduFundError(err?.message, 'عطیہ کا ریکارڈ تبدیل نہیں ہو سکا۔'));
         } finally {
@@ -196,10 +200,15 @@ export const FundList = () => {
 
         try {
             await deactivateFundCollection(deleteTarget.id);
-            setSuccess('عطیہ کا ریکارڈ کامیابی سے حذف ہو گیا۔');
+            const deletedFundId = deleteTarget.id;
             setDeleteTarget(null);
             const nextPage = funds.length === 1 && page > 1 ? page - 1 : page;
-            await loadFunds(nextPage);
+            try {
+                await loadFunds(nextPage);
+            } catch {
+                setFunds((current) => current.filter((fund) => fund.id !== deletedFundId));
+            }
+            setSuccess('عطیہ کا ریکارڈ کامیابی سے حذف ہو گیا۔');
         } catch (err) {
             setError(toUrduFundError(err?.message, 'عطیہ کا ریکارڈ حذف نہیں ہو سکا۔'));
         } finally {

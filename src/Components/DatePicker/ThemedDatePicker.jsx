@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const DAYS = ['اتوار', 'پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ'];
@@ -60,10 +61,15 @@ export const ThemedDatePicker = ({
   error = '',
 }) => {
   const wrapperRef = useRef(null);
+  const buttonRef = useRef(null);
+  const panelRef = useRef(null);
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
   const [isOpen, setIsOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => selectedDate || new Date());
-  const [panelStyle, setPanelStyle] = useState({ right: 0 });
+  const [panelStyle, setPanelStyle] = useState({
+    position: 'fixed',
+    visibility: 'hidden',
+  });
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(() => {
     const years = [];
@@ -75,7 +81,11 @@ export const ThemedDatePicker = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target) &&
+        !panelRef.current?.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -125,42 +135,58 @@ export const ThemedDatePicker = ({
   };
 
   const openCalendar = () => {
-    const wrapper = wrapperRef.current;
-    const viewportWidth = window.innerWidth;
-    const desiredWidth = Math.min(size === 'sm' ? 280 : 320, viewportWidth - 24);
-
-    if (wrapper) {
-      const rect = wrapper.getBoundingClientRect();
-      const overflowLeft = rect.right - desiredWidth < 12;
-      const overflowRight = rect.left + desiredWidth > viewportWidth - 12;
-
-      if (overflowLeft && overflowRight) {
-        setPanelStyle({
-          left: '50%',
-          right: 'auto',
-          transform: 'translateX(-50%)',
-          width: `${desiredWidth}px`,
-        });
-      } else if (overflowLeft) {
-        setPanelStyle({
-          left: 0,
-          right: 'auto',
-          transform: 'none',
-          width: `${desiredWidth}px`,
-        });
-      } else {
-        setPanelStyle({
-          right: 0,
-          left: 'auto',
-          transform: 'none',
-          width: `${desiredWidth}px`,
-        });
-      }
-    }
-
     setViewDate(selectedDate || new Date());
+    setPanelStyle({ position: 'fixed', visibility: 'hidden' });
     setIsOpen(true);
   };
+
+  const updatePanelPosition = useCallback(() => {
+    const anchor = buttonRef.current;
+    const panel = panelRef.current;
+    if (!anchor || !panel) return;
+
+    const viewportPadding = 12;
+    const anchorGap = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const desiredWidth = Math.min(size === 'sm' ? 336 : 320, viewportWidth - (viewportPadding * 2));
+    const anchorRect = anchor.getBoundingClientRect();
+    const panelHeight = panel.offsetHeight;
+    const availableBelow = viewportHeight - anchorRect.bottom - viewportPadding;
+    const availableAbove = anchorRect.top - viewportPadding;
+    const shouldOpenAbove = availableBelow < panelHeight && availableAbove > availableBelow;
+    const unclampedTop = shouldOpenAbove
+      ? anchorRect.top - panelHeight - anchorGap
+      : anchorRect.bottom + anchorGap;
+    const maxTop = Math.max(viewportPadding, viewportHeight - panelHeight - viewportPadding);
+    const top = Math.min(Math.max(unclampedTop, viewportPadding), maxTop);
+    const rtlAlignedLeft = anchorRect.right - desiredWidth;
+    const maxLeft = Math.max(viewportPadding, viewportWidth - desiredWidth - viewportPadding);
+    const left = Math.min(Math.max(rtlAlignedLeft, viewportPadding), maxLeft);
+
+    setPanelStyle({
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${desiredWidth}px`,
+      maxHeight: `calc(100vh - ${viewportPadding * 2}px)`,
+      overflowY: 'auto',
+      visibility: 'visible',
+    });
+  }, [size]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return undefined;
+
+    updatePanelPosition();
+    window.addEventListener('resize', updatePanelPosition);
+    window.addEventListener('scroll', updatePanelPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePanelPosition);
+      window.removeEventListener('scroll', updatePanelPosition, true);
+    };
+  }, [isOpen, updatePanelPosition, viewDate]);
 
   const displayValue = selectedDate
     ? `${selectedDate.getDate()} ${MONTHS[selectedDate.getMonth()]}، ${selectedDate.getFullYear()}`
@@ -173,8 +199,8 @@ export const ThemedDatePicker = ({
   const buttonIconSize = size === 'sm' ? 16 : 18;
   const isCompact = size === 'sm';
   const panelClass = isCompact
-    ? 'themed-date-picker-panel themed-date-picker-panel-sm absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-3'
-    : 'themed-date-picker-panel absolute top-full z-[80] mt-2 max-w-[calc(100vw-24px)] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4';
+    ? 'themed-date-picker-panel themed-date-picker-panel-sm z-[10000] max-w-[calc(100vw-24px)] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-3'
+    : 'themed-date-picker-panel z-[10000] max-w-[calc(100vw-24px)] rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-4';
   const navButtonClass = isCompact
     ? 'w-8 h-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center'
     : 'w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-main)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center';
@@ -199,10 +225,6 @@ export const ThemedDatePicker = ({
           direction: rtl;
           font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif !important;
           line-height: 1.35 !important;
-        }
-
-        .themed-date-picker-panel-sm {
-          min-width: 336px;
         }
 
         .themed-date-picker-panel p,
@@ -266,6 +288,7 @@ export const ThemedDatePicker = ({
       ) : null}
 
       <button
+        ref={buttonRef}
         type="button"
         name={name}
         aria-invalid={Boolean(error)}
@@ -286,8 +309,9 @@ export const ThemedDatePicker = ({
       </button>
       {error ? <p id={name ? `${name}-error` : undefined} className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
 
-      {isOpen ? (
+      {isOpen && typeof document !== 'undefined' ? createPortal((
         <div
+          ref={panelRef}
           style={panelStyle}
           className={panelClass}
         >
@@ -401,7 +425,7 @@ export const ThemedDatePicker = ({
             </button>
           </div>
         </div>
-      ) : null}
+      ), document.body) : null}
     </div>
   );
 };

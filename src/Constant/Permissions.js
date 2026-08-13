@@ -223,8 +223,13 @@ export const ROLE_PERMISSION_MODULES = [
     permissions: [
       { key: 'finance.view', name: 'مالیات دیکھیں' },
       { key: 'finance.heads.view', name: 'آمدن و خرچ سیٹ اپ دیکھیں' },
+      { key: 'finance.heads.create', name: 'آمدن و خرچ کی مد یا کیٹیگری بنائیں' },
+      { key: 'finance.heads.update', name: 'آمدن و خرچ کی مد یا کیٹیگری تبدیل کریں' },
+      { key: 'finance.heads.delete', name: 'آمدن و خرچ کی مد یا کیٹیگری حذف کریں' },
       { key: 'finance.transactions.view', name: 'آمدن و خرچ اندراج دیکھیں' },
       { key: 'finance.transactions.create', name: 'آمدن و خرچ درج کریں' },
+      { key: 'finance.transactions.update', name: 'آمدن و خرچ تبدیل کریں' },
+      { key: 'finance.transactions.delete', name: 'آمدن و خرچ حذف کریں' },
       { key: 'finance.reports.view', name: 'مالی رپورٹس دیکھیں' },
       { key: 'funds.view', name: 'عطیات دیکھیں' },
       { key: 'funds.create', name: 'عطیہ درج کریں' },

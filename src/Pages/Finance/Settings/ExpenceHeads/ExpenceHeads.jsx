@@ -36,7 +36,7 @@ export const ExpenseHeadsSetup = () => {
     const [success, setSuccess] = useState('');
     useNotificationBridge({ error, success });
 
-    const loadExpenseHeads = async () => {
+    const loadExpenseHeads = async (reportError = true) => {
         setIsLoading(true);
         setError('');
 
@@ -50,14 +50,15 @@ export const ExpenseHeadsSetup = () => {
                 description: item.description || '',
             })));
         } catch (loadError) {
-            setError(loadError.message || 'اخراجات کی اقسام لوڈ نہیں ہو سکیں۔');
+            if (reportError) setError(loadError.message || 'اخراجات کی اقسام لوڈ نہیں ہو سکیں۔');
+            throw loadError;
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        loadExpenseHeads();
+        loadExpenseHeads().catch(() => {});
     }, []);
 
     const addRow = () => {
@@ -93,14 +94,18 @@ export const ExpenseHeadsSetup = () => {
 
         setIsSaving(true);
         try {
-            await Promise.all(validRows.map((item) => createFinanceHead({
+            const savedHeads = await Promise.all(validRows.map((item) => createFinanceHead({
                 name: item.title.trim(),
                 type: 'expense',
                 description: buildDescription(item),
             })));
-            setSuccess('اخراجات کی اقسام کامیابی سے محفوظ ہو گئیں۔');
             setExpenseHeads([createExpenseHead()]);
-            await loadExpenseHeads();
+            try {
+                await loadExpenseHeads(false);
+            } catch {
+                setExistingExpenses((current) => [...savedHeads.map((item) => ({ id: item.id, title: item.name, category: '', budgetLimit: '' })), ...current]);
+            }
+            setSuccess('اخراجات کی اقسام کامیابی سے محفوظ ہو گئیں۔');
         } catch (saveError) {
             setError(saveError.message || 'اخراجات کی اقسام محفوظ نہیں ہو سکیں۔');
         } finally {
@@ -128,14 +133,18 @@ export const ExpenseHeadsSetup = () => {
         setError('');
         setSuccess('');
         try {
-            await updateFinanceHead(editingId, {
+            const savedHead = await updateFinanceHead(editingId, {
                 name: editForm.title.trim(),
                 type: 'expense',
                 description: buildDescription(editForm),
             });
-            setSuccess('خرچ کی قسم کامیابی سے تبدیل ہو گئی۔');
             cancelEdit();
-            await loadExpenseHeads();
+            try {
+                await loadExpenseHeads(false);
+            } catch {
+                setExistingExpenses((current) => current.map((item) => item.id === savedHead.id ? { ...item, title: savedHead.name } : item));
+            }
+            setSuccess('خرچ کی قسم کامیابی سے تبدیل ہو گئی۔');
         } catch (saveError) {
             setError(saveError.message || 'خرچ کی قسم تبدیل نہیں ہو سکی۔');
         } finally {
@@ -151,9 +160,14 @@ export const ExpenseHeadsSetup = () => {
         setIsDeleting(true);
         try {
             await deactivateFinanceHead(deleteTarget.id);
-            setSuccess('خرچ کی قسم کامیابی سے ختم کر دی گئی۔');
+            const deletedHeadId = deleteTarget.id;
             setDeleteTarget(null);
-            await loadExpenseHeads();
+            try {
+                await loadExpenseHeads(false);
+            } catch {
+                setExistingExpenses((current) => current.filter((item) => item.id !== deletedHeadId));
+            }
+            setSuccess('خرچ کی قسم کامیابی سے ختم کر دی گئی۔');
         } catch (deleteError) {
             setError(deleteError.message || 'خرچ کی قسم ختم نہیں ہو سکی۔');
         } finally {

@@ -17,7 +17,12 @@ const withJson = (method, body) =>
 
 export const getFinancialRecords = async (query = '') => {
   const result = await apiRequest(`/finance/financial${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
-  return result?.data || { items: [], summary: null, meta: null };
+  const data = result?.data;
+  return {
+    items: Array.isArray(data?.items) ? data.items : [],
+    summary: data?.summary && typeof data.summary === 'object' ? data.summary : null,
+    meta: data?.meta || null,
+  };
 };
 
 export const getFinancialSummary = async (query = '') => {

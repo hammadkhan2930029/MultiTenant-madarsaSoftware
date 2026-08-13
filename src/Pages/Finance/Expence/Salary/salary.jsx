@@ -270,15 +270,22 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
         setIsSaving(true);
         try {
+            const wasEditing = Boolean(editingEntry);
+            let savedEntry;
             if (editingEntry) {
-                await updateSalaryEntry(editingEntry.id, buildPayload());
-                setSuccess('تنخواہ کا ریکارڈ کامیابی سے تبدیل ہو گیا۔');
+                savedEntry = await updateSalaryEntry(editingEntry.id, buildPayload());
             } else {
-                await createSalaryEntry(buildPayload());
-                setSuccess('تنخواہ کامیابی سے محفوظ ہو گئی۔');
+                savedEntry = await createSalaryEntry(buildPayload());
             }
             resetForm();
-            await refreshEntries();
+            try {
+                await refreshEntries();
+            } catch {
+                setEntries((current) => wasEditing
+                    ? current.map((entry) => entry.id === savedEntry.id ? savedEntry : entry)
+                    : [savedEntry, ...current.filter((entry) => entry.id !== savedEntry.id)]);
+            }
+            setSuccess(wasEditing ? 'تنخواہ کا ریکارڈ کامیابی سے تبدیل ہو گیا۔' : 'تنخواہ کامیابی سے محفوظ ہو گئی۔');
         } catch (saveError) {
             setError(toUrduSalaryError(saveError.message, editingEntry ? 'تنخواہ تبدیل نہیں ہو سکی۔' : 'تنخواہ محفوظ نہیں ہو سکی۔'));
         } finally {
@@ -314,10 +321,15 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
         try {
             await deactivateSalaryEntry(deleteTarget.id);
-            setSuccess('تنخواہ کا ریکارڈ کامیابی سے حذف ہو گیا۔');
+            const deletedEntryId = deleteTarget.id;
             setDeleteTarget(null);
             if (editingEntry?.id === deleteTarget.id) resetForm();
-            await refreshEntries();
+            try {
+                await refreshEntries();
+            } catch {
+                setEntries((current) => current.filter((entry) => entry.id !== deletedEntryId));
+            }
+            setSuccess('تنخواہ کا ریکارڈ کامیابی سے حذف ہو گیا۔');
         } catch (deleteError) {
             setError(toUrduSalaryError(deleteError.message, 'تنخواہ کا ریکارڈ حذف نہیں ہو سکا۔'));
         } finally {

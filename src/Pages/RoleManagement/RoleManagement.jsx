@@ -152,8 +152,13 @@ const permissionDisplayNames = {
   'subjects.view': 'مضامین دیکھیں',
   'finance.view': 'مالیات دیکھیں',
   'finance.heads.view': 'آمدن و اخراجات ہیڈز دیکھیں',
+  'finance.heads.create': 'آمدن و اخراجات ہیڈز یا کیٹیگری بنائیں',
+  'finance.heads.update': 'آمدن و اخراجات ہیڈز یا کیٹیگری تبدیل کریں',
+  'finance.heads.delete': 'آمدن و اخراجات ہیڈز یا کیٹیگری حذف کریں',
   'finance.transactions.view': 'آمدن و اخراجات اندراج دیکھیں',
   'finance.transactions.create': 'آمدن و اخراجات درج کریں',
+  'finance.transactions.update': 'آمدن و اخراجات تبدیل کریں',
+  'finance.transactions.delete': 'آمدن و اخراجات حذف کریں',
   'finance.reports.view': 'مالی رپورٹس دیکھیں',
   'funds.view': 'عطیات دیکھیں',
   'funds.create': 'عطیہ درج کریں',
@@ -298,6 +303,11 @@ const getRoleStatus = (role) => String(role?.status || 'active').toLowerCase();
 const isSystemRole = (role) => Boolean(role?.isSystemRole || role?.is_system_role) || getRoleName(role) === SUPER_ADMIN_ROLE;
 const isProtectedRole = (role) => getRoleName(role) === SUPER_ADMIN_ROLE;
 const getRoleUsersCount = (role) => role?.assignedUsers ?? role?.usersCount ?? role?._count?.users ?? role?._count?.admins ?? 0;
+const getSessionRoleId = (session) => {
+  const value = session?.role?.id ?? session?.admin?.roleId ?? session?.admin?.role_id ?? session?.user?.roleId ?? session?.user?.role_id;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
 const formatRoleDate = (value) => {
   if (!value) return '---';
   const date = new Date(value);
@@ -421,6 +431,11 @@ export const RoleManagement = () => {
   const { hasPermission, permissions } = usePermissions();
   const canManageRoles = hasPermission('roles.manage');
   const adminSession = getAdminSession();
+  const currentSessionRoleId = getSessionRoleId(adminSession);
+  const isCurrentAssignedRole = (role) => Boolean(
+    currentSessionRoleId && Number(role?.id) === currentSessionRoleId
+  );
+  const isRoleModificationProtected = (role) => isProtectedRole(role) || isCurrentAssignedRole(role);
   const sessionBranchId = getSessionBranchId(adminSession);
   const branchScopedSession = Boolean(sessionBranchId);
   const canAssignRoleBranch = canUseTenantBranchContext(adminSession) && !branchScopedSession;
@@ -686,7 +701,7 @@ export const RoleManagement = () => {
   };
 
   const saveRolePermissions = async () => {
-    if (!roleId || !canManageRoles || isProtectedRole(currentRole)) return;
+    if (!roleId || !canManageRoles || isRoleModificationProtected(currentRole)) return;
     if (isSavingPermissions) return;
 
     setIsSavingPermissions(true);
@@ -714,6 +729,7 @@ export const RoleManagement = () => {
   };
 
   const handleSubmit = async () => {
+    if (mode === 'edit' && isRoleModificationProtected(currentRole)) return;
     if (!formData.roleName.trim()) {
       setError('کردار کا نام ضروری ہے۔');
       return;
@@ -832,9 +848,11 @@ export const RoleManagement = () => {
       className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
     >
       <div className="mb-6 flex flex-col gap-4">
-        {mode === 'edit' && isProtectedRole(currentRole) ? (
+        {mode === 'edit' && isRoleModificationProtected(currentRole) ? (
           <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-bold leading-7 text-[var(--color-text-main)]">
-            سپر ایڈمن کردار محفوظ ہے۔ اس کردار کی اجازتیں تبدیل نہیں کی جا سکتیں۔
+            {isCurrentAssignedRole(currentRole)
+              ? 'آپ اپنے اکاؤنٹ کو تفویض کردہ کردار کی اجازتیں تبدیل نہیں کر سکتے۔'
+              : 'سپر ایڈمن کردار محفوظ ہے۔ اس کردار کی اجازتیں تبدیل نہیں کی جا سکتیں۔'}
           </div>
         ) : null}
         {!readOnly ? (
@@ -979,9 +997,11 @@ export const RoleManagement = () => {
         style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
         className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm"
       >
-        {mode === 'edit' && isProtectedRole(currentRole) ? (
+        {mode === 'edit' && isRoleModificationProtected(currentRole) ? (
           <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-bold leading-7 text-[var(--color-text-main)]">
-            سپر ایڈمن کردار محفوظ ہے۔ نام، تفصیل، اسٹیٹس اور اجازتیں تبدیل نہیں کی جا سکتیں۔
+            {isCurrentAssignedRole(currentRole)
+              ? 'آپ اپنے اکاؤنٹ کو تفویض کردہ کردار یا اس کی اجازتیں تبدیل نہیں کر سکتے۔'
+              : 'سپر ایڈمن کردار محفوظ ہے۔ نام، تفصیل، اسٹیٹس اور اجازتیں تبدیل نہیں کی جا سکتیں۔'}
           </div>
         ) : null}
 
@@ -993,7 +1013,7 @@ export const RoleManagement = () => {
             placeholder="مثلاً: اکاؤنٹنٹ"
             value={formData.roleName}
             onChange={(event) => setFormData((prev) => ({ ...prev, roleName: event.target.value }))}
-            disabled={mode === 'edit' && isProtectedRole(currentRole)}
+            disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
           />
 
           {mode === 'create' && canAssignRoleBranch ? (
@@ -1014,7 +1034,7 @@ export const RoleManagement = () => {
               placeholder="کردار کی مختصر تفصیل"
               rows={3}
               className="w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
-              disabled={mode === 'edit' && isProtectedRole(currentRole)}
+              disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
             />
           </div>
 
@@ -1027,12 +1047,12 @@ export const RoleManagement = () => {
             ]}
             value={formData.status}
             onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))}
-            disabled={mode === 'edit' && isProtectedRole(currentRole)}
+            disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
           />
         </div>
       </div>
 
-      {renderPermissionSelector(mode === 'edit' && isProtectedRole(currentRole))}
+      {renderPermissionSelector(mode === 'edit' && isRoleModificationProtected(currentRole))}
 
       <div className="flex flex-col gap-3 md:flex-row md:justify-end">
         <button
@@ -1045,7 +1065,7 @@ export const RoleManagement = () => {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={isSaving || (mode === 'edit' && isProtectedRole(currentRole))}
+          disabled={isSaving || (mode === 'edit' && isRoleModificationProtected(currentRole))}
           style={{ backgroundColor: 'var(--color-primary)' }}
           className="flex items-center justify-center gap-3 rounded-2xl px-8 py-3 text-sm font-black text-white shadow-lg shadow-[#00d094]/20 transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
         >
@@ -1084,7 +1104,7 @@ export const RoleManagement = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {canManageRoles && !isProtectedRole(currentRole) ? (
+              {canManageRoles && !isRoleModificationProtected(currentRole) ? (
                 <button
                   type="button"
                   onClick={() => navigate(`/role-management/${currentRole.id}/edit`)}
@@ -1094,7 +1114,7 @@ export const RoleManagement = () => {
                   ترمیم کریں
                 </button>
               ) : null}
-              {canManageRoles && !isProtectedRole(currentRole) ? (
+              {canManageRoles && !isRoleModificationProtected(currentRole) ? (
                 <button
                   type="button"
                   onClick={() => setDeleteTarget(currentRole)}
@@ -1182,17 +1202,17 @@ export const RoleManagement = () => {
                               <Eye size={16} />
                             </button>
                           ) : null}
-                          {canManageRoles && !isProtectedRole(role) ? (
+                          {canManageRoles && !isRoleModificationProtected(role) ? (
                             <button type="button" onClick={() => navigate(`/role-management/${role.id}/edit`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50" title="ترمیم کریں">
                               <Edit2 size={16} />
                             </button>
                           ) : null}
-                          {canManageRoles ? (
+                          {canManageRoles && !isRoleModificationProtected(role) ? (
                             <button type="button" onClick={() => navigate(`/role-management/${role.id}/edit`)} className="rounded-xl bg-[var(--color-primary)]/10 p-2.5 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-white" title="اجازتیں">
                               <ShieldCheck size={16} />
                             </button>
                           ) : null}
-                          {canManageRoles && !isProtectedRole(role) && active ? (
+                          {canManageRoles && !isRoleModificationProtected(role) && active ? (
                             <button type="button" onClick={() => setDeleteTarget(role)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50" title="غیر فعال کریں">
                               <Trash2 size={16} />
                             </button>

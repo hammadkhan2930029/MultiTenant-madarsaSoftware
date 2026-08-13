@@ -17,7 +17,8 @@ const withJson = (method, body) =>
 
 export const getFinanceHeads = async (query = '') => {
   const result = await apiRequest(`/finance/heads${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
-  return result?.data || { items: [], meta: null };
+  const data = result?.data;
+  return { items: Array.isArray(data?.items) ? data.items : [], meta: data?.meta || null };
 };
 
 export const createFinanceHead = async (payload) => {

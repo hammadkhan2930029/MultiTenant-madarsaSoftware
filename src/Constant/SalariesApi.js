@@ -17,12 +17,14 @@ const withJson = (method, body) =>
 
 export const getSalaryEntries = async (query = '') => {
   const result = await apiRequest(`/finance/salaries${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
-  return result?.data || { items: [], meta: null };
+  const data = result?.data;
+  return { items: Array.isArray(data?.items) ? data.items : [], meta: data?.meta || null };
 };
 
 export const getSalaryTeachers = async (query = '') => {
   const result = await apiRequest(`/finance/salaries/teachers${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
-  return result?.data || { items: [], meta: null };
+  const data = result?.data;
+  return { items: Array.isArray(data?.items) ? data.items : [], meta: data?.meta || null };
 };
 
 export const createSalaryEntry = async (payload) => {

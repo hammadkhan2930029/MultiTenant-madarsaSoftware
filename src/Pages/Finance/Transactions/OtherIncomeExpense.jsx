@@ -194,6 +194,8 @@ export const OtherIncomeExpense = () => {
         }
 
         setIsSaving(true);
+        let savedEntry;
+        const wasEditing = Boolean(editingEntry);
         try {
             const payload = {
                 transactionDate: formData.transactionDate,
@@ -208,24 +210,38 @@ export const OtherIncomeExpense = () => {
             };
 
             if (editingEntry) {
-                await updateFinanceTransaction(editingEntry.id, payload);
-                setSuccess('ریکارڈ کامیابی سے تبدیل ہو گیا۔');
+                savedEntry = await updateFinanceTransaction(editingEntry.id, payload);
             } else {
-                await createFinanceTransaction(payload);
-                setSuccess('ریکارڈ کامیابی سے محفوظ ہو گیا۔');
+                savedEntry = await createFinanceTransaction(payload);
             }
-
-            resetForm();
-            await loadEntries(1, filters);
         } catch (saveError) {
-            setError(toUrduError(saveError.message, editingEntry ? 'ریکارڈ تبدیل نہیں ہو سکا۔' : 'ریکارڈ محفوظ نہیں ہو سکا۔'));
-        } finally {
             setIsSaving(false);
+            setError(toUrduError(saveError.message, wasEditing ? 'ریکارڈ تبدیل نہیں ہو سکا۔' : 'ریکارڈ محفوظ نہیں ہو سکا۔'));
+            return;
         }
+
+        resetForm();
+        try {
+            await loadEntries(1, filters);
+        } catch {
+            setEntries((current) => {
+                if (wasEditing) return current.map((entry) => entry.id === savedEntry.id ? savedEntry : entry);
+                return [savedEntry, ...current.filter((entry) => entry.id !== savedEntry.id)].slice(0, PAGE_SIZE);
+            });
+            setPage(1);
+            setMeta((current) => ({
+                ...current,
+                currentPage: 1,
+                totalItems: wasEditing ? current.totalItems : Number(current.totalItems || 0) + 1,
+            }));
+        }
+        setSuccess(wasEditing ? 'ریکارڈ کامیابی سے تبدیل ہو گیا۔' : 'ریکارڈ کامیابی سے محفوظ ہو گیا۔');
+        setIsSaving(false);
     };
 
     const confirmDelete = async () => {
         if (!deleteTarget) return;
+        const deletedEntryId = deleteTarget.id;
 
         setIsDeleting(true);
         setError('');
@@ -233,11 +249,16 @@ export const OtherIncomeExpense = () => {
 
         try {
             await deactivateFinanceTransaction(deleteTarget.id);
-            setSuccess('ریکارڈ کامیابی سے حذف ہو گیا۔');
             if (editingEntry?.id === deleteTarget.id) resetForm();
             setDeleteTarget(null);
             const nextPage = entries.length === 1 && page > 1 ? page - 1 : page;
-            await loadEntries(nextPage, filters);
+            try {
+                await loadEntries(nextPage, filters);
+            } catch {
+                setEntries((current) => current.filter((entry) => entry.id !== deletedEntryId));
+                setMeta((current) => ({ ...current, totalItems: Math.max(0, Number(current.totalItems || 0) - 1) }));
+            }
+            setSuccess('ریکارڈ کامیابی سے حذف ہو گیا۔');
         } catch (deleteError) {
             setError(toUrduError(deleteError.message, 'ریکارڈ حذف نہیں ہو سکا۔'));
         } finally {
