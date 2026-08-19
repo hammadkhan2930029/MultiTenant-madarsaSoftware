@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
 import { BookOpen, Edit2, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { createClassesBulk, deleteClass, getClasses, updateClass } from '../../../Constant/AcademicSetupApi';
+import { getTeachers } from '../../../Constant/TeachersApi';
 import { BRANCH_CONTEXT_UPDATED_EVENT, getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
@@ -10,12 +11,14 @@ import StatusBadge from '../../../Components/Common/StatusBadge';
 const emptyForm = {
     name: '',
     branchId: '',
+    inchargeTeacherId: '',
     status: 'active',
 };
 
 const createEmptyClassRow = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     name: '',
+    inchargeTeacherId: '',
     error: '',
 });
 
@@ -24,6 +27,7 @@ const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے �
 
 export const CreateClasses = () => {
     const [classes, setClasses] = useState([]);
+    const [teachers, setTeachers] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
     const [formData, setFormData] = useState(emptyForm);
@@ -78,15 +82,21 @@ export const CreateClasses = () => {
         setError('');
 
         try {
-            const [activeResult, inactiveResult] = await Promise.all([
+            const teacherParams = new URLSearchParams({ page: '1', limit: '100', status: 'active', staffType: 'teacher' });
+            const activeBranchId = getActiveBranchId();
+            if (activeBranchId) teacherParams.set('branchId', String(activeBranchId));
+
+            const [activeResult, inactiveResult, teachersResult] = await Promise.all([
                 getClasses(buildClassesQuery('active')),
                 getClasses(buildClassesQuery('inactive')),
+                getTeachers(teacherParams.toString()),
             ]);
 
             setClasses(onlyActiveBranchClasses([
                 ...(activeResult.items || []),
                 ...(inactiveResult.items || []),
             ]));
+            setTeachers(teachersResult.items || []);
         } catch (loadError) {
             setError(loadError.message || 'جماعتوں کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
@@ -121,18 +131,19 @@ export const CreateClasses = () => {
         setFormData({
             name: academicClass.name || '',
             branchId: academicClass.branchId ? String(academicClass.branchId) : '',
+            inchargeTeacherId: academicClass.inchargeTeacherId ? String(academicClass.inchargeTeacherId) : '',
             status: academicClass.status || 'active',
         });
-        setClassRows([{ ...createEmptyClassRow(), name: academicClass.name || '' }]);
+        setClassRows([{ ...createEmptyClassRow(), name: academicClass.name || '', inchargeTeacherId: academicClass.inchargeTeacherId ? String(academicClass.inchargeTeacherId) : '' }]);
         setError('');
         setSuccess('');
         setIsFormOpen(true);
         scrollToForm();
     };
 
-    const updateClassRow = (rowId, value) => {
+    const updateClassRow = (rowId, field, value) => {
         setClassRows((rows) =>
-            rows.map((row) => (row.id === rowId ? { ...row, name: value, error: '' } : row)),
+            rows.map((row) => (row.id === rowId ? { ...row, [field]: value, error: '' } : row)),
         );
     };
 
@@ -206,12 +217,21 @@ export const CreateClasses = () => {
             return;
         }
 
+        if (editMode && !formData.inchargeTeacherId) {
+            setError('کلاس انچارج منتخب کریں۔');
+            return;
+        }
+
         if (!editMode) {
             const validation = validateClassRows(branchId);
             setClassRows(validation.rows);
 
             if (validation.hasError) {
                 setError(validation.rows.find((row) => row.error)?.error || 'درج کردہ جماعتوں کی معلومات درست کریں۔');
+                return;
+            }
+            if (validation.validRows.some((row) => !row.inchargeTeacherId)) {
+                setError('ہر جماعت کے لیے کلاس انچارج منتخب کریں۔');
                 return;
             }
         }
@@ -223,6 +243,7 @@ export const CreateClasses = () => {
         try {
             const payload = {
                 name: formData.name.trim(),
+                ...(editMode ? { inchargeTeacherId: Number(formData.inchargeTeacherId) } : {}),
                 ...(editMode ? { status: formData.status || 'active' } : {}),
                 ...(branchId ? { branchId: Number(branchId) } : {}),
             };
@@ -234,7 +255,10 @@ export const CreateClasses = () => {
                 const validation = validateClassRows(branchId);
                 const result = await createClassesBulk({
                     ...(branchId ? { branchId: Number(branchId) } : {}),
-                    classes: validation.validRows.map((row) => ({ name: row.name })),
+                    classes: validation.validRows.map((row) => ({
+                        name: row.name,
+                        inchargeTeacherId: Number(row.inchargeTeacherId),
+                    })),
                 });
                 setSuccess(`${result?.createdCount || validation.validRows.length} جماعتیں کامیابی سے شامل ہو گئیں۔`);
             }
@@ -282,15 +306,16 @@ export const CreateClasses = () => {
         const query = search.trim().toLowerCase();
         const matchesSearch = !query
             ? true
-            : [academicClass.name]
-                  .filter(Boolean)
-                  .some((value) => String(value).toLowerCase().includes(query));
+            : [academicClass.name, academicClass.inchargeTeacher?.fullName]
+                .filter(Boolean)
+                .some((value) => String(value).toLowerCase().includes(query));
 
         return matchesSearch;
     });
 
     const exportColumns = [
         { header: 'Class', accessor: 'name' },
+        { header: 'Class Incharge', accessor: (academicClass) => academicClass.inchargeTeacher?.fullName || '---' },
         { header: 'Sections', accessor: (academicClass) => academicClass._count?.sections ?? 0 },
         { header: 'Status', accessor: (academicClass) => academicClass.status || '---' },
     ];
@@ -325,9 +350,8 @@ export const CreateClasses = () => {
 
                     <button
                         onClick={() => (isFormOpen ? resetForm() : setIsFormOpen(true))}
-                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all ${
-                            isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white'
-                        }`}
+                        className={`flex items-center justify-center gap-3 rounded-2xl px-6 py-3 text-sm font-black transition-all ${isFormOpen ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500' : 'bg-[#00d094] text-white'
+                            }`}
                     >
                         {isFormOpen ? 'بند کریں' : 'نئی جماعت'}
                         {isFormOpen ? <X size={18} /> : <Plus size={18} />}
@@ -344,7 +368,7 @@ export const CreateClasses = () => {
 
                     <div className="space-y-4">
                         {editMode ? (
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                                 <div className="space-y-2">
                                     <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
                                         جماعت نام<span className="text-red-500"> *</span>
@@ -359,6 +383,22 @@ export const CreateClasses = () => {
                                             className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
                                         />
                                     </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                        کلاس انچارج<span className="text-red-500"> *</span>
+                                    </label>
+                                    <select
+                                        required
+                                        value={formData.inchargeTeacherId}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, inchargeTeacherId: e.target.value }))}
+                                        className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                    >
+                                        <option value="">{teachers.length ? 'استاد منتخب کریں' : 'کوئی فعال استاد موجود نہیں'}</option>
+                                        {teachers.map((teacher) => (
+                                            <option key={teacher.id} value={teacher.id}>{teacher.fullName}{teacher.subject ? ` — ${teacher.subject}` : ''}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
@@ -386,21 +426,38 @@ export const CreateClasses = () => {
                                 actionsClassName="flex items-center justify-end gap-2 pt-0 md:pt-8"
                                 addButtonClassName="grid h-14 w-14 place-items-center rounded-2xl bg-[#00d094] text-white transition-all hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
                                 renderFields={(row, index) => (
-                                    <div className="space-y-2">
-                                        <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                            جماعت نام<span className="text-red-500"> *</span>
-                                        </label>
-                                        <div className="relative">
-                                            <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                                            <input
-                                                required={index === 0}
-                                                value={row.name}
-                                                onChange={(e) => updateClassRow(row.id, e.target.value)}
-                                                placeholder="مثلاً حفظ اول"
-                                                className={`h-14 w-full rounded-2xl border bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none ${
-                                                    row.error ? 'border-rose-500' : 'border-[var(--color-border)]'
-                                                }`}
-                                            />
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                جماعت نام<span className="text-red-500"> *</span>
+                                            </label>
+                                            <div className="relative">
+                                                <BookOpen size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                                                <input
+                                                    required={index === 0}
+                                                    value={row.name}
+                                                    onChange={(e) => updateClassRow(row.id, 'name', e.target.value)}
+                                                    placeholder="مثلاً حفظ اول"
+                                                    className={`h-14 w-full rounded-2xl border bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text)] outline-none ${row.error ? 'border-rose-500' : 'border-[var(--color-border)]'
+                                                        }`}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
+                                                کلاس انچارج<span className="text-red-500"> *</span>
+                                            </label>
+                                            <select
+                                                required
+                                                value={row.inchargeTeacherId}
+                                                onChange={(e) => updateClassRow(row.id, 'inchargeTeacherId', e.target.value)}
+                                                className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
+                                            >
+                                                <option value="">{teachers.length ? 'استاد منتخب کریں' : 'کوئی فعال استاد موجود نہیں'}</option>
+                                                {teachers.map((teacher) => (
+                                                    <option key={teacher.id} value={teacher.id}>{teacher.fullName}{teacher.subject ? ` — ${teacher.subject}` : ''}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 )}
@@ -432,6 +489,7 @@ export const CreateClasses = () => {
                         <thead>
                             <tr className="text-[var(--color-text-muted)]">
                                 <th className="px-6 py-4 text-[11px] font-black uppercase tracking-widest">جماعت</th>
+                                <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">کلاس انچارج</th>
                                 <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">سیکشن</th>
                                 <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">حالت</th>
                                 <th className="px-6 py-4 text-center text-[11px] font-black uppercase tracking-widest">ایکشن</th>
@@ -440,7 +498,7 @@ export const CreateClasses = () => {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         جماعتوں کی فہرست لوڈ ہو رہی ہے...
                                     </td>
                                 </tr>
@@ -448,23 +506,24 @@ export const CreateClasses = () => {
                                 filteredClasses.map((academicClass) => (
                                     <tr key={academicClass.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
-                                                <td className="px-6 py-4 text-center">
+                                        <td className="px-6 py-4 text-center text-sm font-bold text-[var(--color-text-muted)]">{academicClass.inchargeTeacher?.fullName || '---'}</td>
+                                        <td className="px-6 py-4  text-center text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
+                                        <td className="px-6 py-4 text-center">
                                             <StatusBadge status={academicClass.status} />
                                         </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-2">
                                                 <button
                                                     onClick={() => handleEdit(academicClass)}
-                                                        className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
+                                                    className="p-3 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
                                                 >
-                                                        <Edit2 size={18} />
+                                                    <Edit2 size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => setDeleteTarget(academicClass)}
-                                                        className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
+                                                    className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
                                                 >
-                                                        <Trash2 size={18} />
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         </td>
@@ -472,7 +531,7 @@ export const CreateClasses = () => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="4" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
+                                    <td colSpan="5" className="px-6 py-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
                                         کوئی جماعت ریکارڈ نہیں ملی۔
                                     </td>
                                 </tr>
