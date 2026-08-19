@@ -242,10 +242,18 @@ export const isTenantAdmin = () => {
   const role = getAdminRole();
   const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
   const legacyRoleName = session?.admin?.role;
+  const accountScope = String(
+    session?.admin?.accountScope ||
+    session?.admin?.userType ||
+    session?.user?.accountScope ||
+    session?.user?.userType ||
+    '',
+  ).trim().toLowerCase();
 
   return Boolean(getSessionTenantId(session)) && (
     roleName === 'admin' ||
     legacyRoleName === 'admin' ||
+    accountScope === 'tenant_admin' ||
     getRoleScopeFromSession(session) === 'tenant'
   );
 };

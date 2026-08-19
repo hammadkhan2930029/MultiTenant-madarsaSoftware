@@ -4,13 +4,13 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import StatusBadge from '../../Components/Common/StatusBadge';
-import { getBranches } from '../../Constant/AcademicSetupApi';
+import { getBranches, getClasses } from '../../Constant/AcademicSetupApi';
 import { ROLE_PERMISSION_MODULES, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { assignRolePermissions, createRole, deleteRole, getGroupedPermissions, getRoleAssignedPermissions, getRoleById, getRolePermissions, getRoles, updateRole } from '../../Constant/RoleManagementApi';
-import { canUseTenantBranchContext, getAdminSession, getSelectedBranchContext, getSessionBranchId, refreshPermissions } from '../../Constant/AdminAuth';
+import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isSuperAdmin, isTenantAdmin, refreshPermissions } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
 
-const emptyForm = { roleName: '', description: '', status: 'active', branchId: '' };
+const emptyForm = { roleName: '', description: '', status: 'active', branchId: '', classScopeMode: 'all', classIds: [] };
 const BRANCH_RESTRICTED_PERMISSION_MODULES = new Set(['tenant_management', 'branches']);
 const BRANCH_RESTRICTED_PERMISSION_PREFIXES = ['tenant_management.', 'branches.'];
 
@@ -438,11 +438,14 @@ export const RoleManagement = () => {
   const isRoleModificationProtected = (role) => isProtectedRole(role) || isCurrentAssignedRole(role);
   const sessionBranchId = getSessionBranchId(adminSession);
   const branchScopedSession = Boolean(sessionBranchId);
-  const canAssignRoleBranch = canUseTenantBranchContext(adminSession) && !branchScopedSession;
+  const tenantAdminSession = isTenantAdmin() && !isSuperAdmin();
+  const canAssignRoleBranch = tenantAdminSession && !branchScopedSession;
+  const canConfigureClassScope = tenantAdminSession || branchScopedSession;
   const selectedTenantBranchId = getSelectedBranchContext(adminSession).branchId || '';
 
   const [roles, setRoles] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [classOptions, setClassOptions] = useState([]);
   const [permissionModules, setPermissionModules] = useState(ROLE_PERMISSION_MODULES);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -574,6 +577,23 @@ export const RoleManagement = () => {
     }
   }, [canAssignRoleBranch, getDefaultRoleBranchId, mode]);
 
+  const loadClasses = useCallback(async () => {
+    if (mode === 'list' || !canConfigureClassScope) return;
+    const branchId = formData.branchId || currentRole?.branchId || sessionBranchId || selectedTenantBranchId;
+    if (!branchId) {
+      setClassOptions([]);
+      return;
+    }
+
+    try {
+      const result = await getClasses(`page=1&limit=100&status=active&branchId=${encodeURIComponent(branchId)}`);
+      setClassOptions(result.items || []);
+    } catch (loadError) {
+      setClassOptions([]);
+      setError(loadError.message || 'جماعتیں لوڈ نہیں ہو سکیں۔');
+    }
+  }, [canConfigureClassScope, currentRole?.branchId, formData.branchId, mode, selectedTenantBranchId, sessionBranchId]);
+
   const loadRoles = useCallback(async () => {
     setIsLoading(true);
     setError('');
@@ -608,7 +628,14 @@ export const RoleManagement = () => {
         : permissionKeys;
       setSelectedPermissions(scopedPermissionKeys);
       setSavedPermissions(scopedPermissionKeys);
-      setFormData({ roleName: getRoleName(role), description: role?.description || '', status: getRoleStatus(role) });
+      setFormData({
+        roleName: getRoleName(role),
+        description: role?.description || '',
+        status: getRoleStatus(role),
+        branchId: role?.branchId ? String(role.branchId) : '',
+        classScopeMode: role?.classScopeMode || 'all',
+        classIds: (role?.classIds || []).map(String),
+      });
     } catch (loadError) {
       setError(loadError.message || 'کردار کی تفصیل لوڈ نہیں ہو سکی۔');
     } finally {
@@ -646,6 +673,7 @@ export const RoleManagement = () => {
 
   useEffect(() => { loadPermissions(); }, [loadPermissions]);
   useEffect(() => { loadBranches(); }, [loadBranches]);
+  useEffect(() => { loadClasses(); }, [loadClasses]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -740,6 +768,11 @@ export const RoleManagement = () => {
       return;
     }
 
+    if (canConfigureClassScope && formData.classScopeMode === 'selected' && !formData.classIds.length) {
+      setError('کم از کم ایک جماعت منتخب کریں۔');
+      return;
+    }
+
     setIsSaving(true);
     setError('');
     setSuccess('');
@@ -752,6 +785,8 @@ export const RoleManagement = () => {
         permissionKeys: branchScopedSession
           ? selectedPermissions.filter((permissionKey) => availablePermissionKeys.has(permissionKey))
           : selectedPermissions,
+        classScopeMode: canConfigureClassScope ? formData.classScopeMode : 'all',
+        classIds: canConfigureClassScope && formData.classScopeMode === 'selected' ? formData.classIds.map(Number) : [],
       };
 
       if (mode === 'create' && canAssignRoleBranch) {
@@ -838,7 +873,61 @@ export const RoleManagement = () => {
         <div style={{ backgroundColor: 'var(--color-primary)' }} className="hidden h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg shadow-[#00d094]/20 md:flex">
           <ShieldCheck size={24} />
         </div>
+
       </div>
+    </div>
+  );
+
+  const renderClassScopeSelector = (readOnly = false) => (
+    <div className="mt-6 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <SelectField
+          label="جماعت تک رسائی"
+          required
+          options={[
+            { value: 'all', label: 'تمام جماعتیں' },
+            { value: 'selected', label: 'منتخب جماعتیں' },
+          ]}
+          value={formData.classScopeMode}
+          onChange={(event) => setFormData((prev) => ({
+            ...prev,
+            classScopeMode: event.target.value,
+            classIds: event.target.value === 'all' ? [] : prev.classIds,
+          }))}
+          disabled={readOnly}
+        />
+        <div className="text-right text-xs font-bold leading-7 text-[var(--color-text-muted)]">
+          منتخب جماعتوں والا صارف صرف انہی جماعتوں کے طلباء، والدین، سیکشن اور حاضری کا ڈیٹا دیکھ اور اپنی اجازت کے مطابق کارروائی کر سکے گا۔
+        </div>
+      </div>
+
+      {formData.classScopeMode === 'selected' ? (
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {classOptions.length ? classOptions.map((academicClass) => {
+            const classId = String(academicClass.id);
+            const checked = formData.classIds.includes(classId);
+            return (
+              <label key={academicClass.id} className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-bold ${checked ? 'border-[#00d094]/30 bg-emerald-500/10' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}>
+                <span>{academicClass.name}</span>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={readOnly}
+                  onChange={() => setFormData((prev) => ({
+                    ...prev,
+                    classIds: checked ? prev.classIds.filter((id) => id !== classId) : [...prev.classIds, classId],
+                  }))}
+                  className="h-4 w-4 accent-[var(--color-primary)]"
+                />
+              </label>
+            );
+          }) : (
+            <div className="col-span-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center text-sm font-bold text-[var(--color-text-muted)]">
+              اس برانچ میں کوئی فعال جماعت موجود نہیں۔
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 
@@ -1022,7 +1111,7 @@ export const RoleManagement = () => {
               required
               options={branchOptions}
               value={formData.branchId}
-              onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))}
+              onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, classIds: [] }))}
             />
           ) : null}
 
@@ -1050,6 +1139,7 @@ export const RoleManagement = () => {
             disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
           />
         </div>
+        {canConfigureClassScope ? renderClassScopeSelector(mode === 'edit' && isRoleModificationProtected(currentRole)) : null}
       </div>
 
       {renderPermissionSelector(mode === 'edit' && isRoleModificationProtected(currentRole))}
@@ -1128,6 +1218,7 @@ export const RoleManagement = () => {
           </div>
         </div>
 
+        {canConfigureClassScope ? renderClassScopeSelector(true) : null}
         {renderPermissionSelector(true)}
       </>
     );
