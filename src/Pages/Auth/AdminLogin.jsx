@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, LockKeyhole, UserRound } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import madarsaLogo from '../../assets/logos/madarsaLogotransparent.png';
 import {
@@ -33,6 +33,7 @@ const LoginForm = ({
 }) => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ username: '', password: '' });
+    const [showPassword, setShowPassword] = useState(false);
     const [forgotData, setForgotData] = useState({ identity: '', contactEmail: '' });
     const [showForgotForm, setShowForgotForm] = useState(false);
     const [error, setError] = useState('');
@@ -215,12 +216,22 @@ const LoginForm = ({
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-teal-200" size={18} />
                                 <input
                                     required
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
                                     value={formData.password}
                                     onChange={(e) => handleChange('password', e.target.value)}
                                     placeholder="پاس ورڈ درج کریں"
-                                    className="h-14 w-full rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.82)] pr-12 pl-4 text-base font-bold text-white outline-none transition-all placeholder:text-slate-400 focus:border-teal-300 focus:shadow-[0_0_0_5px_rgba(45,212,191,0.08)]"
+                                    className="h-14 w-full rounded-2xl border border-white/10 bg-[rgba(7,17,31,0.82)] pr-12 pl-12 text-base font-bold text-white outline-none transition-all placeholder:text-slate-400 focus:border-teal-300 focus:shadow-[0_0_0_5px_rgba(45,212,191,0.08)]"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((currentValue) => !currentValue)}
+                                    className="absolute left-4 top-1/2 flex -translate-y-1/2 items-center justify-center text-slate-400 transition-colors hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-300"
+                                    aria-label={showPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+                                    aria-pressed={showPassword}
+                                    title={showPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+                                >
+                                    {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                                </button>
                             </div>
                         </MotionDiv>
 

@@ -29,6 +29,10 @@ import { RoleManagement } from '../Pages/RoleManagement/RoleManagement';
 import { UserManagement } from '../Pages/RoleManagement/UserManagement';
 import { TenantManagement } from '../Pages/TenantManagement/TenantManagement';
 import { CreateBranch } from '../Pages/CreateBranches/CreateBranches';
+import { CommissionTiers } from '../Pages/Affiliate/CommissionTiers';
+import { AffiliateOverview } from '../Pages/Affiliate/AffiliateOverview';
+import { AffiliateWallet } from '../Pages/Affiliate/AffiliateWallet';
+import { AffiliateWithdrawals } from '../Pages/Affiliate/AffiliateWithdrawals';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -124,6 +128,11 @@ export const AppRoutes = () => {
         <Route path="tenant-management/create" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="tenant-management/:tenantId" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="tenant-management/:tenantId/edit" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
+        <Route path="affiliate/commission-tiers" element={withPermission(<CommissionTiers />, 'tenant_management.view')} />
+        <Route path="affiliate/overview" element={withPermission(<AffiliateOverview />, 'tenant_management.view')} />
+        <Route path="affiliate/overview/:tenantId" element={withPermission(<AffiliateOverview />, 'tenant_management.view')} />
+        <Route path="affiliate/wallet" element={<AffiliateWallet />} />
+        <Route path="affiliate/withdrawals" element={withPermission(<AffiliateWithdrawals />, 'tenant_management.view')} />
         <Route path="finance/*" element={<FinanceRoutes />} />
         <Route path="hifz/*" element={<HifzRoutes />} />
 

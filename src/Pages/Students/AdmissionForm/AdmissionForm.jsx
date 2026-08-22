@@ -4,12 +4,15 @@ import {
     Camera,
     CheckCircle,
     ChevronDown,
+    FileText,
     HeartPulse,
     MapPin,
     Phone,
     Printer,
     Save,
     Search,
+    Trash2,
+    Upload,
     User,
     X,
 } from 'lucide-react';
@@ -17,10 +20,12 @@ import { Field, Form, Formik, useFormikContext } from 'formik';
 import { useSearchParams } from 'react-router-dom';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
-import { createStudent, getNextAdmissionNumber, getParents, getStudentById, updateStudent } from '../../../Constant/StudentsApi';
+import { createStudent, deleteStudentDocument, getNextAdmissionNumber, getParents, getStudentById, updateStudent } from '../../../Constant/StudentsApi';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { FormSkeleton, Skeleton } from '../../../Components/Common/Skeleton';
+import { DeleteConfirmationModal } from '../../../Components/Common/DeleteConfirmationModal';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
 
@@ -48,7 +53,9 @@ const INITIAL_VALUES = {
     guardianEmail: '',
     guardianCnic: '',
     prevMadrassa: '',
+    religiousEduDate: '',
     prevSchool: '',
+    secularEduDate: '',
     secularEdu: '',
     religiousEdu: '',
     sessionId: '',
@@ -65,6 +72,17 @@ const INITIAL_VALUES = {
 
 const DEFAULT_ADMISSION_NUMBER = '0001';
 const MIN_PARENT_SEARCH_LENGTH = 1;
+const MAX_ADMISSION_DOCUMENTS = 10;
+const MAX_ADMISSION_DOCUMENT_SIZE = 5 * 1024 * 1024;
+
+const isAllowedAdmissionDocument = (file) =>
+    file.type === 'application/pdf' || file.type.startsWith('image/');
+
+const formatFileSize = (size) => {
+    if (!Number.isFinite(size) || size <= 0) return '0 KB';
+    if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const parseAdmissionNumber = (value) => {
     const text = String(value || '').trim();
@@ -320,7 +338,9 @@ const mapStudentToFormValues = (student) => {
         guardianEmail: guardian.email || '',
         guardianCnic: guardian.cnic || '',
         prevMadrassa: student?.prevMadrassa || '',
+        religiousEduDate: toDateInputValue(student?.religiousEduDate),
         prevSchool: student?.prevSchool || '',
+        secularEduDate: toDateInputValue(student?.secularEduDate),
         secularEdu: student?.secularEdu || '',
         religiousEdu: student?.religiousEdu || '',
         sessionId: activeAssignment?.sessionId ? String(activeAssignment.sessionId) : activeAssignment?.session?.id ? String(activeAssignment.session.id) : '',
@@ -341,8 +361,13 @@ export const AdmissionForm = () => {
     const editingStudentId = searchParams.get('studentId');
     const [initialFormValues, setInitialFormValues] = useState(INITIAL_VALUES);
     const [isAdmissionNumberLoading, setIsAdmissionNumberLoading] = useState(true);
+    const [isStudentLoading, setIsStudentLoading] = useState(Boolean(editingStudentId));
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
+    const [admissionDocuments, setAdmissionDocuments] = useState([]);
+    const [existingDocuments, setExistingDocuments] = useState([]);
+    const [documentToDelete, setDocumentToDelete] = useState(null);
+    const [isDocumentDeleting, setIsDocumentDeleting] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [savedProfile, setSavedProfile] = useState(null);
     const [savedPrintValues, setSavedPrintValues] = useState(null);
@@ -429,6 +454,7 @@ export const AdmissionForm = () => {
 
         const loadStudentForEdit = async () => {
             setIsAdmissionNumberLoading(true);
+            setIsStudentLoading(true);
             setSubmitError('');
 
             try {
@@ -444,6 +470,7 @@ export const AdmissionForm = () => {
                 setSelectedParentName(primaryParentLink?.parent?.fullName || '');
                 setParentSearch(primaryParentLink?.parent?.fullName || '');
                 setImagePreview(student?.imageUrl ? getApiAssetUrl(student.imageUrl) : null);
+                setExistingDocuments(Array.isArray(student?.documents) ? student.documents : []);
             } catch (error) {
                 if (isMounted) {
                     setSubmitError(error.message || 'طالب علم کی معلومات لوڈ نہیں ہو سکیں۔');
@@ -451,6 +478,7 @@ export const AdmissionForm = () => {
             } finally {
                 if (isMounted) {
                     setIsAdmissionNumberLoading(false);
+                    setIsStudentLoading(false);
                 }
             }
         };
@@ -660,7 +688,9 @@ export const AdmissionForm = () => {
                 permanentAddress: submittedValues.permanentAddress,
                 district: submittedValues.district,
                 prevMadrassa: submittedValues.prevMadrassa,
+                religiousEduDate: submittedValues.religiousEduDate,
                 prevSchool: submittedValues.prevSchool,
+                secularEduDate: submittedValues.secularEduDate,
                 secularEdu: submittedValues.secularEdu,
                 religiousEdu: submittedValues.religiousEdu,
                 sessionId: submittedValues.sessionId ? Number(submittedValues.sessionId) : undefined,
@@ -674,6 +704,7 @@ export const AdmissionForm = () => {
                 reside: submittedValues.reside,
                 parents,
                 image: imageFile,
+                documents: admissionDocuments,
             };
 
             const student = editingStudentId
@@ -699,6 +730,8 @@ export const AdmissionForm = () => {
             setInitialFormValues(nextInitialValues);
             resetForm({ values: nextInitialValues });
             setImageFile(null);
+            setAdmissionDocuments([]);
+            setExistingDocuments(editingStudentId && Array.isArray(student?.documents) ? student.documents : []);
 
             if (!editingStudentId) {
                 setImagePreview(null);
@@ -719,6 +752,53 @@ export const AdmissionForm = () => {
         }
     };
 
+    const handleAdmissionDocumentSelection = (event) => {
+        const selectedFiles = Array.from(event.target.files || []);
+        event.target.value = '';
+        if (!selectedFiles.length) return;
+
+        if (selectedFiles.some((file) => !isAllowedAdmissionDocument(file))) {
+            setSubmitError('صرف PDF یا تصویر فائل اپلوڈ کی جا سکتی ہے۔');
+            return;
+        }
+
+        if (selectedFiles.some((file) => file.size > MAX_ADMISSION_DOCUMENT_SIZE)) {
+            setSubmitError('ہر دستاویز کا سائز زیادہ سے زیادہ 5 MB ہونا چاہیے۔');
+            return;
+        }
+
+        if (existingDocuments.length + admissionDocuments.length + selectedFiles.length > MAX_ADMISSION_DOCUMENTS) {
+            setSubmitError('ایک داخلہ کے ساتھ زیادہ سے زیادہ 10 دستاویزات اپلوڈ کی جا سکتی ہیں۔');
+            return;
+        }
+
+        setSubmitError('');
+        setAdmissionDocuments((currentFiles) => {
+            const knownFiles = new Set(currentFiles.map((file) => `${file.name}:${file.size}:${file.lastModified}`));
+            return [
+                ...currentFiles,
+                ...selectedFiles.filter((file) => !knownFiles.has(`${file.name}:${file.size}:${file.lastModified}`)),
+            ];
+        });
+    };
+
+    const handleExistingDocumentDelete = async () => {
+        if (!editingStudentId || !documentToDelete?.id) return;
+
+        setIsDocumentDeleting(true);
+        setSubmitError('');
+        try {
+            await deleteStudentDocument(editingStudentId, documentToDelete.id);
+            setExistingDocuments((documents) => documents.filter((document) => document.id !== documentToDelete.id));
+            setDocumentToDelete(null);
+            setSubmitSuccess('دستاویز کامیابی سے حذف ہو گئی۔');
+        } catch (error) {
+            setSubmitError(error.message || 'دستاویز حذف نہیں ہو سکی۔');
+        } finally {
+            setIsDocumentDeleting(false);
+        }
+    };
+
     const triggerPrint = () => {
         setShowModal(false);
         requestAnimationFrame(() => {
@@ -727,6 +807,19 @@ export const AdmissionForm = () => {
             });
         });
     };
+
+    if (isStudentLoading) {
+        return (
+            <div className="max-w-6xl mx-auto p-4 md:p-2 bg-[var(--color-bg)]" dir="rtl">
+                <div className="mb-8 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 md:p-8" role="status" aria-label="داخلہ فارم لوڈ ہو رہا ہے" aria-live="polite">
+                    <span className="sr-only">داخلہ فارم لوڈ ہو رہا ہے...</span>
+                    <Skeleton className="h-10 w-64 bg-[var(--color-bg)]" />
+                    <Skeleton className="mt-4 h-5 w-80 max-w-full bg-[var(--color-bg)]" />
+                </div>
+                <FormSkeleton sections={4} fieldsPerSection={6} />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-2 bg-[var(--color-bg)]" dir="rtl">
@@ -866,7 +959,7 @@ export const AdmissionForm = () => {
                                                 ]}
                                             />
                                             <FormikInputField label="قومیت / ذات" name="caste" />
-                                            <FormikCnicField label="آئی ڈی نمبر" name="cnic" error={touched.cnic && errors.cnic ? errors.cnic : ''} />
+                                            <FormikCnicField label="شناختی کارڈ نمبر" name="cnic" error={touched.cnic && errors.cnic ? errors.cnic : ''} />
                                             <FormikInputField label="بے فارم نمبر" name="bForm" />
                                             <FormikInputField label="تاریخ پیدائش" name="dob" type="date" required error={touched.dob && errors.dob ? errors.dob : ''} />
                                         </div>
@@ -906,7 +999,7 @@ export const AdmissionForm = () => {
                                             <FormikInputField label="رشتہ" name="relation" required error={touched.relation && errors.relation ? errors.relation : ''} />
                                             <FormikInputField label="سرپرست موبائل" name="guardianMobile" required error={touched.guardianMobile && errors.guardianMobile ? errors.guardianMobile : ''} />
                                             <FormikInputField label="سرپرست واٹس ایپ" name="guardianWhatsapp" error={touched.guardianWhatsapp && errors.guardianWhatsapp ? errors.guardianWhatsapp : ''} />
-                                            <FormikCnicField label="سرپرست آئی ڈی نمبر" name="guardianCnic" error={touched.guardianCnic && errors.guardianCnic ? errors.guardianCnic : ''} />
+                                            <FormikCnicField label="سرپرست کا شناختی کارڈ نمبر" name="guardianCnic" error={touched.guardianCnic && errors.guardianCnic ? errors.guardianCnic : ''} />
                                             <FormikInputField label="سرپرست کا پیشہ" name="fatherOccupation" />
                                             <FormikInputField label="ای میل" name="guardianEmail" error={touched.guardianEmail && errors.guardianEmail ? errors.guardianEmail : ''} />
                                         </div>
@@ -915,10 +1008,16 @@ export const AdmissionForm = () => {
                                     <FormSection title="تعلیمی ریکارڈ" icon={<BookOpen size={20} />}>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             <FormikInputField label="دینی تعلیم" name="religiousEdu" />
-                                            <FormikInputField label="عصری تعلیم" name="secularEdu" />
                                             <FormikInputField label="سابقہ مدرسہ" name="prevMadrassa" />
+                                            <FormikInputField label="تاریخ" name="religiousEduDate" type="date" />
+                                            <FormikInputField label="عصری تعلیم" name="secularEdu" />
                                             <FormikInputField label="سابقہ اسکول" name="prevSchool" />
+                                            <FormikInputField label="تاریخ" name="secularEduDate" type="date" />
+                                        </div>
 
+                                        <div className="my-8 border-t border-[var(--color-border)]" aria-hidden="true" />
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             <FormikSelectField
                                                 label="سیشن"
                                                 name="sessionId"
@@ -1004,6 +1103,72 @@ export const AdmissionForm = () => {
                                         </div>
                                     </FormSection>
 
+                                    <FormSection title="داخلہ دستاویزات" icon={<FileText size={20} />}>
+                                        <div className="space-y-5">
+                                            <label className="flex min-h-28 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-input)] px-5 py-6 text-center transition-colors hover:border-[#00d094]">
+                                                <Upload size={26} className="text-[#00d094]" />
+                                                <span className="font-bold text-[var(--color-text-main)]">PDF یا تصاویر منتخب کریں</span>
+                                                <span className="text-xs text-[var(--color-text-muted)]">زیادہ سے زیادہ 10 فائلیں، ہر فائل 5 MB تک</span>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    accept="application/pdf,image/*"
+                                                    className="hidden"
+                                                    onChange={handleAdmissionDocumentSelection}
+                                                />
+                                            </label>
+
+                                            {existingDocuments.length || admissionDocuments.length ? (
+                                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                                    {existingDocuments.map((document) => (
+                                                        <div
+                                                            key={`existing-${document.id}`}
+                                                            className="flex min-w-0 items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] p-4 transition-colors hover:border-[#00d094]/60"
+                                                        >
+                                                            <FileText size={20} className="shrink-0 text-[#00d094]" />
+                                                            <a
+                                                                href={getApiAssetUrl(document.fileUrl)}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="min-w-0 flex-1 truncate font-bold text-[var(--color-text-main)] hover:text-[#00d094]"
+                                                                title={document.originalName}
+                                                            >
+                                                                {document.originalName}
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setDocumentToDelete(document)}
+                                                                className="shrink-0 rounded-xl p-2 text-rose-500 transition-colors hover:bg-rose-500/10"
+                                                                aria-label={`${document.originalName} حذف کریں`}
+                                                                title="دستاویز حذف کریں"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    {admissionDocuments.map((file, index) => (
+                                                        <div key={`${file.name}-${file.size}-${file.lastModified}`} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] p-4">
+                                                            <FileText size={20} className="shrink-0 text-[#00d094]" />
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="truncate font-bold text-[var(--color-text-main)]">{file.name}</p>
+                                                                <p className="text-xs text-[var(--color-text-muted)]">{formatFileSize(file.size)}</p>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setAdmissionDocuments((files) => files.filter((_, fileIndex) => fileIndex !== index))}
+                                                                className="shrink-0 rounded-xl p-2 text-rose-500 transition-colors hover:bg-rose-500/10"
+                                                                aria-label={`${file.name} ہٹائیں`}
+                                                                title="فائل ہٹائیں"
+                                                            >
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </FormSection>
+
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
@@ -1014,6 +1179,19 @@ export const AdmissionForm = () => {
                                 </div>
                             </div>
                         </Form>
+
+                        {documentToDelete ? (
+                            <DeleteConfirmationModal
+                                title="دستاویز حذف کریں"
+                                message="کیا آپ واقعی یہ داخلہ دستاویز حذف کرنا چاہتے ہیں؟"
+                                targetName={documentToDelete.originalName}
+                                isDeleting={isDocumentDeleting}
+                                onClose={() => setDocumentToDelete(null)}
+                                onConfirm={handleExistingDocumentDelete}
+                                confirmText="حذف کریں"
+                                loadingText="دستاویز حذف ہو رہی ہے..."
+                            />
+                        ) : null}
 
                         {showModal ? (
                             <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 print:hidden">
@@ -1086,7 +1264,7 @@ export const AdmissionForm = () => {
                                 <div className="admission-print-body space-y-6">
                                     <div className="flex gap-6">
                                         <PrintLine label="والد کا نام" value={printValues.fatherName} />
-                                        <PrintLine label="آئی ڈی نمبر" value={printValues.cnic} />
+                                        <PrintLine label="شناختی کارڈ نمبر" value={printValues.cnic} />
                                     </div>
                                     <div className="flex gap-6">
                                         <PrintLine label="بے فارم نمبر" value={printValues.bForm} />
@@ -1110,14 +1288,16 @@ export const AdmissionForm = () => {
                                             <PrintLine label="سرپرست واٹس ایپ" value={printValues.guardianWhatsapp} />
                                         </div>
                                         <div className="flex gap-6">
-                                            <PrintLine label="سرپرست آئی ڈی نمبر" value={printValues.guardianCnic} />
+                                            <PrintLine label="سرپرست کا شناختی کارڈ نمبر" value={printValues.guardianCnic} />
                                             <PrintLine label="ای میل" value={printValues.guardianEmail} />
                                         </div>
                                     </div>
 
                                     <div className="admission-print-education grid grid-cols-2 gap-x-10 gap-y-6 border-t pt-4 border-[#004a5e]">
                                         <PrintLine label="دینی تعلیم" value={printValues.religiousEdu} />
+                                        <PrintLine label="دینی تعلیم کی تاریخ" value={formatDate(printValues.religiousEduDate)} />
                                         <PrintLine label="عصری تعلیم" value={printValues.secularEdu} />
+                                        <PrintLine label="عصری تعلیم کی تاریخ" value={formatDate(printValues.secularEduDate)} />
                                         <PrintLine label="سابقہ مدرسہ" value={printValues.prevMadrassa} />
                                         <PrintLine label="سابقہ اسکول" value={printValues.prevSchool} />
                                         <PrintLine label="بیماری" value={printValues.medicalCondition} />

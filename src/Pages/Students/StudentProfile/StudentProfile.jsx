@@ -136,7 +136,7 @@ export const StudentProfile = () => {
                         { label: 'جنس', value: GENDER_LABELS[student.gender] || student.gender },
                         { label: 'قومیت/ذات', value: student.caste },
                         { label: 'تاریخ پیدائش', value: formatDate(student.dob) },
-                        { label: 'آئی ڈی نمبر', value: student.cnic },
+                        { label: 'شناختی کارڈ نمبر', value: student.cnic },
                         { label: 'طالب علم فون نمبر', value: student.phone },
                         { label: 'طالب علم واٹس ایپ', value: student.whatsapp },
                         { label: 'ای میل', value: student.email },

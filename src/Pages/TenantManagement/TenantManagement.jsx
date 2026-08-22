@@ -22,6 +22,8 @@ import { usePermissions } from '../../Hooks/usePermissions';
 const emptyForm = {
   tenantCode: '',
   referredByCode: '',
+  saleAmount: '',
+  saleCurrency: '',
   name: '',
   subdomain: '',
   customDomain: '',
@@ -85,6 +87,8 @@ const buildPayload = (formData, mode) => {
     branchEnabled,
     publicWebsiteEnabled: formData.publicWebsiteEnabled === 'true',
     branchLimit,
+    saleAmount: formData.saleAmount.trim() || null,
+    saleCurrency: formData.saleCurrency.trim().toUpperCase() || null,
   };
 
   if (mode === 'create') {
@@ -267,6 +271,8 @@ export const TenantManagement = () => {
       setFormData({
         tenantCode: tenant?.tenantCode || '',
         referredByCode: tenant?.referredBy?.referralCode || '',
+        saleAmount: tenant?.saleAmount || '',
+        saleCurrency: tenant?.saleCurrency || '',
         name: tenant?.name || tenant?.tenantName || '',
         subdomain: tenant?.subdomain || '',
         customDomain: tenant?.customDomain || '',
@@ -345,6 +351,14 @@ export const TenantManagement = () => {
     }
     if (formData.branchLimit !== '' && Number(formData.branchLimit) < 0) {
       nextErrors.branchLimit = 'برانچ حد منفی نہیں ہو سکتی۔';
+    }
+    if (formData.saleAmount !== '' && (!Number.isFinite(Number(formData.saleAmount)) || Number(formData.saleAmount) <= 0)) {
+      nextErrors.saleAmount = 'فروخت کی رقم صفر سے زیادہ ہونی چاہیے۔';
+    }
+    if (Boolean(formData.saleAmount.trim()) !== Boolean(formData.saleCurrency.trim())) {
+      const message = 'فروخت کی رقم اور کرنسی دونوں درج کریں یا دونوں خالی چھوڑیں۔';
+      nextErrors.saleAmount = message;
+      nextErrors.saleCurrency = message;
     }
     if (Object.keys(nextErrors).length) {
       setFormErrors(nextErrors);
@@ -531,6 +545,8 @@ export const TenantManagement = () => {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <InputField label="مدرسہ کوڈ" required={mode === 'create'} disabled={mode === 'edit'} placeholder="madarsa_001" value={formData.tenantCode} onChange={(event) => setFormData((prev) => ({ ...prev, tenantCode: event.target.value }))} />
         <InputField label="ریفر کیا گیا بذریعہ (اختیاری)" placeholder="MDS-ABCDEFGH" value={formData.referredByCode} onChange={(event) => setFormData((prev) => ({ ...prev, referredByCode: event.target.value.toUpperCase() }))} />
+        <InputField label="فروخت کی رقم (اختیاری)" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="مثلاً: 100000" value={formData.saleAmount} error={formErrors.saleAmount} onChange={(event) => { setFormData((prev) => ({ ...prev, saleAmount: event.target.value })); setFormErrors((prev) => ({ ...prev, saleAmount: '' })); }} />
+        <InputField label="کرنسی (اختیاری)" placeholder="PKR" maxLength="10" value={formData.saleCurrency} error={formErrors.saleCurrency} onChange={(event) => { setFormData((prev) => ({ ...prev, saleCurrency: event.target.value.toUpperCase().replace(/[^A-Z]/g, '') })); setFormErrors((prev) => ({ ...prev, saleCurrency: '' })); }} />
         <InputField label="سب ڈومین" placeholder="demo" value={formData.subdomain} onChange={(event) => setFormData((prev) => ({ ...prev, subdomain: event.target.value }))} />
         <InputField label="کسٹم ڈومین" placeholder="school.example.com" value={formData.customDomain} onChange={(event) => setFormData((prev) => ({ ...prev, customDomain: event.target.value }))} />
         <SelectField label="حالت" options={statusOptions} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
@@ -635,6 +651,7 @@ export const TenantManagement = () => {
           ['ریفرل لنک', currentTenant.referralLink || '-'],
           ['ریفر کیا گیا بذریعہ', currentTenant.referredBy ? `${currentTenant.referredBy.name} (${currentTenant.referredBy.referralCode})` : '-'],
           ['کل ریفر کیے گئے مدارس', currentTenant.referredTenantsCount ?? 0],
+          ['فروخت کی رقم', currentTenant.saleAmount ? `${currentTenant.saleAmount} ${currentTenant.saleCurrency || ''}`.trim() : '-'],
           ['سب ڈومین', currentTenant.subdomain || '-'],
           ['کسٹم ڈومین', currentTenant.customDomain || '-'],
           ['حالت', currentTenant.status === 'active' ? 'فعال' : 'غیر فعال'],

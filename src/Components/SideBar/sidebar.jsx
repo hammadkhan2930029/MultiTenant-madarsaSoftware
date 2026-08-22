@@ -9,7 +9,7 @@ import {
 import { Avatar } from '@mui/material';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { ThemeToggle } from '../ThemToggle/ThemToggle'
-import { refreshPermissions, fetchMadrassaProfile, getAdminSession, getApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT, canAccessBranchManagement, isBranchScopedSession as getIsBranchScopedSession } from '../../Constant/AdminAuth'
+import { refreshPermissions, fetchMadrassaProfile, getAdminSession, getApiAssetUrl, logoutAdmin, MADRASSA_PROFILE_UPDATED_EVENT, canAccessBranchManagement, isBranchScopedSession as getIsBranchScopedSession, isTenantAdmin as getIsTenantAdmin } from '../../Constant/AdminAuth'
 import { usePermissions } from '../../Hooks/usePermissions';
 import { getPagePermission, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { BranchContextSelector } from '../BranchContextSelector';
@@ -156,6 +156,7 @@ export const SideBar = () => {
     const hasMadrassaLogo = Boolean(avatarSrc);
     const isBranchManagementEnabled = canAccessBranchManagement(currentSession);
     const isBranchScopedSession = getIsBranchScopedSession(currentSession);
+    const isTenantAdminAccount = getIsTenantAdmin();
     const handleLogout = () => {
         logoutAdmin();
         setIsProfileOpen(false);
@@ -178,6 +179,8 @@ export const SideBar = () => {
         if (item.id === 'tenant_management' || permissionList.includes('tenant_management.view')) {
             return isSuperAdmin;
         }
+
+        if (item.id === 'affiliate_wallet') return isTenantAdminAccount && !isBranchScopedSession;
 
         if (isSuperAdmin) return true;
         if (item.permission) return hasPermission(item.permission);
@@ -219,6 +222,30 @@ export const SideBar = () => {
             icon: Building2,
             path: '/tenant-management',
             permission: 'tenant_management.view',
+        }, {
+            id: 'affiliate_overview',
+            label: 'افیلیئیٹ تفصیلات',
+            icon: Wallet,
+            path: '/affiliate/overview',
+            permission: 'tenant_management.view',
+        }, {
+            id: 'affiliate_withdrawals',
+            label: 'افیلیئیٹ ادائیگیاں',
+            icon: Landmark,
+            path: '/affiliate/withdrawals',
+            permission: 'tenant_management.view',
+        }, {
+            id: 'affiliate_commission_tiers',
+            label: 'افیلیئیٹ کمیشن درجات',
+            icon: BadgeCent,
+            path: '/affiliate/commission-tiers',
+            permission: 'tenant_management.view',
+        }] : []),
+        ...(isTenantAdminAccount && !isSuperAdmin && !isBranchScopedSession ? [{
+            id: 'affiliate_wallet',
+            label: 'میرا افیلیئیٹ والیٹ',
+            icon: Wallet,
+            path: '/affiliate/wallet',
         }] : []),
         {
             id: 'dashboard',
@@ -597,6 +624,7 @@ export const SideBar = () => {
         role_management: 'کردار مینجمنٹ',
         user_management: 'صارفین مینجمنٹ',
         tenant_management: 'مدارس کا انتظام',
+        affiliate_commission_tiers: 'افیلیئیٹ کمیشن درجات',
     };
 
     const cp1252ByteMap = {

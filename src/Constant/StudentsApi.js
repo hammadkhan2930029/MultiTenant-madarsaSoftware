@@ -46,6 +46,11 @@ export const createStudent = async (payload) => {
       return;
     }
 
+    if (key === 'documents' && Array.isArray(value)) {
+      value.forEach((file) => formData.append('documents', file));
+      return;
+    }
+
     formData.append(key, value);
   });
 
@@ -69,10 +74,23 @@ export const updateStudent = async (id, payload) => {
       return;
     }
 
+    if (key === 'documents' && Array.isArray(value)) {
+      value.forEach((file) => formData.append('documents', file));
+      return;
+    }
+
     formData.append(key, value);
   });
 
   const result = await apiRequest(`/students/${id}`, withToken({ method: 'PUT', body: formData }));
+  return result?.data;
+};
+
+export const deleteStudentDocument = async (studentId, documentId) => {
+  const result = await apiRequest(
+    `/students/${studentId}/documents/${documentId}`,
+    withToken({ method: 'DELETE' }),
+  );
   return result?.data;
 };
 

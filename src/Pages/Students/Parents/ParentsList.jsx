@@ -297,7 +297,7 @@ export const ParentsList = () => {
                         />
                         <InputField label="ای میل" value={formValues.email} onChange={(event) => handleChange('email', event.target.value)} placeholder="example@email.com" />
                         <InputField
-                            label="آئی ڈی"
+                            label="شناختی کارڈ نمبر"
                             value={formValues.cnic}
                             onChange={(event) => handleChange('cnic', formatCnicInput(event.target.value))}
                             placeholder="42101-1234567-1"
