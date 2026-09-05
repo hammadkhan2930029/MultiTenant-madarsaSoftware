@@ -7,6 +7,10 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { DeleteConfirmationModal } from '../../../Components/Common/DeleteConfirmationModal';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
+import { getCurrentParent } from '../../../Utils/parentRelations';
+
+const getDisplayedParentName = (student) => getCurrentParent(student)?.fullName || student?.fatherName;
 
 export const StudentAddToClass = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -49,7 +53,7 @@ export const StudentAddToClass = () => {
                             id: assignment.id,
                             studentId: student.id,
                             name: student.fullName,
-                            rollNo: student.admissionNumber,
+                            rollNo: formatStudentRegistrationNumber(student.admissionNumber),
                             session: assignment.session?.name || '---',
                             sessionId: assignment.session?.id || assignment.sessionId || '',
                             className: assignment.class?.name || '---',
@@ -75,7 +79,7 @@ export const StudentAddToClass = () => {
 
         return studentsData
             .filter((student) =>
-                [student.fullName, student.fatherName, student.admissionNumber]
+                [student.fullName, getDisplayedParentName(student), formatStudentRegistrationNumber(student.admissionNumber)]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(query)),
             )
@@ -131,7 +135,7 @@ export const StudentAddToClass = () => {
                 id: assignment?.id || Date.now(),
                 studentId: selectedStudent.id,
                 name: selectedStudent.fullName,
-                rollNo: selectedStudent.admissionNumber,
+                rollNo: formatStudentRegistrationNumber(selectedStudent.admissionNumber),
                 session: assignment?.session?.name || session?.name || '---',
                 sessionId: assignment?.session?.id || Number(filters.sessionId),
                 className: assignment?.class?.name || academicClass?.name || '---',
@@ -158,7 +162,7 @@ export const StudentAddToClass = () => {
         setSelectedStudent(student || {
             id: assignment.studentId,
             fullName: assignment.name,
-            admissionNumber: assignment.rollNo,
+            admissionNumber: formatStudentRegistrationNumber(assignment.rollNo),
         });
         setFilters({
             sessionId: assignment.sessionId ? String(assignment.sessionId) : '',
@@ -248,7 +252,7 @@ export const StudentAddToClass = () => {
                                             className="p-3 hover:bg-[var(--color-primary)]/10 cursor-pointer border-b border-[var(--color-border)] last:border-0 transition-colors"
                                         >
                                             <p className="font-black text-sm text-[var(--color-text-main)]">{student.fullName}</p>
-                                            <p className="text-[10px] font-bold text-[var(--color-text-muted)]">{student.admissionNumber} - {student.fatherName}</p>
+                                            <p className="text-[10px] font-bold text-[var(--color-text-muted)]">{formatStudentRegistrationNumber(student.admissionNumber)} - {getDisplayedParentName(student)}</p>
                                         </div>
                                     ))
                                 ) : (

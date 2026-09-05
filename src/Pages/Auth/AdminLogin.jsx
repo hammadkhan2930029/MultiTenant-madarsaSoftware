@@ -11,6 +11,8 @@ import {
 } from '../../Constant/AdminAuth';
 import { SESSION_EXPIRED_MESSAGE_KEY } from '../../Constant/Api';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { RecaptchaField } from '../../Components/Security/RecaptchaField';
+import { isRecaptchaEnabled } from '../../Components/Security/recaptchaConfig';
 import { getDefaultRouteForSession, getRoleName, isAdminRoleName } from './authLandingRoutes';
 
 const staggerWrap = {
@@ -40,6 +42,8 @@ const LoginForm = ({
     const [success, setSuccess] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState('');
+    const [recaptchaResetSignal, setRecaptchaResetSignal] = useState(0);
     const [tenantBranding, setTenantBranding] = useState(null);
     useNotificationBridge({ error, success });
 
@@ -84,6 +88,13 @@ const LoginForm = ({
         if (success) setSuccess('');
     };
 
+    const handleRecaptchaChange = React.useCallback((token) => {
+        setRecaptchaToken(token);
+        if (token) setError('');
+    }, []);
+
+    const handleRecaptchaError = React.useCallback((message) => setError(message), []);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -92,21 +103,28 @@ const LoginForm = ({
             return;
         }
 
+        if (isRecaptchaEnabled && !recaptchaToken) {
+            setError('براہ کرم تصدیق کریں کہ آپ روبوٹ نہیں ہیں۔');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const { session } = await loginAdmin(formData);
+            const { session } = await loginAdmin({ ...formData, recaptchaToken });
             const roleName = getRoleName(session);
 
             if (!allowAdminRoles && isAdminRoleName(roleName)) {
                 logoutAdmin();
                 setError('ایڈمن لاگ اِن کے لیے براہ کرم /admin استعمال کریں۔');
+                setRecaptchaResetSignal((value) => value + 1);
                 return;
             }
 
             navigate(getDefaultRouteForSession(session), { replace: true });
         } catch (loginError) {
             setError(loginError?.message || 'لاگ اِن نہیں ہو سکا۔');
+            setRecaptchaResetSignal((value) => value + 1);
         } finally {
             setIsSubmitting(false);
         }
@@ -233,6 +251,18 @@ const LoginForm = ({
                                     {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                                 </button>
                             </div>
+                        </MotionDiv>
+
+                        <MotionDiv
+                            initial={{ opacity: 0, y: 14 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.43 }}
+                        >
+                            <RecaptchaField
+                                onChange={handleRecaptchaChange}
+                                onError={handleRecaptchaError}
+                                resetSignal={recaptchaResetSignal}
+                            />
                         </MotionDiv>
 
                         <MotionButton

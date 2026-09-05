@@ -5,6 +5,7 @@ import { createTeacherIncrement, getTeacherById, getTeacherIncrements } from '..
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 import { getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { DateField } from '../../../Components/HR/FormElements';
+import { getEmploymentTypeLabel } from '../../../Constant/EmploymentTypes';
 
 const statusLabel = (status) => (status === 'active' ? 'فعال' : 'غیر فعال');
 const getTeacherShiftLabel = (teacher) =>
@@ -114,7 +115,7 @@ const TeacherPrintPreview = ({ teacher, increments, teacherImageUrl, madrassaNam
                 </div>
                 <div className="pt-12">
                     <h1 className="teacher-print-name mt-1 font-black text-slate-950">{teacher.fullName}</h1>
-                    <p className="teacher-print-meta mt-1 font-bold text-slate-700">نمبر: {teacher.id} | حالت: {statusLabel(teacher.status)}</p>
+                    <p className="teacher-print-meta mt-1 font-bold text-slate-700">حالت: {statusLabel(teacher.status)}</p>
                 </div>
                 <div className="teacher-print-photo grid h-24 w-24 place-items-center overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100 font-black text-slate-700">
                     {teacherImageUrl ? (
@@ -147,7 +148,7 @@ const TeacherPrintPreview = ({ teacher, increments, teacherImageUrl, madrassaNam
                     <PrintField label="شعبہ" value={teacher.department} />
                     <PrintField label="شفٹ" value={getTeacherShiftLabel(teacher)} />
                     <PrintField label="شفٹ اوقات" value={getTeacherShiftTime(teacher)} dir="ltr" />
-                    <PrintField label="ملازمت کی نوعیت" value={teacher.employmentType} />
+                    <PrintField label="ملازمت کی نوعیت" value={getEmploymentTypeLabel(teacher.employmentType)} />
                     <PrintField label="تاریخ تقرری" value={teacher.appointmentDate} />
                     <PrintField label="تاریخ شمولیت" value={teacher.joiningDate} />
                 </div>
@@ -511,9 +512,6 @@ export const EmployeeDetails = () => {
                                 <span className={`text-[10px] font-bold px-4 py-1.5 rounded-full border ${teacher.status === 'active' ? 'bg-emerald-500/10 text-[var(--color-primary)] border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'}`}>
                                     {statusLabel(teacher.status)}
                                 </span>
-                                <span className="bg-emerald-500/10 text-[var(--color-primary)] text-[10px] font-bold px-4 py-1.5 rounded-full border border-emerald-500/20">
-                                    نمبر: {teacher.id}
-                                </span>
                             </div>
                             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 <MiniFact label="قسم" value={teacher.staffType === 'staff' ? 'دیگر عملہ' : 'استاد'} />
@@ -556,7 +554,7 @@ export const EmployeeDetails = () => {
                                 <InfoField label="شعبہ" value={teacher.department} />
                                 <InfoField label="شفٹ" value={getTeacherShiftLabel(teacher)} />
                                 <InfoField label="شفٹ اوقات" value={getTeacherShiftTime(teacher)} />
-                                <InfoField label="ملازمت کی نوعیت" value={teacher.employmentType} />
+                                <InfoField label="ملازمت کی نوعیت" value={getEmploymentTypeLabel(teacher.employmentType)} />
                                 <InfoField label="تاریخ تقرری" value={teacher.appointmentDate} />
                                 <InfoField label="تاریخ شمولیت" value={teacher.joiningDate} />
                                 <InfoField label="حالت" value={statusLabel(teacher.status)} />

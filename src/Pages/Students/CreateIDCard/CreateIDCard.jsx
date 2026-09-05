@@ -8,9 +8,15 @@ import { getStudents } from '../../../Constant/StudentsApi';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
+import { getCurrentParent } from '../../../Utils/parentRelations';
 
 const getActiveAssignment = (student) =>
     student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || null;
+
+const getPrimaryParent = getCurrentParent;
+
+const getDisplayedParentName = (student) => getPrimaryParent(student)?.fullName || student?.fatherName || '---';
 
 const getStudentImage = (student) => {
     const imagePath = student?.imageUrl || student?.image || student?.photoUrl || '';
@@ -33,8 +39,8 @@ const getStudentSearchFields = (student) => [
     student?.fullName,
     student?.fatherName,
     student?.phone,
-    student?.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.fullName,
-    student?.parents?.find((parentItem) => parentItem.isPrimary)?.parent?.phone,
+    getCurrentParent(student)?.fullName,
+    getCurrentParent(student)?.phone,
 ].filter(Boolean);
 
 const findStudentMatch = (studentList, query) => {
@@ -56,13 +62,13 @@ const findStudentMatch = (studentList, query) => {
 
 const mapStudentForCard = (student, madrassaProfile) => {
     const activeAssignment = getActiveAssignment(student);
-    const primaryParent = student?.parents?.find((parentItem) => parentItem.isPrimary)?.parent;
+    const primaryParent = getPrimaryParent(student);
 
     return {
         id: student.id,
-        idNo: student.admissionNumber || '---',
+        idNo: formatStudentRegistrationNumber(student.admissionNumber) || '---',
         name: student.fullName || '---',
-        fatherName: student.fatherName || primaryParent?.fullName || '---',
+        fatherName: primaryParent?.fullName || student.fatherName || '---',
         className: activeAssignment?.class?.name || student?.requiredClass || '---',
         section: activeAssignment?.section?.name || student?.requiredJamaat || '---',
         session: activeAssignment?.session?.name || '---',
@@ -356,7 +362,7 @@ export const CreateIdCard = () => {
                                     >
                                         <p className="font-black text-sm text-[var(--color-text-main)]">{student.fullName}</p>
                                         <p className="text-[10px] font-bold text-[var(--color-text-muted)]">
-                                            {student.admissionNumber} - {student.fatherName || '---'}
+                                            {formatStudentRegistrationNumber(student.admissionNumber)} - {getDisplayedParentName(student)}
                                         </p>
                                     </button>
                                 ))}
@@ -415,7 +421,7 @@ export const CreateIdCard = () => {
                     ) : tableStudents.length > 0 ? (
                         tableStudents.map((student) => (
                             <div key={student.id} className="grid min-w-[820px] grid-cols-[90px_1.2fr_1fr_1fr_1fr_150px] items-center gap-3 border-b border-[var(--color-border)] px-4 py-3 text-md font-bold last:border-b-0">
-                                <span className="text-[var(--color-text-muted)]">{student.admissionNumber || '---'}</span>
+                                <span className="text-[var(--color-text-muted)]">{formatStudentRegistrationNumber(student.admissionNumber) || '---'}</span>
                                 <span className="text-[var(--color-text-main)]">{student.fullName || '---'}</span>
                                 <span className="text-[var(--color-text-muted)]">{getStudentSessionName(student)}</span>
                                 <span className="text-[var(--color-text-muted)]">{getStudentClassName(student)}</span>

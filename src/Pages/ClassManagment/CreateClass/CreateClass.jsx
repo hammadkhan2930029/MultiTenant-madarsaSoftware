@@ -217,21 +217,12 @@ export const CreateClasses = () => {
             return;
         }
 
-        if (editMode && !formData.inchargeTeacherId) {
-            setError('کلاس انچارج منتخب کریں۔');
-            return;
-        }
-
         if (!editMode) {
             const validation = validateClassRows(branchId);
             setClassRows(validation.rows);
 
             if (validation.hasError) {
                 setError(validation.rows.find((row) => row.error)?.error || 'درج کردہ جماعتوں کی معلومات درست کریں۔');
-                return;
-            }
-            if (validation.validRows.some((row) => !row.inchargeTeacherId)) {
-                setError('ہر جماعت کے لیے کلاس انچارج منتخب کریں۔');
                 return;
             }
         }
@@ -243,7 +234,7 @@ export const CreateClasses = () => {
         try {
             const payload = {
                 name: formData.name.trim(),
-                ...(editMode ? { inchargeTeacherId: Number(formData.inchargeTeacherId) } : {}),
+                ...(editMode ? { inchargeTeacherId: formData.inchargeTeacherId ? Number(formData.inchargeTeacherId) : null } : {}),
                 ...(editMode ? { status: formData.status || 'active' } : {}),
                 ...(branchId ? { branchId: Number(branchId) } : {}),
             };
@@ -257,7 +248,7 @@ export const CreateClasses = () => {
                     ...(branchId ? { branchId: Number(branchId) } : {}),
                     classes: validation.validRows.map((row) => ({
                         name: row.name,
-                        inchargeTeacherId: Number(row.inchargeTeacherId),
+                        inchargeTeacherId: row.inchargeTeacherId ? Number(row.inchargeTeacherId) : null,
                     })),
                 });
                 setSuccess(`${result?.createdCount || validation.validRows.length} جماعتیں کامیابی سے شامل ہو گئیں۔`);
@@ -301,12 +292,18 @@ export const CreateClasses = () => {
         }
     };
 
+    const getClassIncharge = (academicClass) => {
+        if (academicClass?.inchargeTeacher?.fullName) return academicClass.inchargeTeacher;
+        if (!academicClass?.inchargeTeacherId) return null;
+        return teachers.find((teacher) => Number(teacher.id) === Number(academicClass.inchargeTeacherId)) || null;
+    };
+
     const filteredClasses = classes.filter((academicClass) => {
         if (academicClass.status !== statusFilter) return false;
         const query = search.trim().toLowerCase();
         const matchesSearch = !query
             ? true
-            : [academicClass.name, academicClass.inchargeTeacher?.fullName]
+            : [academicClass.name, getClassIncharge(academicClass)?.fullName]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(query));
 
@@ -315,7 +312,7 @@ export const CreateClasses = () => {
 
     const exportColumns = [
         { header: 'Class', accessor: 'name' },
-        { header: 'Class Incharge', accessor: (academicClass) => academicClass.inchargeTeacher?.fullName || '---' },
+        { header: 'Class Incharge', accessor: (academicClass) => getClassIncharge(academicClass)?.fullName || '---' },
         { header: 'Sections', accessor: (academicClass) => academicClass._count?.sections ?? 0 },
         { header: 'Status', accessor: (academicClass) => academicClass.status || '---' },
     ];
@@ -386,10 +383,9 @@ export const CreateClasses = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                        کلاس انچارج<span className="text-red-500"> *</span>
+                                        کلاس انچارج (اختیاری)
                                     </label>
                                     <select
-                                        required
                                         value={formData.inchargeTeacherId}
                                         onChange={(e) => setFormData((prev) => ({ ...prev, inchargeTeacherId: e.target.value }))}
                                         className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
@@ -445,10 +441,9 @@ export const CreateClasses = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="mr-2 block text-right text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">
-                                                کلاس انچارج<span className="text-red-500"> *</span>
+                                                کلاس انچارج (اختیاری)
                                             </label>
                                             <select
-                                                required
                                                 value={row.inchargeTeacherId}
                                                 onChange={(e) => updateClassRow(row.id, 'inchargeTeacherId', e.target.value)}
                                                 className="h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text)] outline-none"
@@ -506,7 +501,7 @@ export const CreateClasses = () => {
                                 filteredClasses.map((academicClass) => (
                                     <tr key={academicClass.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4 font-black text-[var(--color-text)]">{academicClass.name}</td>
-                                        <td className="px-6 py-4 text-center text-sm font-bold text-[var(--color-text-muted)]">{academicClass.inchargeTeacher?.fullName || '---'}</td>
+                                        <td className="px-6 py-4 text-center text-sm font-bold text-[var(--color-text-muted)]">{getClassIncharge(academicClass)?.fullName || '---'}</td>
                                         <td className="px-6 py-4  text-center text-sm font-bold text-[var(--color-text-muted)]">{academicClass._count?.sections ?? 0}</td>
                                         <td className="px-6 py-4 text-center">
                                             <StatusBadge status={academicClass.status} />

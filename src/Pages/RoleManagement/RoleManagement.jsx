@@ -5,12 +5,13 @@ import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import StatusBadge from '../../Components/Common/StatusBadge';
 import { getBranches, getClasses } from '../../Constant/AcademicSetupApi';
+import { getTeachers } from '../../Constant/TeachersApi';
 import { ROLE_PERMISSION_MODULES, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { assignRolePermissions, createRole, deleteRole, getGroupedPermissions, getRoleAssignedPermissions, getRoleById, getRolePermissions, getRoles, updateRole } from '../../Constant/RoleManagementApi';
 import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isSuperAdmin, isTenantAdmin, refreshPermissions } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
 
-const emptyForm = { roleName: '', description: '', status: 'active', branchId: '', classScopeMode: 'all', classIds: [] };
+const emptyForm = { roleName: '', description: '', status: 'active', branchId: '', classScopeMode: 'all', classIds: [], teacherId: '' };
 const BRANCH_RESTRICTED_PERMISSION_MODULES = new Set(['tenant_management', 'branches']);
 const BRANCH_RESTRICTED_PERMISSION_PREFIXES = ['tenant_management.', 'branches.'];
 
@@ -446,6 +447,7 @@ export const RoleManagement = () => {
   const [roles, setRoles] = useState([]);
   const [branches, setBranches] = useState([]);
   const [classOptions, setClassOptions] = useState([]);
+  const [teacherOptions, setTeacherOptions] = useState([]);
   const [permissionModules, setPermissionModules] = useState(ROLE_PERMISSION_MODULES);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -594,6 +596,22 @@ export const RoleManagement = () => {
     }
   }, [canConfigureClassScope, currentRole?.branchId, formData.branchId, mode, selectedTenantBranchId, sessionBranchId]);
 
+  const loadTeachers = useCallback(async () => {
+    if (mode === 'list' || !canConfigureClassScope) return;
+    const branchId = formData.branchId || currentRole?.branchId || sessionBranchId || selectedTenantBranchId;
+    if (!branchId) {
+      setTeacherOptions([]);
+      return;
+    }
+    try {
+      const result = await getTeachers(`page=1&limit=100&status=active&staffType=teacher&branchId=${encodeURIComponent(branchId)}`);
+      setTeacherOptions(result.items || []);
+    } catch (loadError) {
+      setTeacherOptions([]);
+      setError(loadError.message || 'اساتذہ لوڈ نہیں ہو سکے۔');
+    }
+  }, [canConfigureClassScope, currentRole?.branchId, formData.branchId, mode, selectedTenantBranchId, sessionBranchId]);
+
   const loadRoles = useCallback(async () => {
     setIsLoading(true);
     setError('');
@@ -635,6 +653,7 @@ export const RoleManagement = () => {
         branchId: role?.branchId ? String(role.branchId) : '',
         classScopeMode: role?.classScopeMode || 'all',
         classIds: (role?.classIds || []).map(String),
+        teacherId: role?.teacherId ? String(role.teacherId) : '',
       });
     } catch (loadError) {
       setError(loadError.message || 'کردار کی تفصیل لوڈ نہیں ہو سکی۔');
@@ -674,6 +693,7 @@ export const RoleManagement = () => {
   useEffect(() => { loadPermissions(); }, [loadPermissions]);
   useEffect(() => { loadBranches(); }, [loadBranches]);
   useEffect(() => { loadClasses(); }, [loadClasses]);
+  useEffect(() => { loadTeachers(); }, [loadTeachers]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -772,6 +792,10 @@ export const RoleManagement = () => {
       setError('کم از کم ایک جماعت منتخب کریں۔');
       return;
     }
+    if (canConfigureClassScope && formData.classScopeMode === 'selected' && !formData.teacherId) {
+      setError('منتخب جماعتوں کے لیے استاد منتخب کریں۔');
+      return;
+    }
 
     setIsSaving(true);
     setError('');
@@ -787,6 +811,7 @@ export const RoleManagement = () => {
           : selectedPermissions,
         classScopeMode: canConfigureClassScope ? formData.classScopeMode : 'all',
         classIds: canConfigureClassScope && formData.classScopeMode === 'selected' ? formData.classIds.map(Number) : [],
+        teacherId: canConfigureClassScope && formData.classScopeMode === 'selected' ? Number(formData.teacherId) : null,
       };
 
       if (mode === 'create' && canAssignRoleBranch) {
@@ -893,6 +918,7 @@ export const RoleManagement = () => {
             ...prev,
             classScopeMode: event.target.value,
             classIds: event.target.value === 'all' ? [] : prev.classIds,
+            teacherId: event.target.value === 'all' ? '' : prev.teacherId,
           }))}
           disabled={readOnly}
         />
@@ -902,7 +928,19 @@ export const RoleManagement = () => {
       </div>
 
       {formData.classScopeMode === 'selected' ? (
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-5 space-y-5">
+          <SelectField
+            label="متعلقہ استاد"
+            required
+            options={[
+              { value: '', label: teacherOptions.length ? 'استاد منتخب کریں' : 'اس برانچ میں کوئی فعال استاد موجود نہیں' },
+              ...teacherOptions.map((teacher) => ({ value: String(teacher.id), label: teacher.fullName })),
+            ]}
+            value={formData.teacherId}
+            onChange={(event) => setFormData((prev) => ({ ...prev, teacherId: event.target.value }))}
+            disabled={readOnly || !teacherOptions.length}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {classOptions.length ? classOptions.map((academicClass) => {
             const classId = String(academicClass.id);
             const checked = formData.classIds.includes(classId);
@@ -926,6 +964,7 @@ export const RoleManagement = () => {
               اس برانچ میں کوئی فعال جماعت موجود نہیں۔
             </div>
           )}
+          </div>
         </div>
       ) : null}
     </div>
@@ -1111,7 +1150,7 @@ export const RoleManagement = () => {
               required
               options={branchOptions}
               value={formData.branchId}
-              onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, classIds: [] }))}
+              onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, classIds: [], teacherId: '' }))}
             />
           ) : null}
 

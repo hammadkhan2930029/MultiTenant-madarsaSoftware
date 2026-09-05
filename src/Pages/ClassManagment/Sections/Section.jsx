@@ -459,7 +459,7 @@ export const CreateSections = () => {
                                 filteredSections.map((section) => (
                                     <tr key={section.id} className="border-t border-[var(--color-border)]/60">
                                         <td className="px-6 py-4">
-                                            <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-xs font-black text-black">
+                                            <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-xs font-black text-[var(--color-primary)]">
                                                 {section.name}
                                             </span>
                                         </td>

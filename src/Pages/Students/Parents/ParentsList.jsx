@@ -6,10 +6,12 @@ import { createParent, deleteParent, getParents, updateParent } from '../../../C
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
+import { PHONE_INPUT_PROPS, PHONE_VALIDATION_MESSAGE, isValidPhoneNumber, normalizePhoneNumber, sanitizePhoneInput } from '../../../Utils/phoneValidation';
 import { usePermissions } from '../../../Hooks/usePermissions';
 import StatusBadge from '../../../Components/Common/StatusBadge';
 
 const INITIAL_FORM = {
+    registrationNumber: '',
     fullName: '',
     phone: '',
     occupation: '',
@@ -38,7 +40,6 @@ const formatChildSummary = (item) => {
         student.fullName,
         student.fatherName,
         item.relationship,
-        item.isPrimary ? 'Primary' : 'Linked',
         activeAssignment?.class?.name,
         activeAssignment?.section?.name,
         student.phone,
@@ -48,7 +49,7 @@ const formatChildSummary = (item) => {
 };
 
 const mapParentForExport = (parent) => ({
-    id: parent.id,
+    registrationNumber: parent.registrationNumber,
     fullName: parent.fullName,
     familyNumber: parent.familyNumber,
     phone: parent.phone,
@@ -154,6 +155,11 @@ export const ParentsList = () => {
             return;
         }
 
+        if (!isValidPhoneNumber(formValues.phone)) {
+            setError(PHONE_VALIDATION_MESSAGE);
+            return;
+        }
+
         if (!formValues.address.trim()) {
             setError('پتہ درج کرنا ضروری ہے۔');
             return;
@@ -166,10 +172,10 @@ export const ParentsList = () => {
 
         try {
             if (editingParentId) {
-                await updateParent(editingParentId, formValues);
+                await updateParent(editingParentId, { ...formValues, phone: normalizePhoneNumber(formValues.phone) });
                 setSuccess('سرپرست کی معلومات تبدیل ہو گئیں۔');
             } else {
-                await createParent(formValues);
+                await createParent({ ...formValues, phone: normalizePhoneNumber(formValues.phone) });
                 setSuccess('سرپرست کی معلومات شامل ہو گئیں۔');
             }
 
@@ -183,6 +189,7 @@ export const ParentsList = () => {
     const handleEdit = (parent) => {
         setEditingParentId(parent.id);
         setFormValues({
+            registrationNumber: parent.registrationNumber || '',
             fullName: parent.fullName || '',
             phone: parent.phone || '',
             occupation: parent.occupation || '',
@@ -216,7 +223,7 @@ export const ParentsList = () => {
     const filteredParents = useMemo(
         () =>
             parents.filter((parent) =>
-                [parent.fullName, parent.familyNumber, parent.phone, parent.occupation, parent.address, parent.email]
+                [parent.registrationNumber, parent.fullName, parent.familyNumber, parent.phone, parent.occupation, parent.address, parent.email]
                     .filter(Boolean)
                     .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
             ),
@@ -226,12 +233,12 @@ export const ParentsList = () => {
     const exportRows = useMemo(() => filteredParents.map(mapParentForExport), [filteredParents]);
 
     const exportColumns = useMemo(() => [
-        { header: 'Parent ID', accessor: 'id' },
+        { header: 'Registration No.', accessor: 'registrationNumber' },
         { header: 'Parent Name', accessor: 'fullName' },
         { header: 'Family Number', accessor: 'familyNumber' },
         { header: 'Phone', accessor: 'phone' },
         { header: 'Email', accessor: 'email' },
-        { header: 'ID', accessor: 'cnic' },
+        { header: 'CNIC', accessor: 'cnic' },
         { header: 'Occupation', accessor: 'occupation' },
         { header: 'Address', accessor: 'address' },
         { header: 'Status', accessor: 'status' },
@@ -278,8 +285,9 @@ export const ParentsList = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {editingParentId ? <InputField label="رجسٹریشن نمبر" value={formValues.registrationNumber} disabled /> : null}
                         <InputField label="سرپرست کا نام" required value={formValues.fullName} onChange={(event) => handleChange('fullName', event.target.value)} placeholder="نام درج کریں" />
-                        <InputField label="فون نمبر" required value={formValues.phone} onChange={(event) => handleChange('phone', event.target.value)} placeholder="0300-0000000" />
+                        <InputField label="فون نمبر" required value={formValues.phone} onChange={(event) => handleChange('phone', sanitizePhoneInput(event.target.value))} placeholder="03001234567 / +923001234567" {...PHONE_INPUT_PROPS} />
                         <InputField
                             label="پیشہ"
                             value={formValues.occupation}
@@ -343,7 +351,7 @@ export const ParentsList = () => {
                                 type="text"
                                 value={searchTerm}
                                 onChange={(event) => setSearchTerm(event.target.value)}
-                                placeholder="سرپرست کا نام، فیملی نمبر یا فون نمبر سے تلاش کریں..."
+                                placeholder="رجسٹریشن نمبر، نام، فیملی نمبر یا فون نمبر سے تلاش کریں..."
                                 className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] py-4 pr-14 pl-6 text-sm font-bold text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]/50"
                             />
                         </div>
@@ -351,9 +359,10 @@ export const ParentsList = () => {
                 </div>
 
                 <div className="min-h-[420px] max-h-[650px] overflow-auto">
-                    <table className="w-full min-w-[1200px] text-right">
+                    <table className="w-full min-w-[1300px] text-right">
                         <thead className="border-b border-[var(--color-border)] bg-[var(--color-input)]/50">
                             <tr>
+                                <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">رجسٹریشن نمبر</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">سرپرست</th>
                                 <th className="p-5 text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فیملی نمبر</th>
                                 <th className="p-5 text-center text-[14px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">فون نمبر</th>
@@ -367,6 +376,7 @@ export const ParentsList = () => {
                         <tbody className="divide-y divide-[var(--color-border)]">
                             {filteredParents.map((parent) => (
                                 <tr key={parent.id} className="transition-colors hover:bg-white/[0.02]">
+                                    <td className="p-5 text-sm font-black text-[var(--color-primary)]">{parent.registrationNumber || '---'}</td>
                                     <td className="p-5">
                                         <div className="font-black text-[var(--color-text-main)]">{parent.fullName || '---'}</div>
                                         <div className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">{parent.email || '---'}</div>

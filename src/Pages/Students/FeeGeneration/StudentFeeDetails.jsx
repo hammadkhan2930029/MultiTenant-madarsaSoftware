@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getStudentFeeById, getStudentFeeHistory, saveStudentFeePayment } from '../../../Constant/StudentFeesApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { Can } from '../../../Components/Auth/Can';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
 
 const monthNames = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
 const toMoney = (value) => Number(value || 0).toLocaleString('en-PK');
@@ -112,7 +113,7 @@ export const StudentFeeDetail = () => {
                             <span>{student?.fatherName || '---'} :سرپرست</span> */}
                             <div >
                                 <span> داخلہ نمبر : </span>
-                                <span className='mr-3'>{student?.admissionNumber || '---'}</span>
+                                <span className='mr-3'>{formatStudentRegistrationNumber(student?.admissionNumber) || '---'}</span>
                             </div>
                             <div >
                                 <span> سرپرست کا نام : </span>

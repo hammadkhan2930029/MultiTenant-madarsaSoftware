@@ -9,7 +9,9 @@ import { getRoles } from '../../Constant/RoleManagementApi';
 import { assignUserRole, createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
 import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession, refreshPermissions } from '../../Constant/AdminAuth';
 import { getBranches } from '../../Constant/AcademicSetupApi';
+import { getTeachers } from '../../Constant/TeachersApi';
 import { usePermissions } from '../../Hooks/usePermissions';
+import { PHONE_INPUT_PROPS, PHONE_VALIDATION_MESSAGE, isValidPhoneNumber, normalizePhoneNumber, sanitizePhoneInput } from '../../Utils/phoneValidation';
 
 const emptyForm = {
   name: '',
@@ -20,6 +22,7 @@ const emptyForm = {
   confirmPassword: '',
   roleId: '',
   branchId: '',
+  teacherId: '',
   status: 'active',
 };
 
@@ -174,6 +177,7 @@ export const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [search, setSearch] = useState('');
@@ -260,6 +264,11 @@ export const UserManagement = () => {
     })(),
   ], [branches]);
 
+  const teacherOptions = useMemo(() => [
+    { value: '', label: 'استاد کے ساتھ منسلک نہیں' },
+    ...teachers.map((teacher) => ({ value: String(teacher.id), label: teacher.fullName })),
+  ], [teachers]);
+
   const loadRoles = useCallback(async () => {
     if (branchScopedSession) {
       const result = await getRoles({ page: 1, limit: 100, branchId: sessionBranchId });
@@ -313,6 +322,20 @@ export const UserManagement = () => {
     }
   }, [roleFilter, search, statusFilter]);
 
+  const loadTeachers = useCallback(async () => {
+    if (mode === 'list' || !assignmentBranchId) {
+      setTeachers([]);
+      return;
+    }
+    try {
+      const result = await getTeachers(`page=1&limit=100&status=active&staffType=teacher&branchId=${encodeURIComponent(assignmentBranchId)}`);
+      setTeachers(result.items || []);
+    } catch (loadError) {
+      setTeachers([]);
+      setError(loadError.message || 'اساتذہ لوڈ نہیں ہو سکے۔');
+    }
+  }, [assignmentBranchId, mode]);
+
   const loadUser = useCallback(async () => {
     if (!userId || mode === 'list' || mode === 'create') return;
 
@@ -330,6 +353,7 @@ export const UserManagement = () => {
         confirmPassword: '',
         roleId: user?.roleId ? String(user.roleId) : '',
         branchId: branchScopedSession ? String(sessionBranchId || '') : user?.branchId ? String(user.branchId) : '',
+        teacherId: user?.teacherId ? String(user.teacherId) : '',
         status: user?.status || 'active',
       });
     } catch (loadError) {
@@ -346,6 +370,10 @@ export const UserManagement = () => {
   useEffect(() => {
     loadRoles().catch((roleError) => setError(roleError.message || 'کردار لوڈ نہیں ہو سکے۔'));
   }, [loadRoles]);
+
+  useEffect(() => {
+    loadTeachers();
+  }, [loadTeachers]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -379,6 +407,7 @@ export const UserManagement = () => {
       return setError('پاس ورڈ اور تصدیقی پاس ورڈ ایک جیسے ہونے چاہئیں۔');
     }
     if (!formData.roleId && !isSuperAdminUser(currentUser)) return setError('کردار منتخب کریں۔');
+    if (formData.phone.trim() && !isValidPhoneNumber(formData.phone)) return setError(PHONE_VALIDATION_MESSAGE);
 
     setIsSaving(true);
     setError('');
@@ -388,9 +417,10 @@ export const UserManagement = () => {
       const payload = {
         name: formData.name.trim(),
         email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        phone: normalizePhoneNumber(formData.phone),
         username: formData.username.trim(),
         status: formData.status,
+        teacherId: formData.teacherId ? Number(formData.teacherId) : null,
       };
 
       if (!branchScopedSession) {
@@ -486,7 +516,7 @@ export const UserManagement = () => {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <InputField id="user-name" label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
           <InputField id="user-email" label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))} />
-          <InputField id="user-phone" label="فون" placeholder="0300xxxxxxx" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: event.target.value }))} />
+          <InputField id="user-phone" label="فون" placeholder="03001234567 / +923001234567" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))} {...PHONE_INPUT_PROPS} />
           <InputField id="user-username" label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))} />
           <InputField id="user-password" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type="password" placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
           <InputField id="user-confirm-password" label="تصدیقی پاس ورڈ" required={mode === 'create'} type="password" placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
@@ -500,8 +530,16 @@ export const UserManagement = () => {
               readOnly
             />
           ) : (
-            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value }))} />
+            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, teacherId: '' }))} />
           )}
+          <SelectField
+            id="user-teacher"
+            label="کیا یہ صارف استاد بھی ہے؟ (اختیاری)"
+            options={teacherOptions}
+            value={formData.teacherId}
+            onChange={(event) => setFormData((prev) => ({ ...prev, teacherId: event.target.value }))}
+            disabled={!assignmentBranchId}
+          />
           <SelectField id="user-status" label="حالت" options={[{ value: 'active', label: 'فعال' }, { value: 'inactive', label: 'غیر فعال' }]} value={formData.status} onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value }))} />
         </div>
 
@@ -549,6 +587,7 @@ export const UserManagement = () => {
                 <span>{currentUser.username}</span>
                 <span>{getUserPhone(currentUser)}</span>
                 <span>{currentUser.branch?.name || 'تمام برانچز'}</span>
+                <span>{currentUser.teacher?.fullName ? `استاد: ${currentUser.teacher.fullName}` : 'استاد سے منسلک نہیں'}</span>
                 <span className="rounded-xl bg-emerald-500/10 px-3 py-1 font-black text-[#00d094]">{getRoleDisplayName(getRoleName(currentUser))}</span>
               </div>
             </div>

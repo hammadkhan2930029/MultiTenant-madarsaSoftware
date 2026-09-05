@@ -5,6 +5,8 @@ import { DateField } from '../../../Components/HR/FormElements';
 import { getStudentAttendance, saveStudentAttendance } from '../../../Constant/AttendanceApi';
 import { getStudentById } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
+import { getCurrentParent } from '../../../Utils/parentRelations';
 
 const STATUS_LABELS = {
     Present: 'حاضر',
@@ -67,8 +69,7 @@ const statusStyle = {
 const getActiveAssignment = (student) =>
     student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || null;
 
-const getPrimaryParent = (student) =>
-    student?.parents?.find((parentItem) => parentItem.isPrimary)?.parent || student?.parents?.[0]?.parent || null;
+const getPrimaryParent = getCurrentParent;
 
 export const StudentAttendanceHistory = () => {
     const { id } = useParams();
@@ -213,7 +214,7 @@ export const StudentAttendanceHistory = () => {
                         <p className="text-sm font-bold text-[var(--color-primary)]">طالب علم کی حاضری</p>
                         <h1 className="mt-2 text-3xl font-black">{student?.fullName || 'طالب علم'}</h1>
                         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            <StudentInfo label="داخلہ نمبر" value={student?.admissionNumber} dir="ltr" />
+                            <StudentInfo label="داخلہ نمبر" value={formatStudentRegistrationNumber(student?.admissionNumber)} dir="ltr" />
                             <StudentInfo label="سیشن" value={activeAssignment?.session?.name} />
                             <StudentInfo label="جماعت" value={activeAssignment?.class?.name} />
                             <StudentInfo label="جماعت سیکشن" value={activeAssignment?.section?.name} />

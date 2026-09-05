@@ -9,6 +9,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { Can } from '../../../Components/Auth/Can';
 import StatusBadge from '../../../Components/Common/StatusBadge';
 import { DateField } from '../../../Components/HR/FormElements';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
 
 const monthNames = [
     'جنوری',
@@ -386,7 +387,7 @@ const buildFeeReceiptHtml = ({ voucher, madrassaProfile }) => {
       </section>
       <section class="student">
         <div><span>نام:</span><strong>${escapeHtml(voucher?.student?.fullName || '')}</strong></div>
-        <div><span>داخلہ نمبر:</span><strong>${escapeHtml(voucher?.student?.admissionNumber || '')}</strong></div>
+        <div><span>داخلہ نمبر:</span><strong>${escapeHtml(formatStudentRegistrationNumber(voucher?.student?.admissionNumber) || '')}</strong></div>
         <div><span>کلاس:</span><strong>${escapeHtml(`${assignment.class?.name || ''} / ${assignment.section?.name || ''}`)}</strong></div>
         <div><span>مہینہ:</span><strong>${escapeHtml(voucher ? `${monthNames[voucher.feeMonth - 1]} ${voucher.feeYear}` : '')}</strong></div>
       </section>
@@ -738,7 +739,7 @@ export const FeesCollection = () => {
                                                 <div className="mt-1 flex flex-col gap-0.5 text-[11px] font-bold leading-5 text-[var(--color-text-muted)]">
                                                     <div>
                                                         <span> داخلہ نمبر : </span>
-                                                        <span>{voucher.student?.admissionNumber || '---'}</span>
+                                                        <span>{formatStudentRegistrationNumber(voucher.student?.admissionNumber) || '---'}</span>
                                                     </div>
                                                     <div>
                                                         <span> سرپرست کا نام : </span>
@@ -895,7 +896,7 @@ const FeeReceipt = ({ voucher, madrassaProfile }) => {
                 </div>
                 <div className="relative z-10 mt-8 grid grid-cols-2 gap-4 text-sm">
                     <div>نام: <strong>{voucher?.student?.fullName || ''}</strong></div>
-                    <div>داخلہ نمبر: <strong>{voucher?.student?.admissionNumber || ''}</strong></div>
+                    <div>داخلہ نمبر: <strong>{formatStudentRegistrationNumber(voucher?.student?.admissionNumber) || ''}</strong></div>
                     <div>کلاس: <strong>{assignment.class?.name || ''} / {assignment.section?.name || ''}</strong></div>
                     <div>مہینہ: <strong>{voucher ? `${monthNames[voucher.feeMonth - 1]} ${voucher.feeYear}` : ''}</strong></div>
                 </div>
@@ -1170,7 +1171,7 @@ const FeeReceiptPrint = ({ voucher, madrassaProfile }) => {
 
                     <section className="fee-print-student">
                         <div><span>نام:</span><strong>{voucher?.student?.fullName || ''}</strong></div>
-                        <div><span>داخلہ نمبر:</span><strong>{voucher?.student?.admissionNumber || ''}</strong></div>
+                        <div><span>داخلہ نمبر:</span><strong>{formatStudentRegistrationNumber(voucher?.student?.admissionNumber) || ''}</strong></div>
                         <div><span>کلاس:</span><strong>{assignment.class?.name || ''} / {assignment.section?.name || ''}</strong></div>
                         <div><span>مہینہ:</span><strong>{voucher ? `${monthNames[voucher.feeMonth - 1]} ${voucher.feeYear}` : ''}</strong></div>
                     </section>

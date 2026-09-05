@@ -374,25 +374,25 @@ export const FinanceHeadsSetup = () => {
             </div>
 
             {activeTab === 'expense' ? (
-                <div className="max-w-6xl mx-auto mb-8 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-                    <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                        <div className="text-right">
+                <div dir="rtl" className="mx-auto mb-8 max-w-6xl rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+                    <div className="mb-5 grid grid-cols-1 items-end gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,640px)]">
+                        <div className="min-w-0 text-right">
                             <h2 className="text-lg font-black text-[var(--color-primary)]">خرچ کی کیٹیگریز</h2>
                             <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">یہ فہرست نیچے خرچ کی قسم والے ڈراپ ڈاؤن میں استعمال ہو گی۔</p>
                         </div>
-                        <div className="flex flex-col gap-3 md:w-[520px] md:flex-row-reverse">
+                        <div className="grid w-full grid-cols-1 items-stretch gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                             <input
                                 dir="rtl"
                                 value={categoryForm.name}
                                 onChange={(event) => setCategoryForm((prev) => ({ ...prev, name: event.target.value }))}
                                 placeholder="مثلاً انتظامی اخراجات"
-                                className="h-[52px] flex-1 rounded-xl border border-white/10 bg-black/20 px-4 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
+                                className="h-[52px] min-w-0 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                             />
                             <button
                                 type="button"
                                 onClick={saveExpenseCategory}
                                 disabled={isSaving}
-                                className="flex h-[52px] items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-bg)] disabled:opacity-60"
+                                className="flex h-[52px] w-full min-w-32 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-bg)] disabled:opacity-60 sm:w-auto"
                             >
                                 <Save size={16} />
                                 {categoryForm.id ? 'تبدیل کریں' : 'محفوظ کریں'}
@@ -401,7 +401,7 @@ export const FinanceHeadsSetup = () => {
                                 <button
                                     type="button"
                                     onClick={cancelCategoryEdit}
-                                    className="h-[52px] rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text-muted)]"
+                                    className="h-[52px] w-full min-w-24 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text-muted)] sm:w-auto"
                                 >
                                     منسوخ
                                 </button>
@@ -410,8 +410,9 @@ export const FinanceHeadsSetup = () => {
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         {expenseCategories.map((category) => (
-                            <div key={category.id || category.name} className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-black/10 p-4">
-                                <div className="flex items-center gap-2">
+                            <div key={category.id || category.name} className="flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-white/5 bg-black/10 p-4">
+                                <span className="min-w-0 flex-1 break-words text-right text-sm font-black text-[var(--color-text-main)]">{category.name}</span>
+                                <div className="flex shrink-0 items-center gap-2">
                                     <button type="button" onClick={() => setCategoryDeleteTarget(category)} className="rounded-xl bg-rose-500/10 p-2 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
                                         <Trash2 size={15} />
                                     </button>
@@ -419,7 +420,6 @@ export const FinanceHeadsSetup = () => {
                                         <Edit2 size={15} />
                                     </button>
                                 </div>
-                                <span className="text-right text-sm font-black text-[var(--color-text-main)]">{category.name}</span>
                             </div>
                         ))}
                     </div>
@@ -442,7 +442,7 @@ export const FinanceHeadsSetup = () => {
                                 placeholder={activeTab === 'income' ? 'آمدنی کا نام' : 'خرچ کا نام'}
                                 value={item.title}
                                 onChange={(e) => handleInputChange(item.id, 'title', e.target.value)}
-                                className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                className="h-[78px] min-w-0 w-full border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                             />
 
                             {activeTab === 'expense' ? (
@@ -458,17 +458,17 @@ export const FinanceHeadsSetup = () => {
                             ) : (
                                 <input dir="rtl" type="text" placeholder="Sub-category (اختیاری)" value={item.category}
                                     onChange={(e) => handleInputChange(item.id, 'category', e.target.value)}
-                                    className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                    className="h-[78px] min-w-0 w-full border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                                 />
                             )}
                             <input dir="rtl" type="text" placeholder="تفصیلات" value={item.description}
                                 onChange={(e) => handleInputChange(item.id, 'description', e.target.value)}
-                                className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                className="h-[78px] min-w-0 w-full border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                             />
                             {activeTab === 'expense' ? (
                                 <input dir="rtl" type="number" placeholder="خرچ کی حد" value={item.budgetLimit}
                                     onChange={(e) => handleInputChange(item.id, 'budgetLimit', e.target.value)}
-                                    className="h-14 border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
+                                    className="h-[78px] min-w-0 w-full border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                                 />
                             ) : null}
                         </div>
@@ -683,7 +683,7 @@ function CategoryDropdown({ value, categories, onChange, compact = false, isLoad
 
     return (
         <div
-            className="relative"
+            className="relative min-w-0 w-full"
             dir="rtl"
             onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -695,7 +695,7 @@ function CategoryDropdown({ value, categories, onChange, compact = false, isLoad
                 type="button"
                 disabled={!hasOptions}
                 onClick={() => hasOptions && setIsOpen((prev) => !prev)}
-                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${compact ? 'min-h-[42px] py-2' : 'h-14'}`}
+                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${compact ? 'min-h-[42px] py-2' : 'h-[78px]'}`}
             >
                 <ChevronDown size={16} className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 <span className="min-w-0 flex-1 truncate">{displayValue}</span>

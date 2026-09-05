@@ -2,6 +2,7 @@
 import React from 'react';
 import { Search, Save, Trash2, X, ArrowRight, ChevronDown } from 'lucide-react';
 import { InputField, SelectField, DateField } from './FormElements';
+import { EMPLOYMENT_TYPE_OPTIONS } from '../../Constant/EmploymentTypes';
 
 export const AppoinmentTab = () => {
     return (
@@ -27,7 +28,7 @@ export const AppoinmentTab = () => {
                     <div className="sm:col-span-2">
                         <SelectField
                             label="ملازمت کی نوعیت"
-                            options={["مستقل", "عارضی (Probation)", "کونٹریکٹ (Contract)", "پارٹ ٹائم"]}
+                            options={EMPLOYMENT_TYPE_OPTIONS}
                         />
                     </div>
 

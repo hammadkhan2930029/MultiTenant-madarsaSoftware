@@ -9,6 +9,8 @@ import { getSubjects } from '../../Constant/AcademicSetupApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../Utils/cnicFormat';
+import { DEFAULT_EMPLOYMENT_TYPE, getEmploymentTypeOptions } from '../../Constant/EmploymentTypes';
+import { PHONE_INPUT_PROPS, PHONE_VALIDATION_MESSAGE, isValidPhoneNumber, normalizePhoneNumber, sanitizePhoneInput } from '../../Utils/phoneValidation';
 
 const INITIAL_VALUES = {
   staffType: 'teacher',
@@ -33,7 +35,7 @@ const INITIAL_VALUES = {
   iban: '',
   jobTitle: '',
   department: '',
-  employmentType: 'مستقل',
+  employmentType: DEFAULT_EMPLOYMENT_TYPE,
   appointmentDate: '',
   joiningDate: '',
   experienceSummary: '',
@@ -202,7 +204,7 @@ export const HRManagement = () => {
           iban: teacher?.iban || '',
           jobTitle: teacher?.jobTitle || '',
           department: teacher?.department || '',
-          employmentType: teacher?.employmentType || 'مستقل',
+          employmentType: teacher?.employmentType || DEFAULT_EMPLOYMENT_TYPE,
           appointmentDate: teacher?.appointmentDate || '',
           joiningDate: teacher?.joiningDate || '',
           experienceSummary: teacher?.experienceSummary || '',
@@ -245,6 +247,12 @@ export const HRManagement = () => {
       return;
     }
 
+    if (!formData.phone.trim() || !isValidPhoneNumber(formData.phone)) {
+      setActiveTab('personal');
+      setError(formData.phone.trim() ? PHONE_VALIDATION_MESSAGE : 'براہ کرم فون نمبر لازمی درج کریں۔');
+      return;
+    }
+
     if (!Number(formData.basicSalary)) {
       setActiveTab('account');
       setError('براہ کرم بنیادی تنخواہ لازمی درج کریں۔');
@@ -282,7 +290,7 @@ export const HRManagement = () => {
         staffType: formData.staffType,
         fullName: formData.fullName,
         email: formData.email,
-        phone: formData.phone,
+        phone: normalizePhoneNumber(formData.phone),
         cnic: formData.cnic,
         subject: formData.subject,
         qualification: formData.qualification,
@@ -521,7 +529,7 @@ const PersonalStep = ({ formData, imagePreview, imageFile, shiftOptions, isLoadi
         ]}
       />
       <InputField label="نام" required value={formData.fullName} onChange={(event) => onChange('fullName', event.target.value)} />
-      <InputField label="فون نمبر" required value={formData.phone} onChange={(event) => onChange('phone', event.target.value)} />
+      <InputField label="فون نمبر" required value={formData.phone} onChange={(event) => onChange('phone', sanitizePhoneInput(event.target.value))} placeholder="03001234567 / +923001234567" {...PHONE_INPUT_PROPS} />
       <InputField label="ای میل" type="email" value={formData.email} onChange={(event) => onChange('email', event.target.value)} />
       <InputField
         label="شناختی کارڈ نمبر"
@@ -654,7 +662,7 @@ const ServiceStep = ({ formData, departmentOptions, isLoadingDepartments, onChan
         label="ملازمت کی نوعیت"
         value={formData.employmentType}
         onChange={(event) => onChange('employmentType', event.target.value)}
-        options={['مستقل', 'عارضی', 'کنٹریکٹ', 'پارٹ ٹائم']}
+        options={getEmploymentTypeOptions(formData.employmentType)}
       />
       <DateField label="تاریخ تقرری" required value={formData.appointmentDate} onChange={(value) => onChange('appointmentDate', value)} />
       <DateField label="تاریخ شمولیت" required value={formData.joiningDate} onChange={(value) => onChange('joiningDate', value)} />

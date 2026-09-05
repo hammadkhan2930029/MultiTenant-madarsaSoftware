@@ -376,7 +376,7 @@ export const canAny = (permissions = []) => hasAnyPermission(permissions);
 
 export const canAll = (permissions = []) => hasAllPermissions(permissions);
 
-export const loginAdmin = async ({ username, password }) => {
+export const loginAdmin = async ({ username, password, recaptchaToken = '' }) => {
   const tenantBranding = await fetchCurrentTenantBranding().catch(() => null);
   const result = await apiRequest('/auth/login', {
     method: 'POST',
@@ -387,6 +387,7 @@ export const loginAdmin = async ({ username, password }) => {
     body: JSON.stringify({
       identity: String(username || '').trim(),
       password: String(password || ''),
+      recaptchaToken: String(recaptchaToken || ''),
     }),
   });
 

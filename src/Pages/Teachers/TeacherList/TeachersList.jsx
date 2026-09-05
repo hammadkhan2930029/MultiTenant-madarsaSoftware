@@ -7,6 +7,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { Can } from '../../../Components/Auth/Can';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { getEmploymentTypeLabel } from '../../../Constant/EmploymentTypes';
 
 const listConfig = {
     teacher: {
@@ -199,7 +200,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
         { header: 'IBAN', accessor: 'iban' },
         { header: 'Job Title', accessor: 'jobTitle' },
         { header: 'Department', accessor: 'department' },
-        { header: 'Employment Type', accessor: 'employmentType' },
+        { header: 'Employment Type', accessor: (teacher) => getEmploymentTypeLabel(teacher.employmentType) },
         { header: 'Appointment Date', accessor: 'appointmentDate' },
         { header: 'Joining Date', accessor: 'joiningDate' },
         { header: 'Experience Summary', accessor: 'experienceSummary' },

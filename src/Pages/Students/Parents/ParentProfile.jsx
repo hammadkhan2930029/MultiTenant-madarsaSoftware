@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Eye, GraduationCap, MapPin, Phone, Search, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getParentById } from '../../../Constant/StudentsApi';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
 
 const getActiveAssignment = (student) => (
     student?.assignments?.find((assignment) => assignment.status === 'active')
@@ -100,7 +101,8 @@ export const ParentProfile = () => {
                             <InfoCard label="ای میل" value={parent.email || '---'} />
                             <InfoCard label="پیشہ" value={parent.occupation || '---'} />
                             <InfoCard label="کل بچے" value={String(parent.students?.length || 0)} icon={<Users size={14} className="text-[var(--color-primary)]" />} />
-                            <InfoCard label="ID" value={parent.cnic || '---'} />
+                            <InfoCard label="رجسٹریشن نمبر" value={parent.registrationNumber || '---'} />
+                            <InfoCard label="شناختی کارڈ نمبر" value={parent.cnic || '---'} />
                             <InfoCard label="پتہ" value={parent.address || 'پتہ درج نہیں ہے'} icon={<MapPin size={14} className="text-[var(--color-primary)]" />} />
                         </div>
                     </div>
@@ -158,12 +160,11 @@ export const ParentProfile = () => {
                             <tr key={item.student.id} className="group cursor-pointer transition-colors hover:bg-white/[0.02]">
                                 <td className="p-6">
                                     <span className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2 text-[12px] font-black text-[var(--color-text)]/70">
-                                        {item.student.admissionNumber}
+                                        {formatStudentRegistrationNumber(item.student.admissionNumber)}
                                     </span>
                                 </td>
                                 <td className="p-6">
                                     <div className="text-base font-black text-[var(--color-text)]">{item.student.fullName}</div>
-                                    <div className="mt-1 text-[11px] font-bold text-[var(--color-text-muted)]">{item.isPrimary ? 'Primary Parent' : 'Linked Parent'}</div>
                                 </td>
                                 <td className="p-6 text-sm font-bold text-[var(--color-text-main)]">{assignment?.class?.name || '---'}</td>
                                 <td className="p-6 text-sm font-bold text-[var(--color-text-main)]">{assignment?.section?.name || '---'}</td>

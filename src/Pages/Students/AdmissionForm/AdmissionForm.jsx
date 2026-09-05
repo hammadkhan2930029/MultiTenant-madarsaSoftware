@@ -5,6 +5,8 @@ import {
     CheckCircle,
     ChevronDown,
     FileText,
+    Download,
+    ExternalLink,
     HeartPulse,
     MapPin,
     Phone,
@@ -20,7 +22,8 @@ import { Field, Form, Formik, useFormikContext } from 'formik';
 import { useSearchParams } from 'react-router-dom';
 import { AppImages } from '../../../Constant/AppImages';
 import { DateField, InputField, SelectField } from '../../../Components/HR/FormElements';
-import { createStudent, deleteStudentDocument, getNextAdmissionNumber, getParents, getStudentById, updateStudent } from '../../../Constant/StudentsApi';
+import { PHONE_INPUT_PROPS, PHONE_VALIDATION_MESSAGE, isValidPhoneNumber, sanitizePhoneInput } from '../../../Utils/phoneValidation';
+import { createStudent, deleteStudentDocument, downloadStudentDocument, getNextAdmissionNumber, getParents, getStudentById, openStudentDocument, updateStudent } from '../../../Constant/StudentsApi';
 import { getClasses, getSections, getSessions } from '../../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
@@ -28,6 +31,9 @@ import { FormSkeleton, Skeleton } from '../../../Components/Common/Skeleton';
 import { DeleteConfirmationModal } from '../../../Components/Common/DeleteConfirmationModal';
 import { fetchMadrassaProfile, getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../../Utils/cnicFormat';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
+import { URDU_RELATIONSHIP_MESSAGE, isValidUrduRelationship } from '../../../Utils/relationshipValidation';
+import { getCurrentParent, getCurrentParentLink, getGuardianParentLink } from '../../../Utils/parentRelations';
 
 const INITIAL_VALUES = {
     idNo: '',
@@ -35,6 +41,7 @@ const INITIAL_VALUES = {
     admissionFee: '',
     fullName: '',
     fatherName: '',
+    familyNumber: '',
     gender: 'male',
     caste: '',
     cnic: '',
@@ -66,7 +73,7 @@ const INITIAL_VALUES = {
     teacherName: '',
     medicalCondition: '',
     monthlyFee: '',
-    reside: 'نہیں',
+    reside: '',
     studentImage: '',
 };
 
@@ -126,6 +133,8 @@ const formatDate = (dateStr) => {
     return `${day}-${month}-${year}`;
 };
 
+const getPrimaryParentFromStudent = getCurrentParent;
+
 const buildPrintValues = (formValues, savedStudent) => ({
     ...INITIAL_VALUES,
     ...formValues,
@@ -133,7 +142,8 @@ const buildPrintValues = (formValues, savedStudent) => ({
     admissionDate: savedStudent?.admissionDate || formValues.admissionDate,
     admissionFee: savedStudent?.admissionFee ?? formValues.admissionFee,
     fullName: savedStudent?.fullName || formValues.fullName,
-    fatherName: savedStudent?.fatherName || formValues.fatherName,
+    fatherName: getPrimaryParentFromStudent(savedStudent)?.fullName || savedStudent?.fatherName || formValues.fatherName,
+    familyNumber: getPrimaryParentFromStudent(savedStudent)?.familyNumber || savedStudent?.familyNumber || formValues.familyNumber,
     gender: savedStudent?.gender || formValues.gender,
     caste: savedStudent?.caste || formValues.caste,
     cnic: savedStudent?.cnic || formValues.cnic,
@@ -153,7 +163,7 @@ const buildPrintValues = (formValues, savedStudent) => ({
     teacherName: savedStudent?.teacherName || formValues.teacherName,
     medicalCondition: savedStudent?.medicalCondition || formValues.medicalCondition,
     monthlyFee: savedStudent?.monthlyFee ?? formValues.monthlyFee,
-    reside: savedStudent?.reside || formValues.reside,
+    reside: normalizeResidenceStatus(savedStudent?.reside || formValues.reside),
 });
 
 const toDateInputValue = (value) => {
@@ -166,8 +176,12 @@ const toDateInputValue = (value) => {
 const isBlank = (value) => !String(value || '').trim();
 const isValidEmail = (value) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 const isValidAmount = (value) => value === '' || value === null || value === undefined || (Number.isFinite(Number(value)) && Number(value) >= 0);
-const isValidPhone = (value) => !value || /^[0-9+\-\s()]{7,20}$/.test(String(value).trim());
 const isValidOptionalCnic = (value) => !String(value || '').trim() || isCompleteCnic(value);
+const normalizeResidenceStatus = (value) => {
+    if (value === 'ہاں') return 'رہائشی';
+    if (value === 'نہیں') return 'غیر رہائشی';
+    return ['رہائشی', 'غیر رہائشی'].includes(value) ? value : '';
+};
 
 const admissionValidationMessages = {
     idNo: 'داخلہ نمبر لازمی درج کریں۔',
@@ -179,12 +193,13 @@ const admissionValidationMessages = {
     dob: 'تاریخ پیدائش لازمی منتخب کریں۔',
     currentAddress: 'حالیہ پتہ لازمی درج کریں۔',
     permanentAddress: 'مستقل پتہ لازمی درج کریں۔',
+    mobile: 'موبائل نمبر لازمی درج کریں۔',
     guardianName: 'سرپرست کا نام لازمی درج کریں۔',
     relation: 'رشتہ لازمی درج کریں۔',
     guardianMobile: 'سرپرست موبائل لازمی درج کریں۔',
     monthlyFee: 'ماہانہ فیس لازمی درج کریں۔',
     email: 'درست ای میل درج کریں۔',
-    phone: 'درست فون نمبر درج کریں۔',
+    phone: PHONE_VALIDATION_MESSAGE,
     amount: 'رقم درست درج کریں۔',
     cnic: 'شناختی کارڈ نمبر 00000-0000000-0 کے فارمیٹ میں درج کریں۔',
 };
@@ -199,6 +214,7 @@ const mandatoryAdmissionFields = [
     'dob',
     'currentAddress',
     'permanentAddress',
+    'mobile',
     'guardianName',
     'relation',
     'guardianMobile',
@@ -221,17 +237,19 @@ const validateAdmissionForm = (values) => {
     if (isBlank(values.dob)) errors.dob = admissionValidationMessages.dob;
     if (isBlank(values.currentAddress)) errors.currentAddress = admissionValidationMessages.currentAddress;
     if (isBlank(values.permanentAddress)) errors.permanentAddress = admissionValidationMessages.permanentAddress;
+    if (isBlank(values.mobile)) errors.mobile = admissionValidationMessages.mobile;
     if (isBlank(values.guardianName)) errors.guardianName = admissionValidationMessages.guardianName;
     if (isBlank(values.relation)) errors.relation = admissionValidationMessages.relation;
+    else if (!isValidUrduRelationship(values.relation)) errors.relation = URDU_RELATIONSHIP_MESSAGE;
     if (isBlank(values.guardianMobile)) errors.guardianMobile = admissionValidationMessages.guardianMobile;
     if (isBlank(values.monthlyFee)) errors.monthlyFee = admissionValidationMessages.monthlyFee;
     if (!isValidAmount(values.admissionFee)) errors.admissionFee = admissionValidationMessages.amount;
     if (!isValidAmount(values.monthlyFee)) errors.monthlyFee = admissionValidationMessages.amount;
     if (!isValidEmail(values.guardianEmail)) errors.guardianEmail = admissionValidationMessages.email;
-    if (!isValidPhone(values.mobile)) errors.mobile = admissionValidationMessages.phone;
-    if (!isValidPhone(values.whatsapp)) errors.whatsapp = admissionValidationMessages.phone;
-    if (!isValidPhone(values.guardianMobile)) errors.guardianMobile = admissionValidationMessages.phone;
-    if (!isValidPhone(values.guardianWhatsapp)) errors.guardianWhatsapp = admissionValidationMessages.phone;
+    if (!isValidPhoneNumber(values.mobile)) errors.mobile = admissionValidationMessages.phone;
+    if (!isValidPhoneNumber(values.whatsapp)) errors.whatsapp = admissionValidationMessages.phone;
+    if (!isValidPhoneNumber(values.guardianMobile)) errors.guardianMobile = admissionValidationMessages.phone;
+    if (!isValidPhoneNumber(values.guardianWhatsapp)) errors.guardianWhatsapp = admissionValidationMessages.phone;
     if (!isValidOptionalCnic(values.cnic)) errors.cnic = admissionValidationMessages.cnic;
     if (!isValidOptionalCnic(values.guardianCnic)) errors.guardianCnic = admissionValidationMessages.cnic;
 
@@ -307,9 +325,9 @@ const toUrduAdmissionError = (message) => {
 };
 
 const mapStudentToFormValues = (student) => {
-    const primaryParentLink = student?.parents?.find((item) => item.isPrimary) || student?.parents?.[0] || {};
+    const primaryParentLink = getCurrentParentLink(student) || {};
     const primaryParent = primaryParentLink.parent || {};
-    const guardianLink = student?.parents?.find((item) => !item.isPrimary) || {};
+    const guardianLink = getGuardianParentLink(student) || {};
     const guardian = guardianLink.parent || primaryParent;
     const activeAssignment = student?.assignments?.find((assignment) => assignment.status === 'active') || student?.assignments?.[0] || {};
 
@@ -319,7 +337,8 @@ const mapStudentToFormValues = (student) => {
         admissionDate: toDateInputValue(student?.admissionDate),
         admissionFee: student?.admissionFee ?? '',
         fullName: student?.fullName || '',
-        fatherName: student?.fatherName || primaryParent.fullName || '',
+        fatherName: primaryParent.fullName || student?.fatherName || '',
+        familyNumber: primaryParent.familyNumber || student?.familyNumber || '',
         gender: student?.gender || 'male',
         caste: student?.caste || '',
         cnic: student?.cnic || primaryParent.cnic || '',
@@ -351,7 +370,7 @@ const mapStudentToFormValues = (student) => {
         teacherName: student?.teacherName || '',
         medicalCondition: student?.medicalCondition || '',
         monthlyFee: student?.monthlyFee ?? '',
-        reside: student?.reside || INITIAL_VALUES.reside,
+        reside: normalizeResidenceStatus(student?.reside),
         studentImage: student?.imageUrl || '',
     };
 };
@@ -462,7 +481,7 @@ export const AdmissionForm = () => {
                 if (!isMounted) return;
 
                 const nextValues = mapStudentToFormValues(student);
-                const primaryParentLink = student?.parents?.find((item) => item.isPrimary) || student?.parents?.[0];
+                const primaryParentLink = getCurrentParentLink(student);
 
                 setInitialFormValues(nextValues);
                 setSelectedRequiredClassId(nextValues.classId ? Number(nextValues.classId) : null);
@@ -606,6 +625,7 @@ export const AdmissionForm = () => {
         setIsParentDropdownOpen(false);
 
         setFieldValue('fatherName', parent.fullName || '');
+        setFieldValue('familyNumber', parent.familyNumber || '');
         setFieldValue('guardianName', parent.fullName || '');
         setFieldValue('guardianMobile', parent.phone || '');
         setFieldValue('guardianWhatsapp', parent.whatsapp || '');
@@ -637,7 +657,7 @@ export const AdmissionForm = () => {
             }
 
             const parents = [];
-            const guardianRelation = submittedValues.relation?.trim() || 'father';
+            const guardianRelation = submittedValues.relation?.trim() || 'والد';
             const guardianIsFather =
                 submittedValues.guardianName?.trim() === submittedValues.fatherName?.trim();
 
@@ -645,8 +665,8 @@ export const AdmissionForm = () => {
                 parents.push({
                     ...(selectedParentId ? { parentId: selectedParentId } : {}),
                     fullName: submittedValues.fatherName,
-                    relationship: guardianIsFather ? guardianRelation : 'father',
-                    isPrimary: true,
+                    familyNumber: submittedValues.familyNumber,
+                    relationship: guardianIsFather ? guardianRelation : 'والد',
                     phone: selectedParentId ? submittedValues.guardianMobile : submittedValues.mobile,
                     whatsapp: selectedParentId ? submittedValues.guardianWhatsapp : submittedValues.whatsapp,
                     email: selectedParentId ? submittedValues.guardianEmail : undefined,
@@ -661,7 +681,6 @@ export const AdmissionForm = () => {
                     ...(selectedParentId ? { parentId: selectedParentId } : {}),
                     fullName: submittedValues.guardianName,
                     relationship: guardianRelation,
-                    isPrimary: false,
                     phone: submittedValues.guardianMobile,
                     whatsapp: submittedValues.guardianWhatsapp,
                     email: submittedValues.guardianEmail,
@@ -947,6 +966,7 @@ export const AdmissionForm = () => {
                                                 error={touched.fatherName && errors.fatherName ? errors.fatherName : ''}
                                                 className="admission-urdu-input"
                                             />
+                                            <FormikInputField label="خاندان نمبر" name="familyNumber" />
                                             <FormikSelectField
                                                 label="جنس"
                                                 name="gender"
@@ -988,8 +1008,8 @@ export const AdmissionForm = () => {
                                                 name="district"
                                                 className="admission-urdu-input"
                                             />
-                                            <FormikInputField label="موبائل نمبر" name="mobile" error={touched.mobile && errors.mobile ? errors.mobile : ''} />
-                                            <FormikInputField label="واٹس ایپ" name="whatsapp" error={touched.whatsapp && errors.whatsapp ? errors.whatsapp : ''} />
+                                            <FormikInputField label="موبائل نمبر" name="mobile" required normalize={sanitizePhoneInput} {...PHONE_INPUT_PROPS} error={touched.mobile && errors.mobile ? errors.mobile : ''} />
+                                            <FormikInputField label="واٹس ایپ" name="whatsapp" normalize={sanitizePhoneInput} {...PHONE_INPUT_PROPS} error={touched.whatsapp && errors.whatsapp ? errors.whatsapp : ''} />
                                         </div>
                                     </FormSection>
 
@@ -997,8 +1017,8 @@ export const AdmissionForm = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             <FormikInputField label="نام سرپرست" name="guardianName" required error={touched.guardianName && errors.guardianName ? errors.guardianName : ''} />
                                             <FormikInputField label="رشتہ" name="relation" required error={touched.relation && errors.relation ? errors.relation : ''} />
-                                            <FormikInputField label="سرپرست موبائل" name="guardianMobile" required error={touched.guardianMobile && errors.guardianMobile ? errors.guardianMobile : ''} />
-                                            <FormikInputField label="سرپرست واٹس ایپ" name="guardianWhatsapp" error={touched.guardianWhatsapp && errors.guardianWhatsapp ? errors.guardianWhatsapp : ''} />
+                                            <FormikInputField label="سرپرست موبائل" name="guardianMobile" required normalize={sanitizePhoneInput} {...PHONE_INPUT_PROPS} error={touched.guardianMobile && errors.guardianMobile ? errors.guardianMobile : ''} />
+                                            <FormikInputField label="سرپرست واٹس ایپ" name="guardianWhatsapp" normalize={sanitizePhoneInput} {...PHONE_INPUT_PROPS} error={touched.guardianWhatsapp && errors.guardianWhatsapp ? errors.guardianWhatsapp : ''} />
                                             <FormikCnicField label="سرپرست کا شناختی کارڈ نمبر" name="guardianCnic" error={touched.guardianCnic && errors.guardianCnic ? errors.guardianCnic : ''} />
                                             <FormikInputField label="سرپرست کا پیشہ" name="fatherOccupation" />
                                             <FormikInputField label="ای میل" name="guardianEmail" error={touched.guardianEmail && errors.guardianEmail ? errors.guardianEmail : ''} />
@@ -1008,10 +1028,10 @@ export const AdmissionForm = () => {
                                     <FormSection title="تعلیمی ریکارڈ" icon={<BookOpen size={20} />}>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             <FormikInputField label="دینی تعلیم" name="religiousEdu" />
-                                            <FormikInputField label="سابقہ مدرسہ" name="prevMadrassa" />
+                                            <FormikInputField label="سابقہ ادارہ" name="prevMadrassa" />
                                             <FormikInputField label="تاریخ" name="religiousEduDate" type="date" />
                                             <FormikInputField label="عصری تعلیم" name="secularEdu" />
-                                            <FormikInputField label="سابقہ اسکول" name="prevSchool" />
+                                            <FormikInputField label="سابقہ ادارہ" name="prevSchool" />
                                             <FormikInputField label="تاریخ" name="secularEduDate" type="date" />
                                         </div>
 
@@ -1099,7 +1119,15 @@ export const AdmissionForm = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             <FormikInputField label="ماہانہ فیس" name="monthlyFee" required error={touched.monthlyFee && errors.monthlyFee ? errors.monthlyFee : ''} />
                                             <FormikInputField label="بیماری (اگر ہے)" name="medicalCondition" />
-                                            <FormikInputField label="رہائشی (ہاں/نہیں)" name="reside" />
+                                            <FormikSelectField
+                                                label="رہائشی حیثیت"
+                                                name="reside"
+                                                options={[
+                                                    { value: '', label: 'رہائشی حیثیت منتخب کریں' },
+                                                    { value: 'رہائشی', label: 'رہائشی' },
+                                                    { value: 'غیر رہائشی', label: 'غیر رہائشی' },
+                                                ]}
+                                            />
                                         </div>
                                     </FormSection>
 
@@ -1126,15 +1154,15 @@ export const AdmissionForm = () => {
                                                             className="flex min-w-0 items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] p-4 transition-colors hover:border-[#00d094]/60"
                                                         >
                                                             <FileText size={20} className="shrink-0 text-[#00d094]" />
-                                                            <a
-                                                                href={getApiAssetUrl(document.fileUrl)}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="min-w-0 flex-1 truncate font-bold text-[var(--color-text-main)] hover:text-[#00d094]"
-                                                                title={document.originalName}
-                                                            >
+                                                            <span className="min-w-0 flex-1 truncate font-bold text-[var(--color-text-main)]" title={document.originalName}>
                                                                 {document.originalName}
-                                                            </a>
+                                                            </span>
+                                                            <button type="button" onClick={() => openStudentDocument(editingStudentId, document.id).catch((actionError) => setSubmitError(actionError.message))} className="shrink-0 rounded-xl p-2 text-blue-500 transition-colors hover:bg-blue-500/10" aria-label={`${document.originalName} دیکھیں`} title="دستاویز دیکھیں">
+                                                                <ExternalLink size={18} />
+                                                            </button>
+                                                            <button type="button" onClick={() => downloadStudentDocument(editingStudentId, document).catch((actionError) => setSubmitError(actionError.message))} className="shrink-0 rounded-xl p-2 text-[#00d094] transition-colors hover:bg-[#00d094]/10" aria-label={`${document.originalName} ڈاؤن لوڈ کریں`} title="دستاویز ڈاؤن لوڈ کریں">
+                                                                <Download size={18} />
+                                                            </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setDocumentToDelete(document)}
@@ -1250,7 +1278,7 @@ export const AdmissionForm = () => {
                                     </div>
                                     <div className="admission-print-main-fields flex-1 space-y-6 pt-2">
                                         <div className="flex gap-4">
-                                            <PrintLine label="داخلہ نمبر" value={printValues.idNo} />
+                                            <PrintLine label="داخلہ نمبر" value={formatStudentRegistrationNumber(printValues.idNo)} />
                                             <PrintLine label="تاریخ داخلہ" value={formatDate(printValues.admissionDate)} />
                                         </div>
                                         <div className="flex gap-4">
@@ -1264,6 +1292,7 @@ export const AdmissionForm = () => {
                                 <div className="admission-print-body space-y-6">
                                     <div className="flex gap-6">
                                         <PrintLine label="والد کا نام" value={printValues.fatherName} />
+                                        <PrintLine label="خاندان نمبر" value={printValues.familyNumber} />
                                         <PrintLine label="شناختی کارڈ نمبر" value={printValues.cnic} />
                                     </div>
                                     <div className="flex gap-6">
@@ -1298,8 +1327,8 @@ export const AdmissionForm = () => {
                                         <PrintLine label="دینی تعلیم کی تاریخ" value={formatDate(printValues.religiousEduDate)} />
                                         <PrintLine label="عصری تعلیم" value={printValues.secularEdu} />
                                         <PrintLine label="عصری تعلیم کی تاریخ" value={formatDate(printValues.secularEduDate)} />
-                                        <PrintLine label="سابقہ مدرسہ" value={printValues.prevMadrassa} />
-                                        <PrintLine label="سابقہ اسکول" value={printValues.prevSchool} />
+                                        <PrintLine label="سابقہ ادارہ" value={printValues.prevMadrassa} />
+                                        <PrintLine label="سابقہ ادارہ" value={printValues.prevSchool} />
                                         <PrintLine label="بیماری" value={printValues.medicalCondition} />
                                         <PrintLine label="استاد کا نام" value={printValues.teacherName} />
                                     </div>
@@ -1451,7 +1480,7 @@ const FormSection = ({ title, icon, children }) => (
     </div>
 );
 
-const FormikInputField = ({ label, name, type = 'text', className = '', ...props }) => (
+const FormikInputField = ({ label, name, type = 'text', className = '', normalize, ...props }) => (
     <Field name={name}>
         {({ field, form }) =>
             type === 'date' ? (
@@ -1470,6 +1499,7 @@ const FormikInputField = ({ label, name, type = 'text', className = '', ...props
                     {...field}
                     {...props}
                     value={field.value || ''}
+                    onChange={normalize ? (event) => form.setFieldValue(name, normalize(event.target.value)) : field.onChange}
                     className={`admission-form-control ${className}`}
                 />
             )

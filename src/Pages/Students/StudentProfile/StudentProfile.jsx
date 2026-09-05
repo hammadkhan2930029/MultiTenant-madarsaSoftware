@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, CalendarDays, CalendarRange, GraduationCap, Phone, ShieldCheck, User, Users } from 'lucide-react';
+import { ArrowRight, CalendarDays, CalendarRange, Download, ExternalLink, FileText, GraduationCap, Phone, ShieldCheck, User, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getStudentById } from '../../../Constant/StudentsApi';
+import { downloadStudentDocument, getStudentById, openStudentDocument } from '../../../Constant/StudentsApi';
 import { getApiAssetUrl } from '../../../Constant/AdminAuth';
 import { AppImages } from '../../../Constant/AppImages';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
+import { getCurrentParent } from '../../../Utils/parentRelations';
 
 const GENDER_LABELS = {
     male: 'مرد',
@@ -21,6 +23,13 @@ const formatDate = (value) => {
 const formatAdmissionFee = (value) => {
     if (value === 0 || value === '0') return '-';
     return value;
+};
+
+const formatFileSize = (value) => {
+    const bytes = Number(value || 0);
+    if (!bytes) return '---';
+    if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 const getProfileClassName = (student, assignment) => assignment?.class?.name || student?.requiredClass || '---';
@@ -54,6 +63,7 @@ export const StudentProfile = () => {
     const { id } = useParams();
     const [student, setStudent] = useState(null);
     const [error, setError] = useState('');
+    const [documentError, setDocumentError] = useState('');
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -74,6 +84,8 @@ export const StudentProfile = () => {
         () => student?.assignments?.find((assignment) => assignment.status === 'active') || null,
         [student],
     );
+    const primaryParent = getCurrentParent(student);
+    const displayedParentName = primaryParent?.fullName || student?.fatherName;
     const studentImageUrl = student?.imageUrl ? getApiAssetUrl(student.imageUrl) : AppImages.profile;
 
     if (error) {
@@ -104,7 +116,7 @@ export const StudentProfile = () => {
                                 <h1 className="mt-4 py-2 text-4xl md:text-5xl font-black leading-[1.8] text-[var(--color-text-main)]">
                                     {student.fullName}
                                 </h1>
-                                <p className="text-base md:text-lg font-bold text-[var(--color-text-muted)] mt-4">سرپرست: {student.fatherName}</p>
+                                <p className="text-base md:text-lg font-bold text-[var(--color-text-muted)] mt-4">سرپرست: {displayedParentName}</p>
                             </div>
 
                             <div className="flex flex-wrap items-center justify-center gap-3 md:justify-end">
@@ -118,7 +130,7 @@ export const StudentProfile = () => {
                         </div>
 
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                            <InfoCard label="داخلہ نمبر" value={student.admissionNumber} />
+                            <InfoCard label="داخلہ نمبر" value={formatStudentRegistrationNumber(student.admissionNumber)} />
                             <InfoCard label="تاریخ داخلہ" value={formatDate(student.admissionDate)} />
                             <InfoCard label="داخلہ فیس" value={formatAdmissionFee(student.admissionFee)} />
                             <InfoCard label="جماعت" value={getProfileClassName(student, activeAssignment)} />
@@ -132,7 +144,8 @@ export const StudentProfile = () => {
                 <InfoGrid
                     items={[
                         { label: 'نام طالب علم', value: student.fullName },
-                        { label: 'سرپرست کا نام', value: student.fatherName },
+                        { label: 'سرپرست کا نام', value: displayedParentName },
+                        { label: 'خاندان نمبر', value: student.familyNumber || primaryParent?.familyNumber },
                         { label: 'جنس', value: GENDER_LABELS[student.gender] || student.gender },
                         { label: 'قومیت/ذات', value: student.caste },
                         { label: 'تاریخ پیدائش', value: formatDate(student.dob) },
@@ -142,7 +155,14 @@ export const StudentProfile = () => {
                         { label: 'ای میل', value: student.email },
                         { label: 'حالیہ پتہ', value: student.currentAddress || student.address },
                         { label: 'مستقل پتہ', value: student.permanentAddress },
-                        { label: 'رہائشی (ہاں/نہیں)', value: student.reside },
+                        {
+                            label: 'رہائشی حیثیت',
+                            value: student.reside === 'ہاں'
+                                ? 'رہائشی'
+                                : student.reside === 'نہیں'
+                                    ? 'غیر رہائشی'
+                                    : student.reside,
+                        },
                         { label: 'اسٹیٹس', value: student.status },
                     ]}
                 />
@@ -158,12 +178,37 @@ export const StudentProfile = () => {
                         { label: 'داخلہ فیس', value: formatAdmissionFee(student.admissionFee) },
                         { label: 'دینی تعلیم', value: student.religiousEdu },
                         { label: 'عصری تعلیم', value: student.secularEdu },
-                        { label: 'سابقہ مدرسہ', value: student.prevMadrassa },
-                        { label: 'سابقہ اسکول', value: student.prevSchool },
+                        { label: 'سابقہ ادارہ', value: student.prevMadrassa },
+                        { label: 'سابقہ ادارہ', value: student.prevSchool },
                         { label: 'بیماری (اگر ہے)', value: student.medicalCondition },
                         { label: 'تفویض کی تاریخ', value: formatDate(activeAssignment?.assignedAt) },
                     ]}
                 />
+            </SectionCard>
+
+            <SectionCard title="داخلہ دستاویزات" icon={FileText}>
+                {documentError ? <p className="rounded-2xl bg-rose-500/10 p-4 text-sm font-bold text-rose-500">{documentError}</p> : null}
+                {student.documents?.length ? (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {student.documents.map((document) => (
+                            <div key={document.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                <FileText size={22} className="shrink-0 text-[var(--color-primary)]" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate font-bold text-[var(--color-text-main)]" title={document.originalName}>{document.originalName}</p>
+                                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">{formatFileSize(document.fileSize)}</p>
+                                </div>
+                                <button type="button" onClick={() => { setDocumentError(''); openStudentDocument(student.id, document.id).catch((actionError) => setDocumentError(actionError.message)); }} className="rounded-xl p-2 text-blue-500 transition-colors hover:bg-blue-500/10" title="دستاویز دیکھیں" aria-label={`${document.originalName} دیکھیں`}>
+                                    <ExternalLink size={18} />
+                                </button>
+                                <button type="button" onClick={() => { setDocumentError(''); downloadStudentDocument(student.id, document).catch((actionError) => setDocumentError(actionError.message)); }} className="rounded-xl p-2 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-primary)]/10" title="دستاویز ڈاؤن لوڈ کریں" aria-label={`${document.originalName} ڈاؤن لوڈ کریں`}>
+                                    <Download size={18} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] p-6 text-center font-bold text-[var(--color-text-muted)]">کوئی داخلہ دستاویز موجود نہیں ہے۔</p>
+                )}
             </SectionCard>
 
             <SectionCard title="سرپرست" icon={Users}>

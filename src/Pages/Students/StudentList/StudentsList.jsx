@@ -6,6 +6,8 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { Can } from '../../../Components/Auth/Can';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
+import { getCurrentParent } from '../../../Utils/parentRelations';
 
 const emptyValue = '-';
 
@@ -24,8 +26,7 @@ const getStudentSectionName = (student, assignment) => assignment?.section?.name
 const getStudentSessionName = (student, assignment) =>
     assignment?.session?.name || student.session?.name || student.sessionName || student.requiredSession || emptyValue;
 
-const getPrimaryParent = (student) =>
-    student.parents?.find((parentItem) => parentItem.isPrimary)?.parent || student.parents?.[0]?.parent || null;
+const getPrimaryParent = getCurrentParent;
 
 const formatParentSummary = (parentItem) => {
     const parent = parentItem.parent || {};
@@ -71,9 +72,9 @@ const mapStudentsForList = (items) =>
 
         return {
             id: student.id,
-            idNo: student.admissionNumber,
+            idNo: formatStudentRegistrationNumber(student.admissionNumber),
             name: student.fullName,
-            fatherName: student.fatherName,
+            fatherName: primaryParent?.fullName || student.fatherName,
             sessionName: getStudentSessionName(student, activeAssignment),
             className: getStudentClassName(student, activeAssignment),
             section: getStudentSectionName(student, activeAssignment),
@@ -93,11 +94,11 @@ const mapStudentForExport = (student) => {
 
     return {
         id: student.id,
-        admissionNumber: student.admissionNumber,
+        admissionNumber: formatStudentRegistrationNumber(student.admissionNumber),
         admissionDate: formatDate(student.admissionDate),
         admissionFee: student.admissionFee,
         fullName: student.fullName,
-        fatherName: student.fatherName,
+        fatherName: primaryParent?.fullName || student.fatherName,
         gender: student.gender,
         caste: student.caste,
         cnic: student.cnic,
@@ -298,7 +299,7 @@ export const StudentList = () => {
 
                 return [
                     student.fullName,
-                    student.admissionNumber,
+                    formatStudentRegistrationNumber(student.admissionNumber),
                     student.fatherName,
                     student.phone,
                     primaryParent?.familyNumber,
@@ -332,7 +333,7 @@ export const StudentList = () => {
         { header: 'Current Address', accessor: 'currentAddress' },
         { header: 'Permanent Address', accessor: 'permanentAddress' },
         { header: 'District', accessor: 'district' },
-        { header: 'Previous Madrassa', accessor: 'prevMadrassa' },
+        { header: 'Previous Institution', accessor: 'prevMadrassa' },
         { header: 'Previous School', accessor: 'prevSchool' },
         { header: 'Secular Education', accessor: 'secularEdu' },
         { header: 'Religious Education', accessor: 'religiousEdu' },
@@ -347,7 +348,7 @@ export const StudentList = () => {
         { header: 'Section', accessor: 'sectionName' },
         { header: 'Session', accessor: 'sessionName' },
         { header: 'Branch', accessor: 'branchName' },
-        { header: 'Primary Parent', accessor: 'primaryParentName' },
+        { header: 'Parent / Guardian', accessor: 'primaryParentName' },
         { header: 'Family Number', accessor: 'primaryParentFamilyNumber' },
         { header: 'Parent Phone', accessor: 'primaryParentPhone' },
         { header: 'Parent Email', accessor: 'primaryParentEmail' },
@@ -477,10 +478,6 @@ export const StudentList = () => {
                                         </div>
                                     </div> */}
                                     <div>
-                                        <span> داخلہ نمبر : </span>
-                                        <span>{student.idNo || '---'}</span>
-                                    </div>
-                                    <div>
                                         <span> سرپرست کا نام : </span>
                                         <span>{student.fatherName || '---'}</span>
                                     </div>
@@ -564,10 +561,6 @@ export const StudentList = () => {
                                             <span className="text-right">سرپرست کا نام</span>
                                             <span className="text-left">{student.fatherName || emptyValue}</span>
                                         </div> */}
-                                         <div>
-                                        <span> داخلہ نمبر : </span>
-                                        <span>{student.idNo || '---'}</span>
-                                    </div>
                                     <div>
                                         <span> سرپرست کا نام : </span>
                                         <span>{student.fatherName || '---'}</span>
