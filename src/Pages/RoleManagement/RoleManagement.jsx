@@ -68,6 +68,12 @@ const moduleDisplayNames = {
   support: 'سپورٹ',
   suggestions: 'تجاویز',
   reports: 'رپورٹس',
+  inventory: 'اشیاء',
+  notifications: 'اطلاعات',
+  admissions: 'داخلے',
+  audit: 'آڈٹ ریکارڈ',
+  madrassa_profile: 'مدرسہ پروفائل',
+  tenant_management: 'مدرسہ انتظام',
   other: 'دیگر اجازتیں',
   class_management: 'کلاس مینجمنٹ',
   parents_attendance: 'والدین اور حاضری',
@@ -279,18 +285,52 @@ const moduleWordLabels = {
 
 const actionDisplayNames = {
   view: 'دیکھیں',
-  create: 'بنائیں',
+  create: 'شامل کریں',
   add: 'شامل کریں',
   edit: 'ترمیم کریں',
-  update: 'تبدیل کریں',
+  update: 'ترمیم کریں',
   delete: 'حذف کریں',
   generate: 'بنائیں',
+  assign: 'تفویض کریں',
+  print: 'پرنٹ کریں',
+  upload: 'اپ لوڈ کریں',
+  download: 'ڈاؤن لوڈ کریں',
+  archive: 'محفوظات میں منتقل کریں',
+  restore: 'بحال کریں',
+  mark: 'درج کریں',
+  collect: 'وصول کریں',
+  refund: 'رقم واپس کریں',
+  reject: 'مسترد کریں',
+  import: 'امپورٹ کریں',
   assign_class: 'کلاس تفویض کریں',
   assign_permissions: 'اجازتیں دیں',
   approve: 'منظوری دیں',
   export: 'ایکسپورٹ کریں',
-  manage: 'مینج کریں',
+  manage: 'انتظام کریں',
   change_password: 'پاس ورڈ تبدیل کریں',
+};
+
+const permissionDescriptionByAction = {
+  view: (moduleLabel) => `${moduleLabel} کے ریکارڈ اور اسکرینیں دیکھنے کی اجازت۔`,
+  create: (moduleLabel) => `${moduleLabel} میں نیا ریکارڈ شامل کرنے کی اجازت۔`,
+  add: (moduleLabel) => `${moduleLabel} میں نیا ریکارڈ شامل کرنے کی اجازت۔`,
+  edit: (moduleLabel) => `${moduleLabel} کے ریکارڈ میں ترمیم کرنے کی اجازت۔`,
+  update: (moduleLabel) => `${moduleLabel} کے ریکارڈ میں ترمیم کرنے کی اجازت۔`,
+  delete: (moduleLabel) => `${moduleLabel} کے ریکارڈ حذف کرنے کی اجازت۔`,
+  assign: (moduleLabel) => `${moduleLabel} کے ریکارڈ یا ذمہ داری تفویض کرنے کی اجازت۔`,
+  print: (moduleLabel) => `${moduleLabel} کے دستاویزات اور ریکارڈ پرنٹ کرنے کی اجازت۔`,
+  upload: (moduleLabel) => `${moduleLabel} میں فائلیں یا منسلکات اپ لوڈ کرنے کی اجازت۔`,
+  download: (moduleLabel) => `${moduleLabel} کی فائلیں یا برآمدات ڈاؤن لوڈ کرنے کی اجازت۔`,
+  archive: (moduleLabel) => `${moduleLabel} کے ریکارڈ محفوظات میں منتقل کرنے کی اجازت۔`,
+  restore: (moduleLabel) => `${moduleLabel} کے محفوظ یا حذف شدہ ریکارڈ بحال کرنے کی اجازت۔`,
+  mark: (moduleLabel) => `${moduleLabel} درج کرنے کی اجازت۔`,
+  collect: (moduleLabel) => `${moduleLabel} وصول کرنے کی اجازت۔`,
+  refund: (moduleLabel) => `${moduleLabel} کی رقم واپس کرنے کی اجازت۔`,
+  manage: (moduleLabel) => `${moduleLabel} کے مکمل کاری بہاؤ کا انتظام کرنے کی اجازت۔`,
+  approve: (moduleLabel) => `${moduleLabel} کی درخواستیں یا کارروائی منظور کرنے کی اجازت۔`,
+  reject: (moduleLabel) => `${moduleLabel} کی درخواستیں مسترد کرنے کی اجازت۔`,
+  export: (moduleLabel) => `${moduleLabel} کے ریکارڈ ایکسپورٹ کرنے کی اجازت۔`,
+  import: (moduleLabel) => `${moduleLabel} کے ریکارڈ امپورٹ کرنے کی اجازت۔`,
 };
 
 const getPermissionKey = (permission) => (
@@ -328,7 +368,11 @@ const formatUnknownModuleLabel = (moduleName) => {
   return /[A-Za-z]/.test(translated) ? translated.replace(/_/g, ' ') : translated;
 };
 
-const formatModuleLabel = (moduleName) => moduleDisplayNames[moduleName] || moduleLabelById[moduleName] || formatUnknownModuleLabel(moduleName);
+const normalizeModuleKey = (moduleName) => String(moduleName || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+const formatModuleLabel = (moduleName) => {
+  const normalized = normalizeModuleKey(moduleName);
+  return moduleDisplayNames[normalized] || moduleLabelById[normalized] || formatUnknownModuleLabel(normalized);
+};
 
 const formatPermissionLabel = (permission) => {
   const key = getPermissionKey(permission);
@@ -346,6 +390,22 @@ const formatPermissionLabel = (permission) => {
   return moduleLabel || rawName || key;
 };
 
+const formatPermissionDescription = (permission) => {
+  const key = getPermissionKey(permission) || permission?.key || '';
+  const [modulePart, ...actionParts] = String(key).split('.');
+  const action = permission?.action || actionParts.join('.');
+  const actionKey = permissionDescriptionByAction[action]
+    ? action
+    : String(action).split('.').pop();
+  const descriptionFactory = permissionDescriptionByAction[actionKey];
+
+  if (descriptionFactory) return descriptionFactory(formatModuleLabel(modulePart));
+
+  const rawDescription = permission?.description || '';
+  if (rawDescription && !/[A-Za-z]/.test(rawDescription)) return rawDescription;
+  return `${formatModuleLabel(modulePart)} کی اس سہولت کو استعمال کرنے کی اجازت۔`;
+};
+
 const groupPermissionsByModule = (permissions = []) => {
   if (!permissions.length) return ROLE_PERMISSION_MODULES;
 
@@ -355,7 +415,7 @@ const groupPermissionsByModule = (permissions = []) => {
     const key = permission.permissionKey || permission.permission_key;
     if (!key) return;
 
-    const moduleId = permission.moduleName || permission.module_name || 'other';
+    const moduleId = String(key).split('.')[0] || 'other';
     if (!grouped.has(moduleId)) {
       grouped.set(moduleId, { id: moduleId, label: formatModuleLabel(moduleId), permissions: [] });
     }
@@ -363,6 +423,7 @@ const groupPermissionsByModule = (permissions = []) => {
     grouped.get(moduleId).permissions.push({
       key,
       name: formatPermissionLabel(permission),
+      description: formatPermissionDescription(permission),
     });
   });
 
@@ -378,7 +439,7 @@ const normalizeGroupedPermissions = (groups = []) => {
 
     return {
       id: moduleId,
-      label: group.moduleLabel || group.label || formatModuleLabel(moduleId),
+      label: formatModuleLabel(moduleId),
       permissions: permissions
         .map((permission) => {
           const key = getPermissionKey(permission) || permission.key;
@@ -387,8 +448,8 @@ const normalizeGroupedPermissions = (groups = []) => {
           return {
             key,
             action: permission.action || String(key).split('.').slice(1).join('.'),
-            name: permission.label || permission.name || formatPermissionLabel({ ...permission, permissionKey: key }),
-            description: permission.description || '',
+            name: formatPermissionLabel({ ...permission, permissionKey: key }),
+            description: formatPermissionDescription({ ...permission, permissionKey: key }),
           };
         })
         .filter(Boolean),
@@ -397,8 +458,7 @@ const normalizeGroupedPermissions = (groups = []) => {
 };
 
 const getPermissionActionLabel = (permission) => {
-  const action = permission.action || String(permission.key || '').split('.').slice(1).join('.');
-  return actionDisplayNames[action] || actionDisplayNames[String(action).split('.').pop()] || permission.name || action;
+  return formatPermissionLabel({ ...permission, permissionKey: permission.key });
 };
 
 const isPermissionRestrictedForBranch = (permission) => {
@@ -1069,7 +1129,6 @@ export const RoleManagement = () => {
                       >
                         <span className="flex-1 text-right leading-6">
                           <span className="block text-[var(--color-text-main)]">{getPermissionActionLabel(permission)}</span>
-                          <span className="mt-1 block text-[11px] font-bold text-[var(--color-text-muted)]">{permission.key}</span>
                           {permission.description ? <span className="mt-1 block text-[11px] font-bold text-[var(--color-text-muted)]">{permission.description}</span> : null}
                         </span>
                         <input
