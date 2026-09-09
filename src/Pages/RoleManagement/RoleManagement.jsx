@@ -10,6 +10,7 @@ import { ROLE_PERMISSION_MODULES, SUPER_ADMIN_ROLE } from '../../Constant/Permis
 import { assignRolePermissions, createRole, deleteRole, getGroupedPermissions, getRoleAssignedPermissions, getRoleById, getRolePermissions, getRoles, updateRole } from '../../Constant/RoleManagementApi';
 import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isSuperAdmin, isTenantAdmin, refreshPermissions } from '../../Constant/AdminAuth';
 import { usePermissions } from '../../Hooks/usePermissions';
+import { clearFieldError, focusFirstInvalidField, normalizeValidationErrors } from '../../Utils/formValidation';
 
 const emptyForm = { roleName: '', description: '', status: 'active', branchId: '', classScopeMode: 'all', classIds: [], teacherId: '' };
 const BRANCH_RESTRICTED_PERMISSION_MODULES = new Set(['tenant_management', 'branches']);
@@ -532,6 +533,7 @@ export const RoleManagement = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [formErrors, setFormErrors] = useState({});
 
   useNotificationBridge({ error, success });
 
@@ -875,21 +877,20 @@ export const RoleManagement = () => {
 
   const handleSubmit = async () => {
     if (mode === 'edit' && isRoleModificationProtected(currentRole)) return;
-    if (!formData.roleName.trim()) {
-      setError('کردار کا نام ضروری ہے۔');
-      return;
-    }
-
-    if (canAssignRoleBranch && !formData.branchId) {
-      setError('برانچ منتخب کریں۔');
-      return;
-    }
-
+    const nextErrors = {};
+    if (!formData.roleName.trim()) nextErrors.roleName = 'کردار کا نام ضروری ہے۔';
+    if (canAssignRoleBranch && !formData.branchId) nextErrors.branchId = 'برانچ منتخب کریں۔';
     if (canConfigureClassScope && formData.classScopeMode === 'selected' && !formData.classIds.length) {
-      setError('کم از کم ایک جماعت منتخب کریں۔');
+      nextErrors.classIds = 'کم از کم ایک جماعت منتخب کریں۔';
+    }
+    if (Object.keys(nextErrors).length) {
+      setFormErrors(nextErrors);
+      setError('درج کردہ معلومات میں غلطی ہے۔ متعلقہ خانوں کو درست کریں۔');
+      focusFirstInvalidField(nextErrors, { roleName: 'role-name', branchId: 'role-branch', classIds: 'role-class-scope' });
       return;
     }
     setIsSaving(true);
+    setFormErrors({});
     setError('');
     setSuccess('');
 
@@ -923,7 +924,14 @@ export const RoleManagement = () => {
         navigate('/role-management');
       }
     } catch (saveError) {
-      setError(saveError.message || 'کردار محفوظ نہیں ہو سکا۔');
+      const backendErrors = normalizeValidationErrors(saveError);
+      if (Object.keys(backendErrors).length) {
+        setFormErrors(backendErrors);
+        setError('درج کردہ معلومات میں غلطی ہے۔ متعلقہ خانوں کو درست کریں۔');
+        focusFirstInvalidField(backendErrors, { roleName: 'role-name', branchId: 'role-branch', classIds: 'role-class-scope' });
+      } else {
+        setError(saveError.message || 'کردار محفوظ نہیں ہو سکا۔');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -1001,18 +1009,20 @@ export const RoleManagement = () => {
     <div className="mt-6 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <SelectField
+          id="role-class-scope"
           label="جماعت تک رسائی (اختیاری)"
+          error={formErrors.classIds}
           options={[
             { value: 'all', label: 'تمام جماعتیں' },
             { value: 'selected', label: 'منتخب جماعتیں' },
           ]}
           value={formData.classScopeMode}
-          onChange={(event) => setFormData((prev) => ({
+          onChange={(event) => { clearFieldError(setFormErrors, 'classIds'); setFormData((prev) => ({
             ...prev,
             classScopeMode: event.target.value,
             classIds: event.target.value === 'all' ? [] : prev.classIds,
             teacherId: event.target.value === 'all' ? '' : prev.teacherId,
-          }))}
+          })); }}
           disabled={readOnly}
         />
         <div className="text-right text-xs font-bold leading-7 text-[var(--color-text-muted)]">
@@ -1043,7 +1053,7 @@ export const RoleManagement = () => {
                   type="checkbox"
                   checked={checked}
                   disabled={readOnly}
-                  onChange={() => toggleClassSelection(academicClass)}
+                  onChange={() => { clearFieldError(setFormErrors, 'classIds'); toggleClassSelection(academicClass); }}
                   className="h-4 w-4 accent-[var(--color-primary)]"
                 />
               </label>
@@ -1223,24 +1233,28 @@ export const RoleManagement = () => {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <InputField
+            id="role-name"
+            error={formErrors.roleName}
             type="text"
             label="کردار کا نام"
             className="h-[88px]"
             required
             placeholder="مثلاً: اکاؤنٹنٹ"
             value={formData.roleName}
-            onChange={(event) => setFormData((prev) => ({ ...prev, roleName: event.target.value }))}
+            onChange={(event) => { clearFieldError(setFormErrors, 'roleName'); setFormData((prev) => ({ ...prev, roleName: event.target.value })); }}
             disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
           />
 
           {mode === 'create' && canAssignRoleBranch ? (
             <SelectField
+              id="role-branch"
+              error={formErrors.branchId}
               label="برانچ"
               className="h-[88px]"
               required
               options={branchOptions}
               value={formData.branchId}
-              onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, classIds: [], teacherId: '' }))}
+              onChange={(event) => { clearFieldError(setFormErrors, 'branchId'); setFormData((prev) => ({ ...prev, branchId: event.target.value, classIds: [], teacherId: '' })); }}
             />
           ) : null}
 

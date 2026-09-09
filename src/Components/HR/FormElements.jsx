@@ -18,7 +18,7 @@ export const InputField = ({ label, placeholder, isDark, type = "text", classNam
       aria-invalid={Boolean(error)}
       aria-describedby={error && id ? `${id}-error` : undefined}
       {...props}
-      className={`w-full p-4 font-arabic rounded-2xl border outline-none font-bold transition-all  focus:ring-4 focus:ring-emerald-500/10 ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
+      className={`w-full p-4 font-arabic rounded-2xl border outline-none font-bold transition-all focus:ring-4 ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : `focus:ring-emerald-500/10 ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'}`
         } ${className}`}
     />
     {error ? <p id={id ? `${id}-error` : undefined} className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
@@ -40,7 +40,7 @@ export const SelectField = ({ label, options, isDark, className = '', required =
         aria-invalid={Boolean(error)}
         aria-describedby={error && id ? `${id}-error` : undefined}
         {...props}
-        className={`w-full p-4 rounded-2xl border outline-none font-bold appearance-none transition-all ${isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]'
+        className={`w-full p-4 rounded-2xl border outline-none font-bold appearance-none transition-all ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10' : (isDark ? 'bg-[var(--color-surface)] border-[var(--color-border)]' : 'bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]')
         } ${className}`}
       >
         {options.map((opt, i) => {

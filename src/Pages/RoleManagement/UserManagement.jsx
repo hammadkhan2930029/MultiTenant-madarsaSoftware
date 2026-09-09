@@ -12,6 +12,7 @@ import { getBranches } from '../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../Constant/TeachersApi';
 import { usePermissions } from '../../Hooks/usePermissions';
 import { PHONE_INPUT_PROPS, PHONE_VALIDATION_MESSAGE, isValidPhoneNumber, normalizePhoneNumber, sanitizePhoneInput } from '../../Utils/phoneValidation';
+import { clearFieldError, focusFirstInvalidField, normalizeValidationErrors } from '../../Utils/formValidation';
 
 const emptyForm = {
   name: '',
@@ -189,6 +190,7 @@ export const UserManagement = () => {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [formErrors, setFormErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -400,18 +402,26 @@ export const UserManagement = () => {
   const handleSubmit = async () => {
     if (isSaving) return undefined;
 
-    if (!formData.name.trim()) return setError('صارف کا نام ضروری ہے۔');
-    if (!formData.email.trim()) return setError('ای میل ضروری ہے۔');
-    if (!formData.username.trim()) return setError('صارف نام ضروری ہے۔');
-    if (mode === 'create' && !formData.password.trim()) return setError('پاس ورڈ ضروری ہے۔');
-    if (!formData.password.trim() && formData.confirmPassword.trim()) return setError('پاس ورڈ بھی درج کریں۔');
+    const nextErrors = {};
+    if (!formData.name.trim()) nextErrors.name = 'صارف کا نام ضروری ہے۔';
+    if (!formData.email.trim()) nextErrors.email = 'ای میل ضروری ہے۔';
+    if (!formData.username.trim()) nextErrors.username = 'صارف نام ضروری ہے۔';
+    if (mode === 'create' && !formData.password.trim()) nextErrors.password = 'پاس ورڈ ضروری ہے۔';
+    if (!formData.password.trim() && formData.confirmPassword.trim()) nextErrors.password = 'پاس ورڈ بھی درج کریں۔';
     if (formData.password.trim() && formData.password !== formData.confirmPassword) {
-      return setError('پاس ورڈ اور تصدیقی پاس ورڈ ایک جیسے ہونے چاہئیں۔');
+      nextErrors.confirmPassword = 'پاس ورڈ اور تصدیقی پاس ورڈ ایک جیسے ہونے چاہئیں۔';
     }
-    if (!formData.roleId && !isSuperAdminUser(currentUser)) return setError('کردار منتخب کریں۔');
-    if (formData.phone.trim() && !isValidPhoneNumber(formData.phone)) return setError(PHONE_VALIDATION_MESSAGE);
+    if (!formData.roleId && !isSuperAdminUser(currentUser)) nextErrors.roleId = 'کردار منتخب کریں۔';
+    if (formData.phone.trim() && !isValidPhoneNumber(formData.phone)) nextErrors.phone = PHONE_VALIDATION_MESSAGE;
+    if (Object.keys(nextErrors).length) {
+      setFormErrors(nextErrors);
+      setError('درج کردہ معلومات میں غلطی ہے۔ متعلقہ خانوں کو درست کریں۔');
+      focusFirstInvalidField(nextErrors, { name: 'user-name', email: 'user-email', username: 'user-username', password: 'user-password', confirmPassword: 'user-confirm-password', roleId: 'user-role', phone: 'user-phone' });
+      return undefined;
+    }
 
     setIsSaving(true);
+    setFormErrors({});
     setError('');
     setSuccess('');
 
@@ -451,7 +461,14 @@ export const UserManagement = () => {
         setSuccess('نیا صارف کامیابی سے محفوظ ہو گیا۔');
       }
     } catch (saveError) {
-      setError(saveError.message || 'صارف محفوظ نہیں ہو سکا۔');
+      const backendErrors = normalizeValidationErrors(saveError);
+      if (Object.keys(backendErrors).length) {
+        setFormErrors(backendErrors);
+        setError('درج کردہ معلومات میں غلطی ہے۔ متعلقہ خانوں کو درست کریں۔');
+        focusFirstInvalidField(backendErrors, { name: 'user-name', email: 'user-email', username: 'user-username', password: 'user-password', roleId: 'user-role', phone: 'user-phone' });
+      } else {
+        setError(saveError.message || 'صارف محفوظ نہیں ہو سکا۔');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -516,12 +533,12 @@ export const UserManagement = () => {
     return (
       <div style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <InputField id="user-name" label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
-          <InputField id="user-email" label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))} />
-          <InputField id="user-phone" label="فون" placeholder="03001234567 / +923001234567" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))} {...PHONE_INPUT_PROPS} />
-          <InputField id="user-username" label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))} />
+          <InputField id="user-name" error={formErrors.name} label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => { clearFieldError(setFormErrors, 'name'); setFormData((prev) => ({ ...prev, name: event.target.value })); }} />
+          <InputField id="user-email" error={formErrors.email} label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => { clearFieldError(setFormErrors, 'email'); setFormData((prev) => ({ ...prev, email: event.target.value })); }} />
+          <InputField id="user-phone" error={formErrors.phone} label="فون" placeholder="03001234567 / +923001234567" value={formData.phone} onChange={(event) => { clearFieldError(setFormErrors, 'phone'); setFormData((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) })); }} {...PHONE_INPUT_PROPS} />
+          <InputField id="user-username" error={formErrors.username} label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => { clearFieldError(setFormErrors, 'username'); setFormData((prev) => ({ ...prev, username: event.target.value })); }} />
           <div className="relative">
-            <InputField id="user-password" className="pl-14" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type={showPassword ? 'text' : 'password'} placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
+            <InputField id="user-password" error={formErrors.password} className="pl-14" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type={showPassword ? 'text' : 'password'} placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => { clearFieldError(setFormErrors, 'password'); setFormData((prev) => ({ ...prev, password: event.target.value })); }} />
             <button
               type="button"
               onClick={() => setShowPassword((visible) => !visible)}
@@ -533,7 +550,7 @@ export const UserManagement = () => {
             </button>
           </div>
           <div className="relative">
-            <InputField id="user-confirm-password" className="pl-14" label="تصدیقی پاس ورڈ" required={mode === 'create'} type={showConfirmPassword ? 'text' : 'password'} placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
+            <InputField id="user-confirm-password" error={formErrors.confirmPassword} className="pl-14" label="تصدیقی پاس ورڈ" required={mode === 'create'} type={showConfirmPassword ? 'text' : 'password'} placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => { clearFieldError(setFormErrors, 'confirmPassword'); setFormData((prev) => ({ ...prev, confirmPassword: event.target.value })); }} />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((visible) => !visible)}
@@ -544,7 +561,7 @@ export const UserManagement = () => {
               {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
-          <SelectField id="user-role" label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => setFormData((prev) => ({ ...prev, roleId: event.target.value }))} />
+          <SelectField id="user-role" error={formErrors.roleId} label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => { clearFieldError(setFormErrors, 'roleId'); setFormData((prev) => ({ ...prev, roleId: event.target.value })); }} />
           {branchScopedSession ? (
             <InputField
               id="user-branch-readonly"

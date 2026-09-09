@@ -300,7 +300,7 @@ export const ThemedDatePicker = ({
           }
           openCalendar();
         }}
-        className={`w-full min-w-0 border bg-[var(--color-input)] border-transparent outline-none font-bold transition-all focus:border-[var(--color-primary)] focus:ring-4 focus:ring-emerald-500/10 flex items-center justify-between gap-2 text-right ${buttonSizeClass}`}
+        className={`w-full min-w-0 border bg-[var(--color-input)] outline-none font-bold transition-all focus:ring-4 flex items-center justify-between gap-2 text-right ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : 'border-transparent focus:border-[var(--color-primary)] focus:ring-emerald-500/10'} ${buttonSizeClass}`}
       >
         <CalendarDays size={buttonIconSize} className="text-[var(--color-primary)] shrink-0" />
         <span className={`min-w-0 flex-1 truncate whitespace-nowrap leading-[2] ${selectedDate ? 'text-[var(--color-text-main)]' : 'text-[var(--color-text-muted)]'}`}>
