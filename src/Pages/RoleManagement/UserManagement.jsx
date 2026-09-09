@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Edit2, Eye, Plus, Save, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowRight, Edit2, Eye, EyeOff, Plus, Save, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
@@ -189,6 +189,8 @@ export const UserManagement = () => {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useNotificationBridge({ error, success });
 
@@ -518,8 +520,30 @@ export const UserManagement = () => {
           <InputField id="user-email" label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))} />
           <InputField id="user-phone" label="فون" placeholder="03001234567 / +923001234567" value={formData.phone} onChange={(event) => setFormData((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))} {...PHONE_INPUT_PROPS} />
           <InputField id="user-username" label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => setFormData((prev) => ({ ...prev, username: event.target.value }))} />
-          <InputField id="user-password" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type="password" placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
-          <InputField id="user-confirm-password" label="تصدیقی پاس ورڈ" required={mode === 'create'} type="password" placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
+          <div className="relative">
+            <InputField id="user-password" className="pl-14" label={mode === 'edit' ? 'نیا پاس ورڈ' : 'پاس ورڈ'} required={mode === 'create'} type={showPassword ? 'text' : 'password'} placeholder={mode === 'edit' ? 'خالی چھوڑیں اگر تبدیل نہیں کرنا' : 'کم از کم 8 حروف'} value={formData.password} onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))} />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              className="absolute bottom-4 left-4 flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+              aria-label={showPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+              title={showPassword ? 'پاس ورڈ چھپائیں' : 'پاس ورڈ دکھائیں'}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+          <div className="relative">
+            <InputField id="user-confirm-password" className="pl-14" label="تصدیقی پاس ورڈ" required={mode === 'create'} type={showConfirmPassword ? 'text' : 'password'} placeholder="پاس ورڈ دوبارہ لکھیں" value={formData.confirmPassword} onChange={(event) => setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))} />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword((visible) => !visible)}
+              className="absolute bottom-4 left-4 flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+              aria-label={showConfirmPassword ? 'تصدیقی پاس ورڈ چھپائیں' : 'تصدیقی پاس ورڈ دکھائیں'}
+              title={showConfirmPassword ? 'تصدیقی پاس ورڈ چھپائیں' : 'تصدیقی پاس ورڈ دکھائیں'}
+            >
+              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           <SelectField id="user-role" label="کردار منتخب کریں" required options={roleOptions} value={formData.roleId} disabled={lockSuperAdminRole} onChange={(event) => setFormData((prev) => ({ ...prev, roleId: event.target.value }))} />
           {branchScopedSession ? (
             <InputField

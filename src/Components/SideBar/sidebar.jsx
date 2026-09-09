@@ -152,7 +152,10 @@ export const SideBar = () => {
         || 'admin';
     const profileRoleName = String(profileRoleNameRaw || 'admin').trim().toLowerCase();
     const profileRoleLabel = profileRoleDisplayNames[profileRoleName] || profileRoleName || 'ایڈمن';
-    const sidebarBadge = madrassaProfile?.city?.trim() || 'Main Campus';
+    const sidebarBadgeValue = madrassaProfile?.city?.trim();
+    const sidebarBadge = !sidebarBadgeValue || /^main\s+(campus|branch)$/i.test(sidebarBadgeValue)
+        ? 'مرکزی کیمپس'
+        : sidebarBadgeValue;
     const hasMadrassaLogo = Boolean(avatarSrc);
     const isBranchManagementEnabled = canAccessBranchManagement(currentSession);
     const isBranchScopedSession = getIsBranchScopedSession(currentSession);
@@ -883,7 +886,7 @@ export const SideBar = () => {
             <div className="flex-1 md:mr-64 flex flex-col min-h-screen overflow-x-hidden">
 
                 {/* --- TOP NAVBAR (Fixed UI) --- */}
-                <nav className="h-20 bg-themeSurface/70 backdrop-blur-md border border-transparent dark:border-themeBorder  shadow-[0_8px_30px_rgb(0,0,0,0.06)] px-6 md:px-10 flex items-center justify-between sticky top-4 z-50 rounded-[2.5rem] mx-2 md:mx-4 transition-all">
+                <nav className="h-20 bg-themeSurface/70 backdrop-blur-md border border-transparent dark:border-themeBorder  shadow-[0_8px_30px_rgb(0,0,0,0.06)] px-6 md:px-10 flex items-center justify-between sticky top-4 z-[200] rounded-[2.5rem] mx-2 md:mx-4 transition-all">
 
                     <div className="flex items-center gap-4">
                         <div ref={profileMenuRef} className="relative">

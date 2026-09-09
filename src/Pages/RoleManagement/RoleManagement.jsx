@@ -337,6 +337,14 @@ const getPermissionKey = (permission) => (
   typeof permission === 'string' ? permission : permission?.permissionKey || permission?.permission_key || ''
 );
 
+const getClassInchargeTeacherId = (academicClass) => {
+  const value = academicClass?.inchargeTeacherId
+    ?? academicClass?.incharge_teacher_id
+    ?? academicClass?.inchargeTeacher?.id
+    ?? academicClass?.incharge_teacher?.id;
+  return value ? String(value) : '';
+};
+
 const getRoleName = (role) => role?.roleName || role?.role_name || role?.name || '';
 const getRoleDisplayName = (role) => roleDisplayNames[getRoleName(role)] || getRoleName(role);
 const getRoleDescription = (role) => roleDescriptionDisplayNames[getRoleName(role)] || role?.description || 'تفصیل موجود نہیں۔';
@@ -583,6 +591,35 @@ export const RoleManagement = () => {
     selectedPermissions.length !== savedPermissions.length ||
     selectedPermissions.some((permission) => !savedSet.has(permission))
   ), [savedPermissions.length, savedSet, selectedPermissions]);
+
+  const toggleClassSelection = (academicClass) => {
+    const classId = String(academicClass.id);
+    const inchargeTeacherId = getClassInchargeTeacherId(academicClass);
+    const inchargeIsAvailable = inchargeTeacherId
+      && teacherOptions.some((teacher) => String(teacher.id) === inchargeTeacherId);
+
+    setFormData((prev) => {
+      const isSelected = prev.classIds.includes(classId);
+      const classIds = isSelected
+        ? prev.classIds.filter((id) => id !== classId)
+        : [...prev.classIds, classId];
+
+      if (!isSelected && inchargeIsAvailable) {
+        return { ...prev, classIds, teacherId: inchargeTeacherId };
+      }
+
+      if (isSelected && inchargeTeacherId && prev.teacherId === inchargeTeacherId) {
+        const remainingIncharge = [...classIds]
+          .reverse()
+          .map((id) => classOptions.find((item) => String(item.id) === id))
+          .map(getClassInchargeTeacherId)
+          .find((teacherId) => teacherOptions.some((teacher) => String(teacher.id) === teacherId));
+        return { ...prev, classIds, teacherId: remainingIncharge || '' };
+      }
+
+      return { ...prev, classIds };
+    });
+  };
   const visibleRoles = useMemo(
     () => roles
       .filter((role) => !statusFilter || getRoleStatus(role) === statusFilter)
@@ -852,11 +889,6 @@ export const RoleManagement = () => {
       setError('کم از کم ایک جماعت منتخب کریں۔');
       return;
     }
-    if (canConfigureClassScope && formData.classScopeMode === 'selected' && !formData.teacherId) {
-      setError('منتخب جماعتوں کے لیے استاد منتخب کریں۔');
-      return;
-    }
-
     setIsSaving(true);
     setError('');
     setSuccess('');
@@ -871,7 +903,9 @@ export const RoleManagement = () => {
           : selectedPermissions,
         classScopeMode: canConfigureClassScope ? formData.classScopeMode : 'all',
         classIds: canConfigureClassScope && formData.classScopeMode === 'selected' ? formData.classIds.map(Number) : [],
-        teacherId: canConfigureClassScope && formData.classScopeMode === 'selected' ? Number(formData.teacherId) : null,
+        teacherId: canConfigureClassScope && formData.classScopeMode === 'selected' && formData.teacherId
+          ? Number(formData.teacherId)
+          : null,
       };
 
       if (mode === 'create' && canAssignRoleBranch) {
@@ -967,8 +1001,7 @@ export const RoleManagement = () => {
     <div className="mt-6 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <SelectField
-          label="جماعت تک رسائی"
-          required
+          label="جماعت تک رسائی (اختیاری)"
           options={[
             { value: 'all', label: 'تمام جماعتیں' },
             { value: 'selected', label: 'منتخب جماعتیں' },
@@ -990,10 +1023,9 @@ export const RoleManagement = () => {
       {formData.classScopeMode === 'selected' ? (
         <div className="mt-5 space-y-5">
           <SelectField
-            label="متعلقہ استاد"
-            required
+            label="متعلقہ استاد (اختیاری)"
             options={[
-              { value: '', label: teacherOptions.length ? 'استاد منتخب کریں' : 'اس برانچ میں کوئی فعال استاد موجود نہیں' },
+              { value: '', label: teacherOptions.length ? 'استاد منتخب نہ کریں' : 'اس برانچ میں کوئی فعال استاد موجود نہیں' },
               ...teacherOptions.map((teacher) => ({ value: String(teacher.id), label: teacher.fullName })),
             ]}
             value={formData.teacherId}
@@ -1011,10 +1043,7 @@ export const RoleManagement = () => {
                   type="checkbox"
                   checked={checked}
                   disabled={readOnly}
-                  onChange={() => setFormData((prev) => ({
-                    ...prev,
-                    classIds: checked ? prev.classIds.filter((id) => id !== classId) : [...prev.classIds, classId],
-                  }))}
+                  onChange={() => toggleClassSelection(academicClass)}
                   className="h-4 w-4 accent-[var(--color-primary)]"
                 />
               </label>
@@ -1196,6 +1225,7 @@ export const RoleManagement = () => {
           <InputField
             type="text"
             label="کردار کا نام"
+            className="h-[88px]"
             required
             placeholder="مثلاً: اکاؤنٹنٹ"
             value={formData.roleName}
@@ -1206,6 +1236,7 @@ export const RoleManagement = () => {
           {mode === 'create' && canAssignRoleBranch ? (
             <SelectField
               label="برانچ"
+              className="h-[88px]"
               required
               options={branchOptions}
               value={formData.branchId}
@@ -1219,14 +1250,15 @@ export const RoleManagement = () => {
               value={formData.description}
               onChange={(event) => setFormData((prev) => ({ ...prev, description: event.target.value }))}
               placeholder="کردار کی مختصر تفصیل"
-              rows={3}
-              className="w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
+              rows={1}
+              className="h-[88px] w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
               disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
             />
           </div>
 
           <SelectField
             label="حالت"
+            className="h-[88px]"
             required
             options={[
               { value: 'active', label: 'فعال' },
