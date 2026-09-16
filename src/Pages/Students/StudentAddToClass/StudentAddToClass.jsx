@@ -34,12 +34,15 @@ export const StudentAddToClass = () => {
 
         const loadData = async () => {
             try {
-                const [studentsResult, classesResult, sectionsResult, sessionsResult] = await Promise.all([
+                const results = await Promise.allSettled([
                     getStudents('page=1&limit=100&status=active'),
                     getClasses('page=1&limit=100&status=active'),
                     getSections('page=1&limit=100&status=active'),
                     getSessions('page=1&limit=100&status=active'),
                 ]);
+                const rejectedResult = results.find((result) => result.status === 'rejected');
+                if (rejectedResult) throw rejectedResult.reason;
+                const [studentsResult, classesResult, sectionsResult, sessionsResult] = results.map((result) => result.value);
 
                 setStudentsData(studentsResult.items || []);
                 setClasses(classesResult.items || []);
@@ -119,13 +122,19 @@ export const StudentAddToClass = () => {
             return;
         }
 
+        const assignmentPayload = {
+            branchId: Number(selectedClass.branchId),
+            classId: Number(filters.classId),
+            sectionId: Number(filters.sectionId),
+            sessionId: Number(filters.sessionId),
+        };
+        if (Object.values(assignmentPayload).some((value) => !Number.isInteger(value) || value <= 0)) {
+            setError('براہ کرم سیشن، جماعت اور سیکشن دوبارہ منتخب کریں۔');
+            return;
+        }
+
         try {
-            const assignment = await assignStudentClass(selectedStudent.id, {
-                branchId: Number(selectedClass.branchId),
-                classId: Number(filters.classId),
-                sectionId: Number(filters.sectionId),
-                sessionId: Number(filters.sessionId),
-            });
+            const assignment = await assignStudentClass(selectedStudent.id, assignmentPayload);
 
             const academicClass = classes.find((item) => String(item.id) === String(filters.classId));
             const section = sections.find((item) => String(item.id) === String(filters.sectionId));

@@ -325,16 +325,16 @@ export const SideBar = () => {
             label: 'طلباء',
             icon: GraduationCap,
             subMenu: [
-                { id: 'std_parents', label: 'سرپرست', path: '/students/parents' },
+                { id: 'std_parents', label: 'سرپرست', path: '/students/parents', permissions: ['parents.view', 'parents.create', 'parents.edit', 'parents.delete'] },
                 { id: 'std_admission', label: 'داخلہ فارم', path: '/students/admission' },
                 { id: 'std_list', label: 'طلباء کی فہرست', path: '/students/list' },
                 { id: 'std_class_asign', label: 'طلباء کو جماعت میں شامل کریں', path: '/students/class_asign' },
 
-                { id: 'std_attendance', label: 'طلبہ کی حاضری', path: '/students/attendance' },
+                { id: 'std_attendance', label: 'طلبہ کی حاضری', path: '/students/attendance', permissions: ['attendance.view', 'attendance.create', 'attendance.edit', 'attendance.delete'] },
                 { id: 'std_id_card', label: 'آئی ڈی کارڈ بنائیں', path: '/students/create-id-card' },
 
                 { id: 'std_schedule ', label: 'نظام الاوقات', path: '/students/schedule' },
-                { id: 'std_fees ', label: 'فیس جینریشن', path: '/students/fees' },
+                { id: 'std_fees ', label: 'فیس جینریشن', path: '/students/fees', permissions: ['student_fees.view', 'student_fees.create', 'student_fees.collect', 'student_fees.history', 'student_fees.edit'] },
 
             ]
         },
@@ -346,7 +346,7 @@ export const SideBar = () => {
                 { id: 't_add', label: 'نیا استاد شامل کریں', path: '/HRManagement?staffType=teacher' },
                 { id: 't_list', label: 'فہرست اساتذہ', path: '/teachers/list' },
                 { id: 't_schedule ', label: 'نظام الاوقات', path: '/teachers/schedule' },
-                { id: 't_attendance', label: 'اساتذہ کی حاضری', path: '/teachers/attendance' },
+                { id: 't_attendance', label: 'اساتذہ کی حاضری', path: '/teachers/attendance', permissions: ['teachers.attendance.view', 'teachers.attendance.create', 'teachers.attendance.edit', 'teachers.attendance.delete'] },
                 { id: 't_assignments', label: 'مضامین', path: '/teachers/assignments', permissions: ['teachers.assignments.view'] },
                 { id: 't_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/teachers/salary-increments' },
                 { id: 't_salary', label: 'تنخواہ کی ادائیگی', path: '/teachers/salary' },
@@ -359,14 +359,14 @@ export const SideBar = () => {
             label: 'مالیات',
             icon: Wallet,
             path: '/finance',
-            permissions: ['fees.view', 'finance.view'],
+            permissions: ['finance.view', 'finance.heads.view', 'finance.transactions.view', 'finance.reports.view', 'funds.view', 'funds.create', 'salary.view', 'reports.view'],
             subMenu: [
                 {
                     id: 'income-heads-config',
                     label: 'آمدن و خرچ سیٹ اَپ',
                     icon: Settings2,
                     path: '/finance/setup/income-expence',
-                    permissions: ['fees.view', 'finance.view'],
+                    permissions: ['finance.heads.view', 'finance.heads.edit'],
                     heads: ['Yahan admin naye purpose add kare ga']
                 },
                 // --- Income Section ---
@@ -380,14 +380,14 @@ export const SideBar = () => {
                             id: 'fee-collection',
                             label: 'فنڈ وصولی',
                             path: '/finance/income/fund-collection',
-                            permissions: ['fees.create', 'finance.create'],
+                            permissions: ['funds.create'],
                             heads: ['Monthly Fee', 'Admission Fee', 'Exam Fee', 'Transport Fee', 'Late Fee Fine']
                         },
                         {
                             id: 'fund-list',
                             label: 'عطیات کی فہرست',
                             path: '/finance/income/fund-list',
-                            permissions: ['fees.view', 'finance.view'],
+                            permissions: ['funds.view'],
                             heads: ['Donations', 'Books & Uniform Sale', 'Bank Interest', 'Event Fund']
                         }
                         // {
@@ -404,7 +404,7 @@ export const SideBar = () => {
                     label: 'دیگر آمدن و خرچ',
                     icon: TrendingDown,
                     path: '/finance/other-income-expense',
-                    permissions: ['fees.view', 'finance.view']
+                    permissions: ['finance.transactions.view', 'finance.transactions.create']
                 },
                 {
                     id: 'finance_reports',
@@ -442,7 +442,7 @@ export const SideBar = () => {
             subMenu: [
                 { id: 'staff_add', label: 'نیا عملہ شامل کریں', path: '/HRManagement?staffType=staff' },
                 { id: 'staff_list', label: 'دیگر عملہ فہرست', path: '/staff/list' },
-                { id: 'staff_attendance', label: 'عملہ کی حاضری', path: '/staff/attendance', permissions: ['attendance.view'] },
+                { id: 'staff_attendance', label: 'عملہ کی حاضری', path: '/staff/attendance', permissions: ['staff.attendance.view', 'staff.attendance.create', 'staff.attendance.edit', 'staff.attendance.delete'] },
                 { id: 'staff_assignments', label: 'ذمہ داریاں', path: '/staff/assignments', permissions: ['teachers.assignments.view'] },
                 { id: 'staff_salary_increment', label: 'تنخواہ انکریمنٹ', path: '/staff/salary-increments' },
                 { id: 'staff_salary', label: 'تنخواہ کی ادائیگی', path: '/staff/salary', permissions: ['salary.view'] }

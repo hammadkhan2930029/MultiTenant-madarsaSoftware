@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { changeAdminPassword, getAdminSession } from '../../../Constant/AdminAuth';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 
@@ -11,6 +11,11 @@ export const ChangePassword = () => {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [visiblePasswords, setVisiblePasswords] = useState({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false,
+    });
     useNotificationBridge({ error, success });
 
     const username = getAdminSession()?.admin?.username || 'admin';
@@ -19,6 +24,10 @@ export const ChangePassword = () => {
         setFormData((prev) => ({ ...prev, [field]: value }));
         if (error) setError('');
         if (success) setSuccess('');
+    };
+
+    const togglePasswordVisibility = (field) => {
+        setVisiblePasswords((prev) => ({ ...prev, [field]: !prev[field] }));
     };
 
     const handleSubmit = async (e) => {
@@ -53,7 +62,7 @@ export const ChangePassword = () => {
     };
 
     const inputClassName =
-        'h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-base font-bold text-[var(--color-text-main)] outline-none transition-all placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(16,185,129,0.08)]';
+        'h-14 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-12 text-base font-bold text-[var(--color-text-main)] outline-none transition-all placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgba(16,185,129,0.08)]';
 
     return (
         <div className="mx-auto max-w-5xl space-y-8 pb-10" dir="rtl">
@@ -122,12 +131,20 @@ export const ChangePassword = () => {
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
                                     required
-                                    type="password"
+                                    type={visiblePasswords.currentPassword ? 'text' : 'password'}
                                     value={formData.currentPassword}
                                     onChange={(e) => handleChange('currentPassword', e.target.value)}
                                     placeholder="موجودہ پاس ورڈ درج کریں"
                                     className={inputClassName}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => togglePasswordVisibility('currentPassword')}
+                                    aria-label={visiblePasswords.currentPassword ? 'Hide current password' : 'Show current password'}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+                                >
+                                    {visiblePasswords.currentPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                                </button>
                             </div>
                         </div>
 
@@ -139,12 +156,20 @@ export const ChangePassword = () => {
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
                                     required
-                                    type="password"
+                                    type={visiblePasswords.newPassword ? 'text' : 'password'}
                                     value={formData.newPassword}
                                     onChange={(e) => handleChange('newPassword', e.target.value)}
                                     placeholder="نیا پاس ورڈ درج کریں"
                                     className={inputClassName}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => togglePasswordVisibility('newPassword')}
+                                    aria-label={visiblePasswords.newPassword ? 'Hide new password' : 'Show new password'}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+                                >
+                                    {visiblePasswords.newPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                                </button>
                             </div>
                         </div>
 
@@ -156,12 +181,20 @@ export const ChangePassword = () => {
                                 <LockKeyhole className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-primary)]" size={18} />
                                 <input
                                     required
-                                    type="password"
+                                    type={visiblePasswords.confirmPassword ? 'text' : 'password'}
                                     value={formData.confirmPassword}
                                     onChange={(e) => handleChange('confirmPassword', e.target.value)}
                                     placeholder="دوبارہ نیا پاس ورڈ درج کریں"
                                     className={inputClassName}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => togglePasswordVisibility('confirmPassword')}
+                                    aria-label={visiblePasswords.confirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+                                >
+                                    {visiblePasswords.confirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                                </button>
                             </div>
                         </div>
 

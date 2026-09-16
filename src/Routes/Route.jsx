@@ -50,6 +50,13 @@ const UserLoginRoute = () => {
   return <UserLogin />;
 };
 
+const AuthenticatedFallbackRoute = () => (
+  <Navigate
+    to={isAdminAuthenticated() ? getDefaultRouteForSession(getAdminSession()) : '/admin'}
+    replace
+  />
+);
+
 const ProtectedAppShell = () => {
   const location = useLocation();
   const [isCheckingSession, setIsCheckingSession] = React.useState(true);
@@ -110,9 +117,9 @@ export const AppRoutes = () => {
         <Route path="branch-management/:branchId" element={withPermission(<CreateBranch />, 'branches.view')} />
         <Route path="HRManagement" element={<RequirePermission anyPermissions={['teachers.create', 'staff.create']}><HRManagement /></RequirePermission>} />
         <Route path="staff/list" element={withPermission(<TeachersList staffType="staff" />, 'staff.view')} />
-        <Route path="staff/attendance" element={withPermission(<TeacherAttendance staffType="staff" />, 'attendance.view')} />
+        <Route path="staff/attendance" element={<RequirePermission anyPermissions={['staff.attendance.view', 'staff.attendance.create', 'staff.attendance.edit', 'staff.attendance.delete']}><TeacherAttendance staffType="staff" /></RequirePermission>} />
         <Route path="staff/assignments" element={withPermission(<TeacherAssignments staffType="staff" />, 'teachers.assignments.view')} />
-        <Route path="staff/attendance-history/:id" element={withPermission(<TeacherAttendanceHistory />, 'attendance.view')} />
+        <Route path="staff/attendance-history/:id" element={<RequirePermission anyPermissions={['staff.attendance.view', 'staff.attendance.create', 'staff.attendance.edit', 'staff.attendance.delete']}><TeacherAttendanceHistory staffType="staff" /></RequirePermission>} />
         <Route path="staff/salary-increments" element={withPermission(<SalaryIncrements staffType="staff" />, 'teachers.salary_increments.view')} />
         <Route path="staff/salary" element={withPermission(<SalaryEntry staffType="staff" />, 'salary.view')} />
         <Route path="students/attendance-history/:id" element={withPermission(<StudentAttendanceHistory />, 'attendance.history.view')} />
@@ -145,7 +152,7 @@ export const AppRoutes = () => {
         {StoreRoutes}
       </Route>
 
-      <Route path="*" element={<Navigate to={isAdminAuthenticated() ? '/dashboard' : '/admin'} replace />} />
+      <Route path="*" element={<AuthenticatedFallbackRoute />} />
     </Routes>
   );
 };

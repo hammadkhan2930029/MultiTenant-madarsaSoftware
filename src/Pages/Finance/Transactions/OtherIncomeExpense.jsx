@@ -5,6 +5,7 @@ import { DateField, InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { getFinanceHeads } from '../../../Constant/FinanceHeadsApi';
 import { createFinanceTransaction, deactivateFinanceTransaction, getFinanceTransactions, updateFinanceTransaction } from '../../../Constant/FinanceTransactionsApi';
+import { usePermissions } from '../../../Hooks/usePermissions';
 
 const today = () => new Date().toISOString().split('T')[0];
 const PAGE_SIZE = 10;
@@ -44,6 +45,8 @@ const buildTransactionQuery = ({ page, filters }) => {
 };
 
 export const OtherIncomeExpense = () => {
+    const { hasPermission } = usePermissions();
+    const canManageTransactions = hasPermission('finance.transactions.create');
     const [formData, setFormData] = useState(createForm);
     const [incomeHeads, setIncomeHeads] = useState([]);
     const [expenseHeads, setExpenseHeads] = useState([]);
@@ -418,7 +421,7 @@ export const OtherIncomeExpense = () => {
                     )}
 
                     <div className="flex justify-end border-t border-[var(--color-border)] pt-4">
-                        <button disabled={isSaving || isLoading} className="flex w-full md:w-[260px] items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] py-4 font-black text-[#0b1120] shadow-lg transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
+                        <button disabled={!canManageTransactions || isSaving || isLoading} className="flex w-full md:w-[260px] items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] py-4 font-black text-[#0b1120] shadow-lg transition-all hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
                             <Save size={18} />
                             {isSaving ? 'محفوظ ہو رہا ہے...' : editingEntry ? 'تبدیلی محفوظ کریں' : 'محفوظ کریں'}
                         </button>
@@ -527,10 +530,10 @@ export const OtherIncomeExpense = () => {
                                             <td className="p-4 text-sm text-[var(--color-text-muted)]">{entry.details || '---'}</td>
                                             <td className="p-4">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <button type="button" onClick={() => startEdit(entry)} className="rounded-xl bg-blue-500/10 p-2 text-blue-400 transition-all hover:bg-blue-500 hover:text-white" aria-label="تبدیل کریں">
+                                                    <button type="button" disabled={!canManageTransactions} onClick={() => startEdit(entry)} className="rounded-xl bg-blue-500/10 p-2 text-blue-400 transition-all hover:bg-blue-500 hover:text-white disabled:opacity-40" aria-label="تبدیل کریں">
                                                         <Edit2 size={16} />
                                                     </button>
-                                                    <button type="button" onClick={() => setDeleteTarget(entry)} className="rounded-xl bg-rose-500/10 p-2 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
+                                                    <button type="button" disabled={!canManageTransactions} onClick={() => setDeleteTarget(entry)} className="rounded-xl bg-rose-500/10 p-2 text-rose-400 transition-all hover:bg-rose-500 hover:text-white disabled:opacity-40" aria-label="حذف کریں">
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </div>
@@ -589,7 +592,7 @@ export const OtherIncomeExpense = () => {
                                 <button type="button" onClick={() => setDeleteTarget(null)} disabled={isDeleting} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:opacity-60">
                                     منسوخ کریں
                                 </button>
-                                <button type="button" onClick={confirmDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-70">
+                                <button type="button" onClick={confirmDelete} disabled={!canManageTransactions || isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-70">
                                     {isDeleting ? 'حذف ہو رہا ہے...' : 'حذف کریں'}
                                 </button>
                             </div>

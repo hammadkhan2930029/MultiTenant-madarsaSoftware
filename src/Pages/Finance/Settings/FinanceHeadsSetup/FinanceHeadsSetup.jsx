@@ -9,6 +9,7 @@ import {
 } from '../../../../Constant/FinanceExpenseCategoriesApi';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { createClientId } from '../../../../Utils/createClientId';
+import { usePermissions } from '../../../../Hooks/usePermissions';
 
 const createIncomeHead = () => ({ id: createClientId(), title: '', category: '', description: '' });
 const createExpenseHead = () => ({ id: createClientId(), title: '', categoryId: '', category: '', description: '', budgetLimit: '' });
@@ -60,6 +61,8 @@ const readDetails = (description) => {
 };
 
 export const FinanceHeadsSetup = () => {
+    const { hasPermission } = usePermissions();
+    const canManageHeads = hasPermission('finance.heads.edit');
     const [activeTab, setActiveTab] = useState('income');
     const [incomeHeads, setIncomeHeads] = useState(() => [createIncomeHead()]);
     const [expenseHeads, setExpenseHeads] = useState(() => [createExpenseHead()]);
@@ -368,7 +371,7 @@ export const FinanceHeadsSetup = () => {
                     </button>
                 </div>
 
-                <button onClick={handleSave} disabled={isSaving} className="bg-[var(--color-primary)] text-[var(--color-bg)] w-full md:w-auto flex items-center justify-center gap-2 font-bold px-10 py-3 rounded-2xl transition-all shadow-lg active:scale-95 disabled:opacity-60">
+                <button onClick={handleSave} disabled={!canManageHeads || isSaving} className="bg-[var(--color-primary)] text-[var(--color-bg)] w-full md:w-auto flex items-center justify-center gap-2 font-bold px-10 py-3 rounded-2xl transition-all shadow-lg active:scale-95 disabled:opacity-60">
                     <Save size={20} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
                 </button>
             </div>
@@ -391,7 +394,7 @@ export const FinanceHeadsSetup = () => {
                             <button
                                 type="button"
                                 onClick={saveExpenseCategory}
-                                disabled={isSaving}
+                                disabled={!canManageHeads || isSaving}
                                 className="flex h-[52px] w-full min-w-32 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-bg)] disabled:opacity-60 sm:w-auto"
                             >
                                 <Save size={16} />
@@ -413,10 +416,10 @@ export const FinanceHeadsSetup = () => {
                             <div key={category.id || category.name} className="flex min-h-16 items-center justify-between gap-3 rounded-2xl border border-white/5 bg-black/10 p-4">
                                 <span className="min-w-0 flex-1 break-words text-right text-sm font-black text-[var(--color-text-main)]">{category.name}</span>
                                 <div className="flex shrink-0 items-center gap-2">
-                                    <button type="button" onClick={() => setCategoryDeleteTarget(category)} className="rounded-xl bg-rose-500/10 p-2 text-rose-400 transition-all hover:bg-rose-500 hover:text-white" aria-label="حذف کریں">
+                                    <button type="button" disabled={!canManageHeads} onClick={() => setCategoryDeleteTarget(category)} className="rounded-xl bg-rose-500/10 p-2 text-rose-400 transition-all hover:bg-rose-500 hover:text-white disabled:opacity-40" aria-label="حذف کریں">
                                         <Trash2 size={15} />
                                     </button>
-                                    <button type="button" onClick={() => startCategoryEdit(category)} className="rounded-xl bg-blue-500/10 p-2 text-blue-400 transition-all hover:bg-blue-500 hover:text-white" aria-label="تبدیل کریں">
+                                    <button type="button" disabled={!canManageHeads} onClick={() => startCategoryEdit(category)} className="rounded-xl bg-blue-500/10 p-2 text-blue-400 transition-all hover:bg-blue-500 hover:text-white disabled:opacity-40" aria-label="تبدیل کریں">
                                         <Edit2 size={15} />
                                     </button>
                                 </div>
@@ -473,7 +476,7 @@ export const FinanceHeadsSetup = () => {
                             ) : null}
                         </div>
 
-                        <button onClick={() => setNewRowDeleteTarget({ id: item.id, type: activeTab, title: item.title })}
+                        <button disabled={!canManageHeads} onClick={() => setNewRowDeleteTarget({ id: item.id, type: activeTab, title: item.title })}
                             className={`p-2 rounded-lg transition-all ${activeNewRows.length === 1 ? 'opacity-20 cursor-not-allowed' : 'text-red-400 hover:bg-red-500/10'}`}
                             aria-label="سطر حذف کریں">
                             <Trash2 size={20} />
@@ -482,10 +485,10 @@ export const FinanceHeadsSetup = () => {
                 ))}
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button onClick={addRow} className="flex items-center gap-2 border-2 border-dashed px-6 py-2 rounded-xl transition-all text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]">
+                    <button disabled={!canManageHeads} onClick={addRow} className="flex items-center gap-2 border-2 border-dashed px-6 py-2 rounded-xl transition-all text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] disabled:opacity-40">
                         <Plus size={18} /> مزید سطر شامل کریں
                     </button>
-                    <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-6 py-2 font-bold text-[var(--color-bg)] transition-all disabled:opacity-60">
+                    <button onClick={handleSave} disabled={!canManageHeads || isSaving} className="flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-6 py-2 font-bold text-[var(--color-bg)] transition-all disabled:opacity-60">
                         <Save size={18} /> {isSaving ? 'محفوظ ہو رہا ہے...' : 'محفوظ کریں'}
                     </button>
                 </div>
@@ -547,13 +550,13 @@ export const FinanceHeadsSetup = () => {
                                         <div className="flex justify-center gap-2">
                                             {editingId === item.id ? (
                                                 <>
-                                                    <button onClick={saveEdit} disabled={isSaving} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg" aria-label="محفوظ کریں"><Save size={16} /></button>
+                                                    <button onClick={saveEdit} disabled={!canManageHeads || isSaving} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg disabled:opacity-40" aria-label="محفوظ کریں"><Save size={16} /></button>
                                                     <button onClick={cancelEdit} className="p-2 text-gray-400 hover:bg-white/10 rounded-lg" aria-label="منسوخ کریں"><X size={16} /></button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <button onClick={() => startEdit(item)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg" aria-label="تبدیل کریں"><Edit2 size={16} /></button>
-                                                    <button onClick={() => setDeleteTarget({ ...item, type: activeTab })} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg" aria-label="حذف کریں"><Trash2 size={16} /></button>
+                                                    <button disabled={!canManageHeads} onClick={() => startEdit(item)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg disabled:opacity-40" aria-label="تبدیل کریں"><Edit2 size={16} /></button>
+                                                    <button disabled={!canManageHeads} onClick={() => setDeleteTarget({ ...item, type: activeTab })} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg disabled:opacity-40" aria-label="حذف کریں"><Trash2 size={16} /></button>
                                                 </>
                                             )}
                                         </div>
@@ -597,7 +600,7 @@ export const FinanceHeadsSetup = () => {
                             <button type="button" onClick={() => setCategoryDeleteTarget(null)} disabled={isDeleting} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:opacity-60">
                                 منسوخ کریں
                             </button>
-                            <button type="button" onClick={confirmCategoryDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-70">
+                            <button type="button" onClick={confirmCategoryDelete} disabled={!canManageHeads || isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-70">
                                 {isDeleting ? 'حذف ہو رہی ہے...' : 'حذف کریں'}
                             </button>
                         </div>
@@ -621,7 +624,7 @@ export const FinanceHeadsSetup = () => {
                         </div>
                         <div className="mt-8 flex justify-end gap-3">
                             <button type="button" onClick={() => setNewRowDeleteTarget(null)} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)]">منسوخ کریں</button>
-                            <button type="button" onClick={deleteNewRow} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600">تصدیق کریں</button>
+                    <button type="button" disabled={!canManageHeads} onClick={deleteNewRow} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:opacity-40">تصدیق کریں</button>
                         </div>
                     </div>
                 </div>
@@ -660,7 +663,7 @@ export const FinanceHeadsSetup = () => {
                             <button
                                 type="button"
                                 onClick={confirmDelete}
-                                disabled={isDeleting}
+                                disabled={!canManageHeads || isDeleting}
                                 className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {isDeleting ? 'حذف ہو رہی ہے...' : 'تصدیق کریں'}

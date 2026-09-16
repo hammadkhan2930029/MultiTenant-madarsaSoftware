@@ -29,7 +29,7 @@ export const AccessDeniedPage = () => {
           <span className="text-2xl font-black leading-none">!</span>
         </div>
         <p className="text-xl font-black leading-loose">
-          You do not have permission to access this page.
+          آپ کو اس صفحے تک رسائی کی اجازت نہیں ہے۔
         </p>
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
@@ -42,7 +42,7 @@ export const AccessDeniedPage = () => {
               backgroundColor: 'var(--color-bg)',
             }}
           >
-            Back
+            واپس
           </button>
           <button
             type="button"
@@ -50,7 +50,7 @@ export const AccessDeniedPage = () => {
             className="min-w-32 rounded-xl px-5 py-3 text-sm font-black text-white transition-all hover:opacity-90"
             style={{ backgroundColor: 'var(--color-primary)' }}
           >
-            Dashboard
+            مجاز صفحہ
           </button>
         </div>
       </div>

@@ -23,6 +23,7 @@ const exactTranslations = new Map([
   ['Parent not found.', 'والدین کا ریکارڈ نہیں ملا۔'],
   ['City not found.', 'شہر کا ریکارڈ نہیں ملا۔'],
   ['Teacher not found.', 'استاد کا ریکارڈ نہیں ملا۔'],
+  ['This role is assigned to users. Please change those users to another role before deleting it.', 'یہ کردار ابھی صارفین کو دیا گیا ہے۔ پہلے متعلقہ صارفین کا کردار تبدیل کریں، پھر اسے حذف کریں۔'],
   ['Only image files are allowed.', 'صرف تصویر والی فائل منتخب کریں۔'],
 ]);
 

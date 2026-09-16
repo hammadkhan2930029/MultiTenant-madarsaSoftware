@@ -6,7 +6,7 @@ import { useNotificationBridge } from '../../Components/Notifications/useNotific
 import StatusBadge from '../../Components/Common/StatusBadge';
 import { SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { getRoles } from '../../Constant/RoleManagementApi';
-import { assignUserRole, createUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
+import { assignUserRole, createUser, deleteUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
 import { getAdminSession, getSelectedBranchContext, getSessionBranchId, isBranchScopedSession, refreshPermissions } from '../../Constant/AdminAuth';
 import { getBranches } from '../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../Constant/TeachersApi';
@@ -85,11 +85,13 @@ const permissionDisplayNames = {
   'users.delete': 'صارف حذف کریں',
   'students.view': 'طلباء دیکھیں',
   'students.create': 'طالب علم شامل کریں',
-  'students.update': 'طالب علم میں ترمیم کریں',
   'students.edit': 'طالب علم میں ترمیم کریں',
   'students.delete': 'طالب علم حذف کریں',
   'attendance.view': 'حاضری دیکھیں',
-  'attendance.mark': 'حاضری درج کریں',
+  'staff.attendance.view': 'عملہ کی حاضری دیکھیں',
+  'staff.attendance.create': 'عملہ کی حاضری درج کریں',
+  'staff.attendance.edit': 'عملہ کی حاضری میں ترمیم کریں',
+  'staff.attendance.delete': 'عملہ کی حاضری حذف کریں',
   'teachers.view': 'اساتذہ دیکھیں',
   'fees.view': 'فیس دیکھیں',
   'reports.view': 'رپورٹس دیکھیں',
@@ -129,6 +131,7 @@ const getRoleDisplayName = (roleName) => roleDisplayNames[roleName] || roleName 
 const getRoleStatus = (role) => String(role?.status || 'active').toLowerCase();
 const getUserStatus = (user) => String(user?.status || 'active').toLowerCase();
 const isSuperAdminUser = (user) => getRoleName(user) === SUPER_ADMIN_ROLE;
+const isProtectedAdminUser = (user) => ['super_admin', 'admin'].includes(String(getRoleName(user)).trim().toLowerCase());
 const getUserPhone = (user) => user?.phone || user?.phoneNumber || user?.phone_number || '---';
 const isMainBranch = (branch) => {
   const name = String(branch?.name || '').trim().toLowerCase();
@@ -168,6 +171,7 @@ export const UserManagement = () => {
   const { userId } = useParams();
   const { hasPermission } = usePermissions();
   const canManageUsers = hasPermission('users.manage');
+  const canDeleteUsers = canManageUsers || hasPermission('users.delete');
   const adminSession = getAdminSession();
   const branchScopedSession = isBranchScopedSession(adminSession);
   const sessionBranchId = getSessionBranchId(adminSession);
@@ -477,20 +481,20 @@ export const UserManagement = () => {
   };
 
   const handleDeactivateUser = async () => {
-    if (!deactivateTarget || isSuperAdminUser(deactivateTarget)) return;
+    if (!deactivateTarget || isProtectedAdminUser(deactivateTarget)) return;
 
     setIsDeactivating(true);
     setError('');
     setSuccess('');
 
     try {
-      await updateUser(deactivateTarget.id, { status: 'inactive' });
+      await deleteUser(deactivateTarget.id);
       setDeactivateTarget(null);
       refreshPermissions().catch(() => {});
-      setSuccess('صارف کامیابی سے غیر فعال ہو گیا۔');
+      setSuccess('صارف کامیابی سے حذف ہو گیا۔');
       await loadUsers();
     } catch (deactivateError) {
-      setError(deactivateError.message || 'صارف غیر فعال نہیں ہو سکا۔');
+      setError(deactivateError.message || 'صارف حذف نہیں ہو سکا۔');
     } finally {
       setIsDeactivating(false);
     }
@@ -745,8 +749,8 @@ export const UserManagement = () => {
                               <ShieldCheck size={16} />
                             </button>
                           ) : null}
-                          {canManageUsers && active && !isSuperAdminUser(user) ? (
-                            <button type="button" onClick={() => setDeactivateTarget(user)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white" title="غیر فعال کریں">
+                          {canDeleteUsers && active && !isProtectedAdminUser(user) && Number(user.id) !== Number(adminSession?.admin?.id || adminSession?.user?.id || 0) ? (
+                            <button type="button" onClick={() => setDeactivateTarget(user)} className="rounded-xl bg-rose-500/10 p-2.5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white" title="حذف کریں">
                               <Trash2 size={16} />
                             </button>
                           ) : null}
@@ -777,9 +781,9 @@ export const UserManagement = () => {
           <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
             <div className="flex items-start justify-between gap-4">
               <div className="text-right">
-                <h3 className="text-xl font-black text-[var(--color-text-main)]">صارف غیر فعال کرنے کی تصدیق</h3>
+                <h3 className="text-xl font-black text-[var(--color-text-main)]">صارف حذف کرنے کی تصدیق</h3>
                 <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
-                  کیا آپ واقعی <span className="text-rose-500">{deactivateTarget.name}</span> کو غیر فعال کرنا چاہتے ہیں؟
+                  کیا آپ واقعی <span className="text-rose-500">{deactivateTarget.name}</span> کو حذف کرنا چاہتے ہیں؟ اس صارف کا لاگ اِن اور کردار کی تفویض ختم ہو جائے گی۔
                 </p>
               </div>
               <button type="button" onClick={() => !isDeactivating && setDeactivateTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500">
@@ -791,7 +795,7 @@ export const UserManagement = () => {
                 منسوخ کریں
               </button>
               <button type="button" onClick={handleDeactivateUser} disabled={isDeactivating} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
-                {isDeactivating ? 'غیر فعال ہو رہا ہے...' : 'غیر فعال کریں'}
+                {isDeactivating ? 'حذف ہو رہا ہے...' : 'حذف کریں'}
               </button>
             </div>
           </div>

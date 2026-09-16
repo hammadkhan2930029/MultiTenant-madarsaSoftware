@@ -409,6 +409,16 @@ export const AdmissionForm = () => {
     const [sessionOptions, setSessionOptions] = useState([]);
     const [teacherOptions, setTeacherOptions] = useState([]);
     const [selectedRequiredClassId, setSelectedRequiredClassId] = useState(null);
+    const sessionRole = useMemo(
+        () => getAdminSession()?.role || getAdminSession()?.admin?.roleDetails || null,
+        [],
+    );
+    const assignedClassIds = useMemo(
+        () => sessionRole?.classScopeMode === 'selected'
+            ? (sessionRole.classIds || []).map(Number).filter(Number.isInteger)
+            : [],
+        [sessionRole],
+    );
 
     useNotificationBridge({ error: submitError, success: submitSuccess });
     useNotificationBridge({ error: parentSearchError });
@@ -445,11 +455,11 @@ export const AdmissionForm = () => {
             try {
                 const nextAdmissionNumber = await fetchNextAdmissionNumber();
                 if (isMounted) {
-                    setInitialFormValues({ ...INITIAL_VALUES, idNo: nextAdmissionNumber });
+                    setInitialFormValues((currentValues) => ({ ...currentValues, idNo: nextAdmissionNumber }));
                 }
             } catch {
                 if (isMounted) {
-                    setInitialFormValues({ ...INITIAL_VALUES, idNo: DEFAULT_ADMISSION_NUMBER });
+                    setInitialFormValues((currentValues) => ({ ...currentValues, idNo: DEFAULT_ADMISSION_NUMBER }));
                     setSubmitError('داخلہ نمبر خودکار طور پر نہیں بن سکا۔ پہلے سے طے شدہ سلسلہ 0001 سے شروع کر دیا گیا ہے۔');
                 }
             } finally {
@@ -535,17 +545,22 @@ export const AdmissionForm = () => {
     useEffect(() => {
         const loadDropdownOptions = async () => {
             try {
-                const [classesResponse, sectionsResponse, sessionsResponse, teachersResponse] = await Promise.all([
+                const [classesResult, sectionsResult, sessionsResult, teachersResult] = await Promise.allSettled([
                     getClasses('page=1&limit=100&status=active'),
                     getSections('page=1&limit=100&status=active'),
                     getSessions('page=1&limit=100&status=active'),
                     getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
 
-                setClassOptions((classesResponse?.items || []).filter((item) => item.status === 'active'));
-                setSectionOptions((sectionsResponse?.items || []).filter((item) => item.status === 'active'));
-                setSessionOptions((sessionsResponse?.items || []).filter((item) => item.status === 'active'));
-                setTeacherOptions((teachersResponse?.items || []).filter((item) => item.status === 'active'));
+                const fulfilledItems = (result) => result.status === 'fulfilled' ? (result.value?.items || []) : [];
+                const activeClasses = fulfilledItems(classesResult).filter((item) => item.status === 'active');
+                const visibleClasses = assignedClassIds.length
+                    ? activeClasses.filter((item) => assignedClassIds.includes(Number(item.id)))
+                    : activeClasses;
+                setClassOptions(visibleClasses);
+                setSectionOptions(fulfilledItems(sectionsResult).filter((item) => item.status === 'active'));
+                setSessionOptions(fulfilledItems(sessionsResult).filter((item) => item.status === 'active'));
+                setTeacherOptions(fulfilledItems(teachersResult).filter((item) => item.status === 'active'));
             } catch {
                 setClassOptions([]);
                 setSectionOptions([]);
@@ -555,7 +570,26 @@ export const AdmissionForm = () => {
         };
 
         loadDropdownOptions();
-    }, []);
+    }, [assignedClassIds]);
+
+    useEffect(() => {
+        if (editingStudentId || assignedClassIds.length !== 1 || !classOptions.length) return;
+
+        const assignedClass = classOptions.find((item) => Number(item.id) === assignedClassIds[0]);
+        if (!assignedClass) return;
+
+        setSelectedRequiredClassId(Number(assignedClass.id));
+        setInitialFormValues((currentValues) => {
+            if (currentValues.classId) return currentValues;
+            return {
+                ...currentValues,
+                classId: String(assignedClass.id),
+                requiredClass: assignedClass.name || '',
+                sectionId: '',
+                requiredJamaat: '',
+            };
+        });
+    }, [assignedClassIds, classOptions, editingStudentId]);
 
     useEffect(() => {
         const trimmedQuery = parentSearch.trim();
@@ -651,8 +685,10 @@ export const AdmissionForm = () => {
                 return;
             }
 
-            if (submittedValues.sessionId && (!submittedValues.classId || !submittedValues.sectionId)) {
-                setSubmitError('سیشن محفوظ کرنے کے لیے جماعت اور سیکشن بھی فہرست سے منتخب کریں۔');
+            const assignmentSelection = [submittedValues.sessionId, submittedValues.classId, submittedValues.sectionId];
+            const selectedAssignmentFields = assignmentSelection.filter(Boolean).length;
+            if (selectedAssignmentFields > 0 && selectedAssignmentFields < assignmentSelection.length) {
+                setSubmitError('سیشن، جماعت اور سیکشن تینوں فہرست سے منتخب کریں۔');
                 return;
             }
 
@@ -740,7 +776,21 @@ export const AdmissionForm = () => {
                 }
             }
 
-            const nextInitialValues = editingStudentId ? mapStudentToFormValues(student) : { ...INITIAL_VALUES, idNo: nextAdmissionNumber };
+            const singleAssignedClass = assignedClassIds.length === 1
+                ? classOptions.find((item) => Number(item.id) === assignedClassIds[0])
+                : null;
+            const nextInitialValues = editingStudentId
+                ? mapStudentToFormValues(student)
+                : {
+                    ...INITIAL_VALUES,
+                    idNo: nextAdmissionNumber,
+                    ...(singleAssignedClass
+                        ? {
+                            classId: String(singleAssignedClass.id),
+                            requiredClass: singleAssignedClass.name || '',
+                        }
+                        : {}),
+                };
 
             setSavedProfile(student);
             setSavedPrintValues(buildPrintValues(submittedValues, student));

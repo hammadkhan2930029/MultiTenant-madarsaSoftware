@@ -143,7 +143,7 @@ export const StudentFeeDetail = () => {
                                 <h3 className="font-black">موجودہ واؤچر ادائیگی</h3>
                             </div>
                             {!isEditing ? (
-                                <Can permission="fees.create">
+                                <Can anyPermissions={['student_fees.collect', 'student_fees.edit']}>
                                     <button type="button" onClick={() => setIsEditing(true)} className="flex items-center gap-2 rounded-xl bg-blue-500/10 px-4 py-2 text-sm font-black text-blue-500 transition-all hover:bg-blue-500 hover:text-white">
                                         <Edit2 size={16} /> تبدیل کریں
                                     </button>
@@ -166,7 +166,7 @@ export const StudentFeeDetail = () => {
                                 <option value="Bank Transfer">Bank Transfer</option>
                             </Select>
                             {isEditing ? (
-                                <Can permission="fees.create">
+                                <Can anyPermissions={['student_fees.collect', 'student_fees.edit']}>
                                     <div className="flex gap-2 self-end">
                                         <button type="button" onClick={() => { setPaymentAmount(String(Number(activeVoucher.dueAmount || 0))); setPaymentMethod(activeVoucher.paymentMethod || 'Cash'); setIsEditing(false); }} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 font-black">منسوخ</button>
                                         <button onClick={handleSavePayment} className="h-12 rounded-2xl bg-[var(--color-primary)] px-5 font-black text-white">محفوظ کریں</button>

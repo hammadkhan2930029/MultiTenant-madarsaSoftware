@@ -138,6 +138,9 @@ const permissionDisplayNames = {
   'teachers.delete': 'استاد حذف کریں',
   'teachers.details.view': 'استاد کی تفصیل دیکھیں',
   'teachers.attendance.view': 'اساتذہ حاضری دیکھیں',
+  'teachers.attendance.create': 'اساتذہ کی حاضری درج کریں',
+  'teachers.attendance.edit': 'اساتذہ کی حاضری میں ترمیم کریں',
+  'teachers.attendance.delete': 'اساتذہ کی حاضری حذف کریں',
   'teachers.schedule.view': 'اساتذہ شیڈول دیکھیں',
   'teachers.assignments.view': 'مضامین اور ذمہ داریاں دیکھیں',
   'teachers.assignments.create': 'مضامین اور ذمہ داریاں شامل کریں',
@@ -148,6 +151,10 @@ const permissionDisplayNames = {
   'staff.create': 'عملہ شامل کریں',
   'staff.edit': 'عملہ میں ترمیم کریں',
   'staff.delete': 'عملہ حذف کریں',
+  'staff.attendance.view': 'عملہ کی حاضری دیکھیں',
+  'staff.attendance.create': 'عملہ کی حاضری درج کریں',
+  'staff.attendance.edit': 'عملہ کی حاضری میں ترمیم کریں',
+  'staff.attendance.delete': 'عملہ کی حاضری حذف کریں',
   'classes.view': 'جماعتیں دیکھیں',
   'classes.create': 'جماعت بنائیں',
   'classes.edit': 'جماعت میں ترمیم کریں',
@@ -160,13 +167,8 @@ const permissionDisplayNames = {
   'subjects.view': 'مضامین دیکھیں',
   'finance.view': 'مالیات دیکھیں',
   'finance.heads.view': 'آمدن و اخراجات ہیڈز دیکھیں',
-  'finance.heads.create': 'آمدن و اخراجات ہیڈز یا کیٹیگری بنائیں',
-  'finance.heads.update': 'آمدن و اخراجات ہیڈز یا کیٹیگری تبدیل کریں',
-  'finance.heads.delete': 'آمدن و اخراجات ہیڈز یا کیٹیگری حذف کریں',
   'finance.transactions.view': 'آمدن و اخراجات اندراج دیکھیں',
   'finance.transactions.create': 'آمدن و اخراجات درج کریں',
-  'finance.transactions.update': 'آمدن و اخراجات تبدیل کریں',
-  'finance.transactions.delete': 'آمدن و اخراجات حذف کریں',
   'finance.reports.view': 'مالی رپورٹس دیکھیں',
   'funds.view': 'عطیات دیکھیں',
   'funds.create': 'عطیہ درج کریں',
@@ -180,6 +182,8 @@ const permissionDisplayNames = {
   'student_fees.view': 'طلباء فیس دیکھیں',
   'student_fees.create': 'طلباء فیس بنائیں',
   'student_fees.generate': 'طلباء فیس بنائیں',
+  'student_fees.collect': 'طلباء کی فیس وصول کریں',
+  'student_fees.history': 'طلباء کی فیس ہسٹری دیکھیں',
   'student_fees.edit': 'طلباء فیس میں ترمیم کریں',
   'student_fees.delete': 'طلباء فیس حذف کریں',
   'salary.view': 'تنخواہ دیکھیں',
@@ -415,6 +419,14 @@ const formatPermissionDescription = (permission) => {
   return `${formatModuleLabel(modulePart)} کی اس سہولت کو استعمال کرنے کی اجازت۔`;
 };
 
+const deprecatedPermissionKeys = new Set([
+  'fees.view',
+  'fees.create',
+  'fees.edit',
+  'fees.delete',
+  'fees.details.view',
+]);
+
 const groupPermissionsByModule = (permissions = []) => {
   if (!permissions.length) return ROLE_PERMISSION_MODULES;
 
@@ -422,7 +434,7 @@ const groupPermissionsByModule = (permissions = []) => {
 
   permissions.forEach((permission) => {
     const key = permission.permissionKey || permission.permission_key;
-    if (!key) return;
+    if (!key || deprecatedPermissionKeys.has(key)) return;
 
     const moduleId = String(key).split('.')[0] || 'other';
     if (!grouped.has(moduleId)) {
@@ -452,7 +464,7 @@ const normalizeGroupedPermissions = (groups = []) => {
       permissions: permissions
         .map((permission) => {
           const key = getPermissionKey(permission) || permission.key;
-          if (!key) return null;
+          if (!key || deprecatedPermissionKeys.has(key)) return null;
 
           return {
             key,
@@ -940,6 +952,12 @@ export const RoleManagement = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
 
+    if (getRoleUsersCount(deleteTarget) > 0) {
+      setDeleteTarget(null);
+      setError('یہ کردار ابھی صارف کو دیا گیا ہے۔ پہلے متعلقہ صارف کا کردار تبدیل کریں، پھر اسے حذف کریں۔');
+      return;
+    }
+
     setIsDeleting(true);
     setError('');
     setSuccess('');
@@ -947,11 +965,11 @@ export const RoleManagement = () => {
     try {
       await deleteRole(deleteTarget.id);
       setDeleteTarget(null);
-      setSuccess('کردار کامیابی سے غیر فعال ہو گیا۔');
+      setSuccess('کردار کامیابی سے حذف ہو گیا۔');
       if (mode === 'list') await loadRoles();
       else navigate('/role-management');
     } catch (deleteError) {
-      setError(deleteError.message || 'کردار غیر فعال نہیں ہو سکا۔');
+      setError(deleteError.message || 'کردار حذف نہیں ہو سکا۔');
     } finally {
       setIsDeleting(false);
     }
@@ -1482,10 +1500,15 @@ export const RoleManagement = () => {
           <div className="w-full max-w-md rounded-[2rem] border border-rose-500/20 bg-[var(--color-surface)] p-8 shadow-2xl" dir="rtl">
             <div className="flex items-start justify-between gap-4">
               <div className="text-right">
-                <h3 className="text-xl font-black text-[var(--color-text-main)]">کردار غیر فعال کرنے کی تصدیق</h3>
+                <h3 className="text-xl font-black text-[var(--color-text-main)]">کردار حذف کرنے کی تصدیق</h3>
                 <p className="mt-3 text-sm font-bold leading-7 text-[var(--color-text-muted)]">
-                  کیا آپ واقعی <span className="text-rose-500">{getRoleDisplayName(deleteTarget)}</span> کو غیر فعال کرنا چاہتے ہیں؟
+                  کیا آپ واقعی <span className="text-rose-500">{getRoleDisplayName(deleteTarget)}</span> کو حذف کرنا چاہتے ہیں؟
                 </p>
+                {getRoleUsersCount(deleteTarget) > 0 ? (
+                  <p className="mt-2 text-sm font-bold leading-7 text-rose-500">
+                    یہ کردار {getRoleUsersCount(deleteTarget)} صارف کو دیا گیا ہے۔ پہلے صارف کا کردار تبدیل کریں۔
+                  </p>
+                ) : null}
               </div>
               <button type="button" onClick={() => !isDeleting && setDeleteTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500">
                 <X size={18} />
@@ -1495,8 +1518,8 @@ export const RoleManagement = () => {
               <button type="button" onClick={() => setDeleteTarget(null)} disabled={isDeleting} className="rounded-xl border border-[var(--color-border)] px-5 py-3 text-sm font-black text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg)] disabled:cursor-not-allowed disabled:opacity-60">
                 منسوخ کریں
               </button>
-              <button type="button" onClick={handleDelete} disabled={isDeleting} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
-                {isDeleting ? 'غیر فعال ہو رہا ہے...' : 'غیر فعال کریں'}
+              <button type="button" onClick={handleDelete} disabled={isDeleting || getRoleUsersCount(deleteTarget) > 0} className="rounded-xl bg-rose-500 px-6 py-3 text-sm font-black text-white transition-all hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-70">
+                {isDeleting ? 'حذف ہو رہا ہے...' : 'حذف کریں'}
               </button>
             </div>
           </div>

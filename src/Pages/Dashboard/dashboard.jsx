@@ -226,7 +226,7 @@ export const Dashboard = () => {
     const canViewStaff = hasPermission('staff.view');
     const canViewParents = hasPermission('parents.view');
     const canViewAttendance = hasPermission('attendance.view');
-    const canViewFinance = hasAnyPermission(['fees.view', 'finance.view', 'finance.transactions.view', 'finance.reports.view']);
+    const canViewFinance = hasAnyPermission(['finance.view', 'finance.transactions.view', 'finance.reports.view', 'reports.view']);
     const canViewExamSchedules = hasPermission('exams.view');
     const canViewExamResults = hasPermission('exam_results.view');
     const canViewDailyHifz = hasPermission('hifz.daily.view');

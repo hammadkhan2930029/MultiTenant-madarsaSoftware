@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Save, Edit2 } from 'lucide-react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { DateField } from '../../../Components/HR/FormElements';
-import { deleteTeacherAttendance, getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
+import { deleteStaffAttendance, deleteTeacherAttendance, getStaffAttendance, getTeacherAttendance, saveStaffAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { getTeacherById } from '../../../Constant/TeachersApi';
 import { getTeacherAssignments } from '../../../Constant/TeacherAssignmentApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
+import { getAdminSession, getSelectedBranchContext } from '../../../Constant/AdminAuth';
+import { usePermissions } from '../../../Hooks/usePermissions';
 
 const monthsUrdu = [
     'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون',
@@ -93,10 +95,18 @@ const buildAttendanceHistory = (range, existingEntries) => {
     return data;
 };
 
-export const TeacherAttendanceHistory = () => {
+export const TeacherAttendanceHistory = ({ staffType = 'teacher' }) => {
     const { id: teacherId } = useParams();
+    const { hasAnyPermission, hasPermission } = usePermissions();
+    const isStaffAttendance = staffType === 'staff';
+    const canEditAttendance = hasAnyPermission(isStaffAttendance ? ['staff.attendance.create', 'staff.attendance.edit'] : ['teachers.attendance.create', 'teachers.attendance.edit']);
+    const canDeleteAttendance = hasPermission(isStaffAttendance ? 'staff.attendance.delete' : 'teachers.attendance.delete');
+    const loadAttendanceRecords = isStaffAttendance ? getStaffAttendance : getTeacherAttendance;
+    const saveAttendanceRecord = isStaffAttendance ? saveStaffAttendance : saveTeacherAttendance;
+    const deleteAttendanceRecord = isStaffAttendance ? deleteStaffAttendance : deleteTeacherAttendance;
     const [searchParams] = useSearchParams();
     const branchIdFromQuery = searchParams.get('branchId') || '';
+    const sessionBranchId = getSelectedBranchContext(getAdminSession()).branchId;
     const today = new Date();
     const [teacher, setTeacher] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -121,19 +131,21 @@ export const TeacherAttendanceHistory = () => {
             startDate: nextRange.startDate,
             endDate: nextRange.endDate,
         });
-        if (branchIdFromQuery) query.set('branchId', branchIdFromQuery);
+        const effectiveBranchId = branchIdFromQuery || sessionBranchId || defaultBranchId;
+        if (effectiveBranchId) query.set('branchId', String(effectiveBranchId));
 
-        const result = await getTeacherAttendance(query.toString());
+        const result = await loadAttendanceRecords(query.toString());
         setAttendanceEntries(result.items || []);
-    }, [branchIdFromQuery, range, teacherId]);
+    }, [branchIdFromQuery, defaultBranchId, loadAttendanceRecords, range, sessionBranchId, teacherId]);
 
     useEffect(() => {
         const loadTeacherAndAttendance = async () => {
             try {
+                const sessionBranchId = branchIdFromQuery || getSelectedBranchContext(getAdminSession()).branchId;
                 const [teacherResult, defaultBranch, assignmentsResult] = await Promise.all([
                     getTeacherById(teacherId),
-                    getDefaultBranch().catch(() => null),
-                    getTeacherAssignments(`page=1&limit=100&status=active&teacherId=${teacherId}`).catch(() => ({ items: [] })),
+                    sessionBranchId ? Promise.resolve({ id: sessionBranchId }) : getDefaultBranch().catch(() => null),
+                    isStaffAttendance ? Promise.resolve({ items: [] }) : getTeacherAssignments(`page=1&limit=100&status=active&teacherId=${teacherId}`).catch(() => ({ items: [] })),
                 ]);
 
                 setTeacher(teacherResult);
@@ -145,7 +157,7 @@ export const TeacherAttendanceHistory = () => {
         };
 
         loadTeacherAndAttendance();
-    }, [teacherId]);
+    }, [branchIdFromQuery, isStaffAttendance, teacherId]);
 
     useEffect(() => {
         loadAttendanceForRange().catch((loadError) => {
@@ -201,15 +213,21 @@ export const TeacherAttendanceHistory = () => {
     };
 
     const handleSave = async () => {
+        if (!canEditAttendance) return;
         const rowsToSave = attendanceHistory.filter((item) => item.status !== 'Not Marked');
         const rowsToClear = attendanceHistory.filter((item) => item.status === 'Not Marked' && item.id);
+
+        if (rowsToClear.length && !canDeleteAttendance) {
+            setError('آپ کو محفوظ شدہ حاضری حذف کرنے کی اجازت نہیں ہے۔');
+            return;
+        }
 
         if (!rowsToSave.length && !rowsToClear.length) {
             setError('محفوظ کرنے کے لیے کوئی حاضری منتخب نہیں ہے۔');
             return;
         }
 
-        const fallbackBranchId = branchIdFromQuery || defaultBranchId;
+        const fallbackBranchId = branchIdFromQuery || sessionBranchId || teacher?.branchId || defaultBranchId;
         const missingBranchRow = rowsToSave.find((item) => !item.branchId && !fallbackBranchId);
 
         if (missingBranchRow) {
@@ -224,14 +242,14 @@ export const TeacherAttendanceHistory = () => {
         try {
             await Promise.all(
                 [
-                    ...rowsToSave.map((item) => saveTeacherAttendance({
+                    ...rowsToSave.map((item) => saveAttendanceRecord({
                         teacherId: Number(teacherId),
                         branchId: Number(item.branchId || fallbackBranchId),
                         date: item.date,
                         status: item.status,
                         remarks: item.note || '',
                     })),
-                    ...rowsToClear.map((item) => deleteTeacherAttendance(`teacherId=${teacherId}&date=${item.date}`)),
+                    ...rowsToClear.map((item) => deleteAttendanceRecord(`teacherId=${teacherId}&date=${item.date}`)),
                 ],
             );
 
@@ -256,14 +274,14 @@ export const TeacherAttendanceHistory = () => {
                         <StatBox label="تاخیر" value={String(stats.late).padStart(2, '0')} color="text-sky-500" bg="bg-sky-500/10" />
                     </div>
 
-                    <button
+                    {canEditAttendance ? <button
                         onClick={() => (isEditMode ? handleSave() : setIsEditMode(true))}
                         disabled={isSaving}
                         className={`flex items-center justify-center gap-2 px-3 md:px-6 lg:px-6 py-3 text-[10px] md:text-[12px] lg:text-[14px] rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-60 ${isEditMode ? 'bg-emerald-600 text-white' : 'bg-[#00d094] text-[#002a33]'}`}
                     >
                         {isEditMode ? <Save size={18} /> : <Edit2 size={18} />}
                         {isSaving ? 'محفوظ...' : isEditMode ? 'محفوظ کریں' : 'درستگی کریں'}
-                    </button>
+                    </button> : null}
                 </div>
             </div>
 

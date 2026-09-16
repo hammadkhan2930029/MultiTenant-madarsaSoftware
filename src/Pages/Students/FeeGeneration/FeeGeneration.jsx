@@ -457,21 +457,30 @@ export const FeesCollection = () => {
     }, []);
 
     useEffect(() => {
+        let isCurrentRequest = true;
+
         const loadSections = async () => {
             if (!filters.classId) {
                 setSections([]);
                 return;
             }
 
+            setSections([]);
             try {
                 const result = await getSections(`page=1&limit=100&status=active&classId=${filters.classId}`);
-                setSections(result.items || []);
+                if (isCurrentRequest) setSections(result.items || []);
             } catch (loadError) {
-                setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
+                if (isCurrentRequest) {
+                    setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
+                }
             }
         };
 
         loadSections();
+
+        return () => {
+            isCurrentRequest = false;
+        };
     }, [filters.classId]);
 
     const loadFees = async () => {
@@ -642,7 +651,7 @@ export const FeesCollection = () => {
                                 <p className="mt-4 text-sm font-bold text-[var(--color-text-muted)]">ماہانہ فیس واؤچر بنائیں، ادائیگی محفوظ کریں اور رسید پرنٹ کریں</p>
                             </div>
                         </div>
-                        <Can permission="fees.create">
+                        <Can permission="student_fees.create">
                             <button
                                 onClick={handleGenerateFees}
                                 disabled={isGenerating}
@@ -763,12 +772,12 @@ export const FeesCollection = () => {
                                                     <button onClick={() => navigate(`/students/details/${voucher.id}`)} className="rounded-xl bg-sky-500/10 p-2.5 text-sky-500 transition-all hover:bg-sky-500 hover:text-white">
                                                         <Eye size={16} />
                                                     </button>
-                                                    <Can permission="fees.create">
+                                                    <Can anyPermissions={['student_fees.collect', 'student_fees.edit']}>
                                                         <button onClick={() => navigate(`/students/details/${voucher.id}?edit=true`)} className="rounded-xl bg-blue-500/10 p-2.5 text-blue-500 transition-all hover:bg-blue-500 hover:text-white" title="تبدیل کریں">
                                                             <Edit2 size={16} />
                                                         </button>
                                                     </Can>
-                                                    <Can permission="fees.create">
+                                                    <Can anyPermissions={['student_fees.collect', 'student_fees.edit']}>
                                                         <button onClick={() => openPaymentModal(voucher)} className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white">
                                                             <Wallet size={16} />
                                                         </button>
@@ -819,7 +828,7 @@ export const FeesCollection = () => {
                         </div>
                         <div className="mt-6 flex gap-3">
                             <button onClick={() => setPaymentTarget(null)} className="flex-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3 font-black">منسوخ</button>
-                            <Can permission="fees.create">
+                            <Can anyPermissions={['student_fees.collect', 'student_fees.edit']}>
                                 <button onClick={handleSavePayment} className="flex-1 rounded-2xl bg-[var(--color-primary)] px-5 py-3 font-black text-white">محفوظ کریں</button>
                             </Can>
                         </div>

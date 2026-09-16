@@ -79,6 +79,8 @@ const BRANCH_FILTERED_GET_PREFIXES = [
 
 const BODY_BRANCH_ASSIGNMENT_PREFIXES = [
   '/users',
+  '/students',
+  '/attendance',
 ];
 
 const getRoleNameFromSession = (session) => {
@@ -125,8 +127,7 @@ const isTenantAdminSession = (session) => (
   Boolean(getSessionTenantId(session)) &&
   !isSuperAdminSession(session) &&
   (
-    String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin' ||
-    getRoleScopeFromSession(session) === 'tenant'
+    String(getRoleNameFromSession(session)).trim().toLowerCase() === 'admin'
   )
 );
 
@@ -350,7 +351,9 @@ export const apiRequest = async (endpoint, options = {}) => {
   const result = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const rawMessage = result?.message || '';
+    const fieldErrors = result?.errors || result?.error?.fieldErrors || result?.data?.fieldErrors || {};
+    const firstFieldError = Object.values(fieldErrors).find(Boolean);
+    const rawMessage = firstFieldError || result?.message || '';
     const shouldExpireSession = authToken && isSessionExpiredError(response.status, rawMessage);
     const isPermissionDenied = response.status === 403 && !shouldExpireSession;
     const message = toUrduNotificationText(

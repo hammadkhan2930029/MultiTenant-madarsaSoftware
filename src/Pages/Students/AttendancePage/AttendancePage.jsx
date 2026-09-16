@@ -103,21 +103,35 @@ export const AttendancePage = () => {
     }, []);
 
     useEffect(() => {
+        let isCurrentRequest = true;
+
         const loadSections = async () => {
             if (!searchFilters.classId) {
                 setSections([]);
                 return;
             }
 
+            setSections([]);
             try {
                 const result = await getSections(`page=1&limit=100&status=active&classId=${searchFilters.classId}`);
-                setSections(result.items || []);
+                if (isCurrentRequest) {
+                    const classSections = (result.items || []).filter(
+                        (section) => String(section.classId) === String(searchFilters.classId)
+                    );
+                    setSections(classSections);
+                }
             } catch (loadError) {
-                setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
+                if (isCurrentRequest) {
+                    setError(loadError.message || 'سیکشنز لوڈ نہیں ہو سکے۔');
+                }
             }
         };
 
         loadSections();
+
+        return () => {
+            isCurrentRequest = false;
+        };
     }, [searchFilters.classId]);
 
     const handleFilterChange = (key, value) => {
@@ -238,6 +252,15 @@ export const AttendancePage = () => {
         setSuccessMessage('');
 
         try {
+            const invalidRow = students.find((student) =>
+                [student.id, student.branchId, student.classId, student.sectionId]
+                    .some((value) => !Number.isInteger(Number(value)) || Number(value) <= 0),
+            );
+            if (invalidRow || !/^\d{4}-\d{2}-\d{2}$/.test(String(searchFilters.date || ''))) {
+                setError('حاضری محفوظ کرنے کے لیے جماعت، سیکشن، برانچ اور تاریخ دوبارہ منتخب کریں۔');
+                return;
+            }
+
             const savedEntries = await Promise.all(
                 students.map((student) =>
                     saveStudentAttendance({

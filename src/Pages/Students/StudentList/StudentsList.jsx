@@ -510,7 +510,7 @@ export const StudentList = () => {
                                 <ActionIcon label="حاضری ریکارڈ" tone="blue" onClick={() => navigate(`/students/attendance-history/${student.id}`)}>
                                     <CalendarRange size={18} />
                                 </ActionIcon>
-                                <Can anyPermissions={['students.update', 'students.edit']}>
+                                <Can permission="students.edit">
                                     <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
                                         <Edit2 size={18} />
                                     </ActionIcon>
@@ -594,7 +594,7 @@ export const StudentList = () => {
                                         <ActionIcon label="حاضری ریکارڈ" tone="blue" onClick={() => navigate(`/students/attendance-history/${student.id}`)}>
                                             <CalendarRange size={16} />
                                         </ActionIcon>
-                                        <Can anyPermissions={['students.update', 'students.edit']}>
+                                        <Can permission="students.edit">
                                             <ActionIcon label="تبدیل کریں" tone="blue" onClick={() => navigate(`/students/admission?studentId=${student.id}`)}>
                                                 <Edit2 size={16} />
                                             </ActionIcon>

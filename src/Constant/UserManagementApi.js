@@ -46,6 +46,11 @@ export const updateUser = async (id, payload) => {
   return result?.data;
 };
 
+export const deleteUser = async (id) => {
+  const result = await apiRequest(`/users/${id}`, withToken({ method: 'DELETE' }));
+  return result?.data;
+};
+
 export const assignUserRole = async (id, roleId) => {
   const result = await apiRequest(`/users/${id}/role`, {
     ...withToken({ method: 'PATCH' }),

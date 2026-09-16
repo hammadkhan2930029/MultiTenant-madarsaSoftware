@@ -39,3 +39,18 @@ export const deleteTeacherAttendance = async (query = '') => {
   const result = await apiRequest(`/attendance/teachers${query ? `?${query}` : ''}`, withToken({ method: 'DELETE' }));
   return result?.data;
 };
+
+export const getStaffAttendance = async (query = '') => {
+  const result = await apiRequest(`/attendance/staff${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
+  return result?.data || { items: [], meta: null };
+};
+
+export const saveStaffAttendance = async (payload) => {
+  const result = await apiRequest('/attendance/staff', withJson('POST', payload));
+  return result?.data;
+};
+
+export const deleteStaffAttendance = async (query = '') => {
+  const result = await apiRequest(`/attendance/staff${query ? `?${query}` : ''}`, withToken({ method: 'DELETE' }));
+  return result?.data;
+};

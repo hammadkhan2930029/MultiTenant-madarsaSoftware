@@ -6,9 +6,10 @@ import { getDefaultBranch } from '../../../Constant/AcademicSetupApi';
 import { getAdminSession, getSelectedBranchContext } from '../../../Constant/AdminAuth';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import { getTeacherAssignments } from '../../../Constant/TeacherAssignmentApi';
-import { getTeacherAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
+import { getStaffAttendance, getTeacherAttendance, saveStaffAttendance, saveTeacherAttendance } from '../../../Constant/AttendanceApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { usePermissions } from '../../../Hooks/usePermissions';
 
 const STATUS_OPTIONS = [
     { value: 'Present', label: 'حاضر' },
@@ -59,7 +60,13 @@ const isTeacherAvailableOnDate = (teacher, dateValue) => {
 
 export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     const navigate = useNavigate();
+    const { hasAnyPermission } = usePermissions();
     const isStaffAttendance = staffType === 'staff';
+    const canManageAttendance = hasAnyPermission(isStaffAttendance
+        ? ['staff.attendance.create', 'staff.attendance.edit']
+        : ['teachers.attendance.create', 'teachers.attendance.edit']);
+    const loadAttendanceRecords = isStaffAttendance ? getStaffAttendance : getTeacherAttendance;
+    const saveAttendanceRecord = isStaffAttendance ? saveStaffAttendance : saveTeacherAttendance;
     const entityPluralLabel = isStaffAttendance ? 'عملہ' : 'اساتذہ';
     const [selectedDate, setSelectedDate] = useState(formatDateKey(new Date()));
     const [selectedBranchId, setSelectedBranchId] = useState('');
@@ -91,7 +98,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         try {
             const [teacherResult, attendanceResult] = await Promise.all([
                 getTeachers(`page=1&limit=100&status=active&staffType=${staffType}&branchId=${activeBranchId}`),
-                getTeacherAttendance(`page=1&limit=400&branchId=${activeBranchId}&date=${selectedDate}`),
+                loadAttendanceRecords(`page=1&limit=400&branchId=${activeBranchId}&date=${selectedDate}`),
             ]);
 
             const attendanceMap = new Map(
@@ -109,23 +116,32 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                     };
                 }),
             );
+
         } catch (loadError) {
             setError(loadError.message || `${entityPluralLabel} کی حاضری لوڈ نہیں ہو سکی۔`);
         } finally {
             setIsLoading(false);
         }
-    }, [defaultBranchId, entityPluralLabel, selectedBranchId, selectedDate, staffType]);
+    }, [defaultBranchId, entityPluralLabel, loadAttendanceRecords, selectedBranchId, selectedDate, staffType]);
 
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                const [defaultBranch, teacherResult, assignmentsResult] = await Promise.all([
-                    getDefaultBranch(),
-                    getTeachers(`page=1&limit=100&status=active&staffType=${staffType}`),
+                const selectedContextBranchId = getSelectedBranchContext(getAdminSession()).branchId;
+                const [branchRequest, teacherRequest, assignmentsRequest] = await Promise.allSettled([
+                    selectedContextBranchId ? Promise.resolve({ id: selectedContextBranchId }) : getDefaultBranch(),
+                    getTeachers(`page=1&limit=100&status=active&staffType=${staffType}${selectedContextBranchId ? `&branchId=${selectedContextBranchId}` : ''}`),
                     isStaffAttendance ? Promise.resolve({ items: [] }) : getTeacherAssignments('page=1&limit=500&status=active').catch(() => ({ items: [] })),
                 ]);
 
-                const selectedContextBranchId = getSelectedBranchContext(getAdminSession()).branchId;
+                if (teacherRequest.status === 'rejected') {
+                    throw teacherRequest.reason;
+                }
+
+                const defaultBranch = branchRequest.status === 'fulfilled' ? branchRequest.value : null;
+                const teacherResult = teacherRequest.value;
+                const assignmentsResult = assignmentsRequest.status === 'fulfilled' ? assignmentsRequest.value : { items: [] };
+
                 setDefaultBranchId(defaultBranch?.id ? String(defaultBranch.id) : '');
                 setSelectedBranchId(selectedContextBranchId ? String(selectedContextBranchId) : '');
                 setTeachers(
@@ -150,10 +166,12 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     }, [defaultBranchId, loadAttendance, selectedBranchId]);
 
     const handleStatusChange = (id, newStatus) => {
+        if (!canManageAttendance) return;
         setTeachers((prev) => prev.map((teacher) => (teacher.id === id ? { ...teacher, status: newStatus } : teacher)));
     };
 
     const markAllTeachers = (status) => {
+        if (!canManageAttendance) return;
         const selectedTeacherIds = new Set(attendanceRows.map((teacher) => String(teacher.id)));
         setTeachers((prev) =>
             prev.map((teacher) => (selectedTeacherIds.has(String(teacher.id)) ? { ...teacher, status } : teacher)),
@@ -161,6 +179,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
     };
 
     const handleSave = async () => {
+        if (!canManageAttendance) return;
         const activeBranchId = selectedBranchId || defaultBranchId;
 
         if (!activeBranchId) {
@@ -180,7 +199,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
         try {
             await Promise.all(
                 attendanceRows.map((teacher) =>
-                    saveTeacherAttendance({
+                    saveAttendanceRecord({
                         teacherId: Number(teacher.id),
                         branchId: Number(activeBranchId),
                         date: selectedDate,
@@ -364,7 +383,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                             <ExportExcelButton rows={attendanceRows} columns={exportColumns} fileName={`${staffType}-attendance-${selectedDate}`} className="w-full h-12" />
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || !attendanceRows.length || !(selectedBranchId || defaultBranchId)}
+                                disabled={!canManageAttendance || isSaving || !attendanceRows.length || !(selectedBranchId || defaultBranchId)}
                                 className="w-full h-12 flex justify-center items-center gap-2 bg-[var(--color-primary)] text-white px-6 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60"
                             >
                                 <Save size={18} /> {isSaving ? 'محفوظ...' : 'محفوظ کریں'}
@@ -376,7 +395,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                                     key={status.value}
                                     type="button"
                                     onClick={() => markAllTeachers(status.value)}
-                                    disabled={!attendanceRows.length}
+                                    disabled={!canManageAttendance || !attendanceRows.length}
                                     className="rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] px-4 py-2 text-xs font-black text-[var(--color-text)] transition-all hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     سب {status.label}
@@ -427,7 +446,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
                                     <td className="p-4 text-sm text-[var(--text-color)] opacity-80">{getTeacherShiftLabel(teacher)}</td>
                                     <td className="p-4">
                                         <div className="flex justify-center">
-                                            <StatusDropdown status={teacher.status} onChange={(value) => handleStatusChange(teacher.id, value)} />
+                                            <StatusDropdown status={teacher.status} onChange={(value) => handleStatusChange(teacher.id, value)} disabled={!canManageAttendance} />
                                         </div>
                                     </td>
                                     <td>
@@ -492,7 +511,7 @@ export const TeacherAttendance = ({ staffType = 'teacher' }) => {
 
                             <div className="pt-2">
                                 <label className="text-[10px] font-bold opacity-40 block mb-2 mr-1 uppercase">حاضری منتخب کریں:</label>
-                                <StatusDropdown status={teacher.status} onChange={(value) => handleStatusChange(teacher.id, value)} isFullWidth />
+                                <StatusDropdown status={teacher.status} onChange={(value) => handleStatusChange(teacher.id, value)} isFullWidth disabled={!canManageAttendance} />
                             </div>
                         </div>
                     ))}
@@ -514,10 +533,11 @@ const SummaryCard = ({ title, count, icon, color, textColor }) => (
     </div>
 );
 
-const StatusDropdown = ({ status, onChange, isFullWidth }) => (
+const StatusDropdown = ({ status, onChange, isFullWidth, disabled = false }) => (
     <select
         value={status}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         className={`px-4 py-2.5 rounded-2xl text-sm font-bold border-2 outline-none transition-all
             ${isFullWidth ? 'w-full' : 'w-48'}
             ${status === 'Present' ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600' : ''}

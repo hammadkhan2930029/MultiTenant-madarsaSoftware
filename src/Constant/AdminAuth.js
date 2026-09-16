@@ -214,8 +214,8 @@ export const getAdminRole = () => {
 
 const GRANTED_PERMISSION_ALIASES = {
   'admissions.create': ['students.create'],
-  'admissions.edit': ['students.edit', 'students.update'],
-  'admissions.update': ['students.edit', 'students.update'],
+  'admissions.edit': ['students.edit'],
+  'admissions.update': ['students.edit'],
 };
 
 const expandPermissionAliases = (permissions = []) => Array.from(new Set(
@@ -230,11 +230,15 @@ export const getAdminPermissions = () => {
 };
 
 export const isSuperAdmin = () => {
+  const session = readSession();
   const role = getAdminRole();
   const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
-  const legacyRoleName = readSession()?.admin?.role;
+  const legacyRoleName = session?.admin?.role;
+  const hasAssignedRole = Boolean(role && typeof role !== 'string' && role.id);
 
-  return roleName === SUPER_ADMIN_ROLE || legacyRoleName === SUPER_ADMIN_ROLE;
+  return !getSessionTenantId(session) && (
+    roleName === SUPER_ADMIN_ROLE || (!hasAssignedRole && legacyRoleName === SUPER_ADMIN_ROLE)
+  );
 };
 
 export const isTenantAdmin = () => {
@@ -242,6 +246,7 @@ export const isTenantAdmin = () => {
   const role = getAdminRole();
   const roleName = typeof role === 'string' ? role : role?.roleName || role?.role_name;
   const legacyRoleName = session?.admin?.role;
+  const hasAssignedRole = Boolean(role && typeof role !== 'string' && role.id);
   const accountScope = String(
     session?.admin?.accountScope ||
     session?.admin?.userType ||
@@ -252,9 +257,8 @@ export const isTenantAdmin = () => {
 
   return Boolean(getSessionTenantId(session)) && (
     roleName === 'admin' ||
-    legacyRoleName === 'admin' ||
-    accountScope === 'tenant_admin' ||
-    getRoleScopeFromSession(session) === 'tenant'
+    (!hasAssignedRole && legacyRoleName === 'admin') ||
+    accountScope === 'tenant_admin'
   );
 };
 
@@ -303,8 +307,15 @@ export const canUseTenantBranchContext = (session = readSession()) => (
 export const getSelectedBranchContext = (session = readSession()) => {
   const tenantId = getSessionTenantId(session);
   const sessionBranchId = getSessionBranchId(session);
-  const fallbackBranchId = canUseTenantBranchContext(session) && sessionBranchId ? sessionBranchId : null;
-  const fallback = { tenantId, branchId: fallbackBranchId, mode: fallbackBranchId ? 'branch' : 'all' };
+  const isFixedBranch = hasFixedBranchContext(session);
+  const fallbackBranchId = isFixedBranch || canUseTenantBranchContext(session)
+    ? sessionBranchId
+    : null;
+  const fallback = {
+    tenantId,
+    branchId: fallbackBranchId,
+    mode: isFixedBranch ? 'fixed' : (fallbackBranchId ? 'branch' : 'all'),
+  };
 
   if (!canUseStorage || !canUseTenantBranchContext(session) || !tenantId) return fallback;
 
