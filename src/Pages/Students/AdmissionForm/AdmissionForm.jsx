@@ -901,7 +901,7 @@ export const AdmissionForm = () => {
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-2 bg-[var(--color-bg)]" dir="rtl">
             <Formik initialValues={initialFormValues} enableReinitialize validate={validateAdmissionForm} onSubmit={handleFormSubmit}>
-                {({ setFieldValue, values, isSubmitting, errors, touched }) => {
+                {({ setFieldValue, values, isSubmitting, errors, touched, submitCount }) => {
                     const printValues = savedPrintValues || values;
                     const printImagePreview = savedPrintImagePreview || imagePreview;
                     const madrassaName = madrassaProfile?.name?.trim() || 'جامعہ انوار القرآن';
@@ -1100,6 +1100,7 @@ export const AdmissionForm = () => {
                                                 label="سیشن"
                                                 name="sessionId"
                                                 required
+                                                error={touched.sessionId && errors.sessionId ? errors.sessionId : ''}
                                                 options={[
                                                     { value: '', label: 'سیشن منتخب کریں' },
                                                     ...sessionOptions.map((session) => ({
@@ -1113,6 +1114,7 @@ export const AdmissionForm = () => {
                                                     <SearchableSelectField
                                                         label="جماعت"
                                                         required
+                                                        error={(submitCount > 0 || touched.classId || touched.requiredClass) && errors.classId ? errors.classId : ''}
                                                         value={field.value || ''}
                                                         options={classOptions.map((item) => ({
                                                             id: item.id,
@@ -1142,6 +1144,7 @@ export const AdmissionForm = () => {
                                                     <SearchableSelectField
                                                         label="سیکشن"
                                                         required
+                                                        error={(submitCount > 0 || touched.sectionId || touched.requiredJamaat) && errors.sectionId ? errors.sectionId : ''}
                                                         value={field.value || ''}
                                                         options={filteredJamaatOptions}
                                                         placeholder="سیکشن تلاش کریں"
@@ -1541,16 +1544,19 @@ const FormSection = ({ title, icon, children }) => (
     </div>
 );
 
-const FormikInputField = ({ label, name, type = 'text', className = '', normalize, ...props }) => (
+const FormikInputField = ({ label, name, type = 'text', className = '', normalize, error = '', ...props }) => (
     <Field name={name}>
-        {({ field, form }) =>
-            type === 'date' ? (
+        {({ field, form, meta }) => {
+            const fieldError = error || ((meta.touched || form.submitCount > 0) ? meta.error : '');
+
+            return type === 'date' ? (
                 <DateField
                     label={label}
                     name={name}
                     value={field.value || ''}
                     onChange={(nextValue) => form.setFieldValue(name, nextValue)}
                     className={`admission-date-field ${className}`}
+                    error={fieldError}
                     {...props}
                 />
             ) : (
@@ -1562,9 +1568,10 @@ const FormikInputField = ({ label, name, type = 'text', className = '', normaliz
                     value={field.value || ''}
                     onChange={normalize ? (event) => form.setFieldValue(name, normalize(event.target.value)) : field.onChange}
                     className={`admission-form-control ${className}`}
+                    error={fieldError}
                 />
-            )
-        }
+            );
+        }}
     </Field>
 );
 
@@ -1589,21 +1596,25 @@ const FormikCnicField = ({ label, name, error = '' }) => (
 
 const FormikSelectField = ({ label, name, options, required = false, error = '' }) => (
     <Field name={name}>
-        {({ field, form }) => (
-            <SelectField
-                label={label}
-                required={required}
-                error={error}
-                options={options}
-                value={field.value || options[0]?.value || options[0]}
-                onChange={(event) => form.setFieldValue(name, event.target.value)}
-                className="admission-form-control"
-            />
-        )}
+        {({ field, form, meta }) => {
+            const fieldError = error || ((meta.touched || form.submitCount > 0) ? meta.error : '');
+
+            return (
+                <SelectField
+                    label={label}
+                    required={required}
+                    error={fieldError}
+                    options={options}
+                    value={field.value || options[0]?.value || options[0]}
+                    onChange={(event) => form.setFieldValue(name, event.target.value)}
+                    className="admission-form-control"
+                />
+            );
+        }}
     </Field>
 );
 
-const SearchableSelectField = ({ label, value, options, onChange, onSelectOption, placeholder, required = false }) => {
+const SearchableSelectField = ({ label, value, options, onChange, onSelectOption, placeholder, required = false, error = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const filteredOptions = useMemo(() => {
@@ -1626,6 +1637,7 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
                 <input
                     type="text"
                     value={value}
+                    aria-invalid={Boolean(error)}
                     onChange={(event) => {
                         onChange(event.target.value);
                         setIsOpen(true);
@@ -1633,7 +1645,7 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
                     onFocus={() => setIsOpen(true)}
                     onBlur={() => setTimeout(() => setIsOpen(false), 150)}
                     placeholder={placeholder}
-                    className="admission-form-control w-full rounded-2xl border outline-none font-bold transition-all bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]"
+                    className={`admission-form-control w-full rounded-2xl border outline-none font-bold transition-all bg-[var(--color-input)] ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10' : 'border-transparent focus:border-[var(--color-primary)]'}`}
                 />
                 <ChevronDown size={18} className="absolute left-4 top-4 text-[var(--color-text-muted)] pointer-events-none" />
 
@@ -1661,6 +1673,7 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
                     </div>
                 ) : null}
             </div>
+            {error ? <p className="mr-2 text-xs font-bold text-rose-500">{error}</p> : null}
         </div>
     );
 };
