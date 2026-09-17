@@ -122,13 +122,21 @@ export const ParaJaizaEntry = () => {
 
         const loadOptions = async () => {
             try {
-                const [studentResult, teacherResult] = await Promise.all([
+                const results = await Promise.allSettled([
                     getStudents('page=1&limit=100&status=active'),
                     getTeachers('page=1&limit=100&status=active&staffType=teacher'),
                 ]);
                 if (isMounted) {
+                    const [studentResult, teacherResult] = results.map((result) => (
+                        result.status === 'fulfilled' ? result.value : { items: [] }
+                    ));
                     setStudents(mapStudentsForHifz(studentResult.items || []));
                     setTeachers(teacherResult.items || []);
+
+                    const failedResult = results.find((result) => result.status === 'rejected');
+                    if (failedResult) {
+                        notify.error(failedResult.reason?.message || 'معلومات لوڈ نہیں ہو سکیں۔');
+                    }
                 }
             } catch (error) {
                 notify.error(error?.message || 'طلبہ لوڈ نہیں ہو سکے۔');
