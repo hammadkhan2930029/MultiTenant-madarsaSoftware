@@ -198,6 +198,9 @@ const admissionValidationMessages = {
     relation: 'رشتہ لازمی درج کریں۔',
     guardianMobile: 'سرپرست موبائل لازمی درج کریں۔',
     monthlyFee: 'ماہانہ فیس لازمی درج کریں۔',
+    sessionId: 'سیشن منتخب کرنا لازمی ہے۔',
+    classId: 'جماعت منتخب کرنا لازمی ہے۔',
+    sectionId: 'سیکشن منتخب کرنا لازمی ہے۔',
     email: 'درست ای میل درج کریں۔',
     phone: PHONE_VALIDATION_MESSAGE,
     amount: 'رقم درست درج کریں۔',
@@ -219,6 +222,9 @@ const mandatoryAdmissionFields = [
     'relation',
     'guardianMobile',
     'monthlyFee',
+    'sessionId',
+    'classId',
+    'sectionId',
 ];
 
 const userEnteredMandatoryFields = mandatoryAdmissionFields.filter(
@@ -243,6 +249,9 @@ const validateAdmissionForm = (values) => {
     else if (!isValidUrduRelationship(values.relation)) errors.relation = URDU_RELATIONSHIP_MESSAGE;
     if (isBlank(values.guardianMobile)) errors.guardianMobile = admissionValidationMessages.guardianMobile;
     if (isBlank(values.monthlyFee)) errors.monthlyFee = admissionValidationMessages.monthlyFee;
+    if (isBlank(values.sessionId)) errors.sessionId = admissionValidationMessages.sessionId;
+    if (isBlank(values.classId)) errors.classId = admissionValidationMessages.classId;
+    if (isBlank(values.sectionId)) errors.sectionId = admissionValidationMessages.sectionId;
     if (!isValidAmount(values.admissionFee)) errors.admissionFee = admissionValidationMessages.amount;
     if (!isValidAmount(values.monthlyFee)) errors.monthlyFee = admissionValidationMessages.amount;
     if (!isValidEmail(values.guardianEmail)) errors.guardianEmail = admissionValidationMessages.email;
@@ -686,8 +695,7 @@ export const AdmissionForm = () => {
             }
 
             const assignmentSelection = [submittedValues.sessionId, submittedValues.classId, submittedValues.sectionId];
-            const selectedAssignmentFields = assignmentSelection.filter(Boolean).length;
-            if (selectedAssignmentFields > 0 && selectedAssignmentFields < assignmentSelection.length) {
+            if (assignmentSelection.some((value) => !value)) {
                 setSubmitError('سیشن، جماعت اور سیکشن تینوں فہرست سے منتخب کریں۔');
                 return;
             }
@@ -1091,6 +1099,7 @@ export const AdmissionForm = () => {
                                             <FormikSelectField
                                                 label="سیشن"
                                                 name="sessionId"
+                                                required
                                                 options={[
                                                     { value: '', label: 'سیشن منتخب کریں' },
                                                     ...sessionOptions.map((session) => ({
@@ -1103,6 +1112,7 @@ export const AdmissionForm = () => {
                                                 {({ field, form }) => (
                                                     <SearchableSelectField
                                                         label="جماعت"
+                                                        required
                                                         value={field.value || ''}
                                                         options={classOptions.map((item) => ({
                                                             id: item.id,
@@ -1131,6 +1141,7 @@ export const AdmissionForm = () => {
                                                 {({ field, form }) => (
                                                     <SearchableSelectField
                                                         label="سیکشن"
+                                                        required
                                                         value={field.value || ''}
                                                         options={filteredJamaatOptions}
                                                         placeholder="سیکشن تلاش کریں"
@@ -1592,7 +1603,7 @@ const FormikSelectField = ({ label, name, options, required = false, error = '' 
     </Field>
 );
 
-const SearchableSelectField = ({ label, value, options, onChange, onSelectOption, placeholder }) => {
+const SearchableSelectField = ({ label, value, options, onChange, onSelectOption, placeholder, required = false }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const filteredOptions = useMemo(() => {
@@ -1608,7 +1619,9 @@ const SearchableSelectField = ({ label, value, options, onChange, onSelectOption
 
     return (
         <div className="space-y-2 relative">
-            <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">{label}</label>
+            <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">
+                {label}{required ? <span className="text-red-500"> *</span> : null}
+            </label>
             <div className="relative">
                 <input
                     type="text"

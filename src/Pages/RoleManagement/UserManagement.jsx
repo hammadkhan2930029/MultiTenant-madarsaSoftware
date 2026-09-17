@@ -408,7 +408,7 @@ export const UserManagement = () => {
 
     const nextErrors = {};
     if (!formData.name.trim()) nextErrors.name = 'صارف کا نام ضروری ہے۔';
-    if (!formData.email.trim()) nextErrors.email = 'ای میل ضروری ہے۔';
+    if (mode !== 'create' && !formData.email.trim()) nextErrors.email = 'ای میل ضروری ہے۔';
     if (!formData.username.trim()) nextErrors.username = 'صارف نام ضروری ہے۔';
     if (mode === 'create' && !formData.password.trim()) nextErrors.password = 'پاس ورڈ ضروری ہے۔';
     if (!formData.password.trim() && formData.confirmPassword.trim()) nextErrors.password = 'پاس ورڈ بھی درج کریں۔';
@@ -432,7 +432,7 @@ export const UserManagement = () => {
     try {
       const payload = {
         name: formData.name.trim(),
-        email: formData.email.trim(),
+        email: formData.email.trim() || null,
         phone: normalizePhoneNumber(formData.phone),
         username: formData.username.trim(),
         status: formData.status,
@@ -538,7 +538,7 @@ export const UserManagement = () => {
       <div style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} className="border rounded-[2.5rem] p-6 md:p-8 shadow-sm">
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <InputField id="user-name" error={formErrors.name} label="نام" required placeholder="صارف کا نام" value={formData.name} onChange={(event) => { clearFieldError(setFormErrors, 'name'); setFormData((prev) => ({ ...prev, name: event.target.value })); }} />
-          <InputField id="user-email" error={formErrors.email} label="ای میل" required type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => { clearFieldError(setFormErrors, 'email'); setFormData((prev) => ({ ...prev, email: event.target.value })); }} />
+          <InputField id="user-email" error={formErrors.email} label="ای میل" required={mode !== 'create'} type="email" placeholder="user@example.com" value={formData.email} onChange={(event) => { clearFieldError(setFormErrors, 'email'); setFormData((prev) => ({ ...prev, email: event.target.value })); }} />
           <InputField id="user-phone" error={formErrors.phone} label="فون" placeholder="03001234567 / +923001234567" value={formData.phone} onChange={(event) => { clearFieldError(setFormErrors, 'phone'); setFormData((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) })); }} {...PHONE_INPUT_PROPS} />
           <InputField id="user-username" error={formErrors.username} label="صارف نام" required placeholder="username" value={formData.username} onChange={(event) => { clearFieldError(setFormErrors, 'username'); setFormData((prev) => ({ ...prev, username: event.target.value })); }} />
           <div className="relative">
