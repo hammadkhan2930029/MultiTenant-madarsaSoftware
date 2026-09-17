@@ -272,8 +272,8 @@ export const WeeklyJaizaList = () => {
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">سوال 1 نمبر<br />کل 20</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">سوال 2 نمبر<br />کل 20</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">سوال 3 نمبر<br />کل 20</th>
-                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">تہجی<br />کل 20</th>
-                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">پنجہ<br />کل 10</th>
+                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">تجوید<br />کل 20</th>
+                                    <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[110px]">لہجہ<br />کل 10</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[120px]">خود خوانی<br />کل 10</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[130px]">کلاس میں کردہ نمبر</th>
                                     <th className="border border-[var(--color-border)] px-2 py-3 font-black min-w-[150px]">کیفیت</th>
