@@ -246,10 +246,9 @@ const buildFeeReceiptHtml = ({ voucher, madrassaProfile }) => {
   font-weight: 900;
   letter-spacing: 0;
 
-  background: var(--print-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--print-primary);
+  background: none;
+  -webkit-text-fill-color: currentColor;
 }
 
   .title i {
@@ -280,6 +279,10 @@ const buildFeeReceiptHtml = ({ voucher, madrassaProfile }) => {
   .student span {
     color: var(--print-dark);
     font-weight: 800;
+  }
+
+  .student strong {
+    font-size: 10.5pt;
   }
 
   table {

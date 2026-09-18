@@ -10,7 +10,7 @@ const formatDate = (value) => {
   return new Date(value).toLocaleDateString('ur-PK');
 };
 
-export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId = '' }) => {
+export const printFundReceipt = ({ donorInfo = {}, funds = [] }) => {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
 
@@ -23,7 +23,6 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
   const donorName = donorInfo.name || firstFund.donorName || '---';
   const careOf = donorInfo.careOf || firstFund.careOf || '---';
   const phone = donorInfo.number || firstFund.phone || '---';
-  const receiptTrackingId = collectionGroupId || firstFund.collectionGroupId || '---';
   const totalAmount = funds.reduce((sum, fund) => sum + parseAmount(fund.amount), 0);
   const cashTotal = funds.filter((fund) => fund.paymentMode === 'نقد').reduce((sum, fund) => sum + parseAmount(fund.amount), 0);
   const chequeTotal = funds.filter((fund) => fund.paymentMode === 'چیک').reduce((sum, fund) => sum + parseAmount(fund.amount), 0);
@@ -55,40 +54,35 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
         <div class="a5-page shadow-lg">
           <img src="${receiptLogo}" alt="مدرسہ لوگو" class="absolute inset-0 m-auto w-64 opacity-5 -rotate-12 object-contain" />
 
-          <div class="relative z-10 flex justify-between text-[8px] text-gray-500 mb-2">
+          <div class="relative z-10 flex justify-between text-[10px] text-gray-500 mb-2">
             <span>تاریخ: ${formatDate(firstFund.paymentDate || new Date())}</span>
-            <span dir="ltr">ID: ${receiptTrackingId}</span>
           </div>
 
           <div class="relative z-10 text-center mb-4 border-b-2 border-green-700 pb-3">
             <img src="${receiptLogo}" alt="مدرسہ لوگو" class="w-14 h-14 object-contain mx-auto mb-2" />
-            <h1 class="urdu-font text-xl font-bold text-green-800">${madrassaName}</h1>
-            <span class="mt-3 urdu-font text-xs bg-green-700 text-white px-3 py-3 rounded-full inline-block mt-1">الیکٹرانک رسیدِ عطیات</span>
+            <h1 class="urdu-font text-2xl font-bold text-green-800">${madrassaName}</h1>
+            <span class="mt-3 urdu-font text-sm bg-green-700 text-white px-3 py-3 rounded-full inline-block mt-1">الیکٹرانک رسیدِ عطیات</span>
           </div>
 
           <div class="relative z-10 grid grid-cols-2 gap-2 mb-3">
             <div class="border border-green-200 bg-green-50 p-2 rounded-lg flex flex-row items-center">
-              <p class="urdu-font text-[10px] text-green-700">نام دہندہ:</p>
-              <p class="urdu-font text-xs font-bold mr-4">${donorName}</p>
+              <p class="urdu-font text-xs text-green-700">نام دہندہ:</p>
+              <p class="urdu-font text-sm font-bold mr-4">${donorName}</p>
             </div>
             <div class="border border-green-200 bg-green-50 p-2 rounded-lg flex flex-row items-center">
-              <p class="urdu-font text-[10px] text-green-700">رابطہ نمبر:</p>
-              <p class="text-xs font-bold mr-4" dir="ltr">${phone}</p>
+              <p class="urdu-font text-xs text-green-700">رابطہ نمبر:</p>
+              <p class="text-sm font-bold mr-4" dir="ltr">${phone}</p>
             </div>
             <div class="border border-green-200 bg-green-50 p-2 rounded-lg flex flex-row items-center">
-              <p class="urdu-font text-[10px] text-green-700">ولدیت:</p>
-              <p class="urdu-font text-xs font-bold mr-4">${careOf}</p>
-            </div>
-            <div class="border border-green-200 bg-green-50 p-2 rounded-lg flex flex-row items-center">
-              <p class="urdu-font text-[10px] text-green-700">ٹریکنگ نمبر:</p>
-              <p class="text-xs font-bold mr-4" dir="ltr">${receiptTrackingId}</p>
+              <p class="urdu-font text-xs text-green-700">ولدیت:</p>
+              <p class="urdu-font text-sm font-bold mr-4">${careOf}</p>
             </div>
           </div>
 
           <div class="relative z-10">
             <table class="w-full text-right border-collapse">
               <thead>
-                <tr class="bg-green-700 text-white urdu-font text-[10px]">
+                <tr class="bg-green-700 text-white urdu-font text-xs">
                   <th class="p-1 border border-green-800 text-center">شمار</th>
                   <th class="p-1 border border-green-800">نوعیت</th>
                   <th class="p-1 border border-green-800">مقصد</th>
@@ -96,7 +90,7 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
                   <th class="p-1 border border-green-800 text-center">رقم</th>
                 </tr>
               </thead>
-              <tbody class="urdu-font text-[10px]">
+              <tbody class="urdu-font text-xs">
                 ${funds.map((fund, index) => `
                   <tr class="border-b border-gray-200">
                     <td class="p-1 text-center border-x">${index + 1}</td>
@@ -111,7 +105,7 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
           </div>
 
           <div class="relative z-10 mt-4 border-t border-dashed border-gray-400 pt-3">
-            <table class="w-full text-[10px] border border-gray-300">
+            <table class="w-full text-xs border border-gray-300">
               <tr class="bg-gray-50 border-b">
                 <td class="p-1 border-l urdu-font text-center font-bold">نقد</td>
                 <td class="p-1 border-l urdu-font text-center font-bold">چیک</td>
@@ -127,7 +121,7 @@ export const printFundReceipt = ({ donorInfo = {}, funds = [], collectionGroupId
             </table>
           </div>
 
-          <div class="relative z-10 mt-8 flex justify-between urdu-font text-[10px]">
+          <div class="relative z-10 mt-8 flex justify-between urdu-font text-xs">
             <span>دستخط دہندہ: __________________</span>
             <span>دستخط وصول کنندہ: __________________</span>
           </div>
