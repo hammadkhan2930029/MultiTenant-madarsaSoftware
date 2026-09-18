@@ -262,9 +262,9 @@ export const CreateSessions = () => {
                             </div>
                         </div>
 
-                        <DateField label="شروع تاریخ" required value={formData.startDate} onChange={(value) => setFormData((prev) => ({ ...prev, startDate: value }))} />
+                        <DateField className="[&>button]:h-14" label="شروع تاریخ" required value={formData.startDate} onChange={(value) => setFormData((prev) => ({ ...prev, startDate: value }))} />
 
-                        <DateField label="اختتام تاریخ" required value={formData.endDate} onChange={(value) => setFormData((prev) => ({ ...prev, endDate: value }))} />
+                        <DateField className="[&>button]:h-14" label="اختتام تاریخ" required value={formData.endDate} onChange={(value) => setFormData((prev) => ({ ...prev, endDate: value }))} />
 
                         {editMode ? (
                             <div className="space-y-2">

@@ -160,30 +160,25 @@ export const AttendancePage = () => {
 
         const selectedClass = classes.find((item) => String(item.id) === String(searchFilters.classId));
 
-        if (!searchFilters.classId || !searchFilters.sectionId || !searchFilters.sessionId || !selectedClass?.branchId) {
-            setError('براہ کرم سیشن، جماعت اور سیکشن منتخب کریں۔');
-            return;
-        }
-
         setIsLoading(true);
 
         try {
-            const studentQuery = new URLSearchParams({
-                page: '1',
-                limit: '100',
-                classId: searchFilters.classId,
-                sectionId: searchFilters.sectionId,
-                sessionId: searchFilters.sessionId,
-            }).toString();
+            const studentParams = new URLSearchParams({ page: '1', limit: '100' });
+            const attendanceParams = new URLSearchParams({ page: '1', limit: '400', date: searchFilters.date });
 
-            const attendanceQuery = new URLSearchParams({
-                page: '1',
-                limit: '400',
-                branchId: String(selectedClass.branchId),
-                classId: searchFilters.classId,
-                sectionId: searchFilters.sectionId,
-                date: searchFilters.date,
-            }).toString();
+            if (searchFilters.sessionId) studentParams.set('sessionId', searchFilters.sessionId);
+            if (searchFilters.classId) {
+                studentParams.set('classId', searchFilters.classId);
+                attendanceParams.set('classId', searchFilters.classId);
+            }
+            if (searchFilters.sectionId) {
+                studentParams.set('sectionId', searchFilters.sectionId);
+                attendanceParams.set('sectionId', searchFilters.sectionId);
+            }
+            if (selectedClass?.branchId) attendanceParams.set('branchId', String(selectedClass.branchId));
+
+            const studentQuery = studentParams.toString();
+            const attendanceQuery = attendanceParams.toString();
 
             const [studentResult, attendanceResult] = await Promise.all([
                 getStudents(studentQuery),
@@ -199,7 +194,12 @@ export const AttendancePage = () => {
 
             const rows = (studentResult.items || [])
                 .map((student) => {
-                    const activeAssignment = student.assignments?.find((assignment) => assignment.status === 'active');
+                    const activeAssignment = student.assignments?.find((assignment) => (
+                        assignment.status === 'active' &&
+                        (!searchFilters.sessionId || String(assignment.sessionId) === String(searchFilters.sessionId)) &&
+                        (!searchFilters.classId || String(assignment.classId) === String(searchFilters.classId)) &&
+                        (!searchFilters.sectionId || String(assignment.sectionId) === String(searchFilters.sectionId))
+                    ));
 
                     if (!activeAssignment) {
                         return null;
@@ -217,9 +217,9 @@ export const AttendancePage = () => {
                         name: student.fullName,
                         status: existingAttendance?.status || 'Present',
                         remarks: existingAttendance?.remarks || '',
-                        branchId: activeAssignment.branchId || Number(selectedClass.branchId),
-                        classId: activeAssignment.classId || Number(searchFilters.classId),
-                        sectionId: activeAssignment.sectionId || Number(searchFilters.sectionId),
+                        branchId: activeAssignment.branchId,
+                        classId: activeAssignment.classId,
+                        sectionId: activeAssignment.sectionId,
                         attendanceId: existingAttendance?.id || null,
                     };
                 })
@@ -360,24 +360,22 @@ export const AttendancePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     <SelectField
                         label="سیشن"
-                        required
                         value={searchFilters.sessionId}
                         onChange={(e) => handleFilterChange('sessionId', e.target.value)}
-                        options={formatOptions(sessions, 'سیشن منتخب کریں')}
+                        options={formatOptions(sessions, 'تمام سیشن')}
                     />
                     <SelectField
                         label="جماعت"
-                        required
                         value={searchFilters.classId}
                         onChange={(e) => handleFilterChange('classId', e.target.value)}
-                        options={formatOptions(classes, 'جماعت منتخب کریں')}
+                        options={formatOptions(classes, 'تمام جماعتیں')}
                     />
                     <SelectField
                         label="سیکشن"
-                        required
                         value={searchFilters.sectionId}
                         onChange={(e) => handleFilterChange('sectionId', e.target.value)}
-                        options={formatOptions(sections, 'سیکشن منتخب کریں')}
+                        options={formatOptions(sections, searchFilters.classId ? 'تمام سیکشن' : 'پہلے جماعت منتخب کریں')}
+                        disabled={!searchFilters.classId}
                     />
                 </div>
 
