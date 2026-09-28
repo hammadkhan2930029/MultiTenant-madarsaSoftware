@@ -6,6 +6,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { createDepartments, deleteDepartment, getDepartments, updateDepartment } from '../../../Constant/DepartmentApi';
 import { getTeachers } from '../../../Constant/TeachersApi';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     name: '',
@@ -15,6 +16,7 @@ const emptyForm = {
     headSearch: '',
     status: 'active',
 };
+const PAGE_SIZE = 25;
 
 const createEmptyDepartmentRow = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -42,6 +44,10 @@ const buildHeadOptions = (items = []) => items
 
 export const DepartmentManagement = () => {
     const [departments, setDepartments] = useState([]);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [departmentRows, setDepartmentRows] = useState([createEmptyDepartmentRow()]);
     const [rowErrors, setRowErrors] = useState({});
@@ -67,43 +73,37 @@ export const DepartmentManagement = () => {
     const loadDepartments = useCallback(async () => {
         try {
             setIsLoading(true);
-            const [activeResult, inactiveResult] = await Promise.all([
-                getDepartments('page=1&limit=100&status=active'),
-                getDepartments('page=1&limit=100&status=inactive'),
-            ]);
-            setDepartments([...(activeResult.items || []), ...(inactiveResult.items || [])]);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (search.trim()) params.set('search', search.trim());
+            const result = await getDepartments(params.toString());
+            setDepartments(result.items || []);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'شعبہ جات لوڈ نہیں ہو سکے۔');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [page, search, statusFilter]);
 
     useEffect(() => {
         loadDepartments();
     }, [loadDepartments]);
 
-    useEffect(() => {
-        let isMounted = true;
-
-        const loadHeadOptions = async () => {
+    const loadHeadOptions = useCallback(async (searchQuery = '') => {
             try {
                 setIsHeadsLoading(true);
-                const result = await getTeachers('page=1&limit=100&status=active');
-                if (isMounted) setHeadOptions(buildHeadOptions(result.items || []));
+                const params = new URLSearchParams({ page: '1', limit: '25', status: 'active' });
+                if (searchQuery.trim()) params.set('search', searchQuery.trim());
+                const result = await getTeachers(params.toString());
+                setHeadOptions(buildHeadOptions(result.items || []));
             } catch (loadError) {
-                if (isMounted) setError(loadError.message || 'شعبہ ہیڈ کی فہرست لوڈ نہیں ہو سکی۔');
+                setError(loadError.message || 'شعبہ ہیڈ کی فہرست لوڈ نہیں ہو سکی۔');
             } finally {
-                if (isMounted) setIsHeadsLoading(false);
+                setIsHeadsLoading(false);
             }
-        };
-
-        loadHeadOptions();
-
-        return () => {
-            isMounted = false;
-        };
     }, []);
+
+    useEffect(() => { loadHeadOptions(); }, [loadHeadOptions]);
 
     const resetForm = () => {
         setFormData(emptyForm);
@@ -331,6 +331,7 @@ export const DepartmentManagement = () => {
                                 value={formData.headSearch}
                                 options={headOptions}
                                 isLoading={isHeadsLoading}
+                                onSearch={loadHeadOptions}
                                 placeholder="ہیڈ منتخب کریں"
                                 onChange={(value) => setFormData((prev) => ({
                                     ...prev,
@@ -409,6 +410,7 @@ export const DepartmentManagement = () => {
                                         value={row.headSearch}
                                         options={headOptions}
                                         isLoading={isHeadsLoading}
+                                        onSearch={loadHeadOptions}
                                         placeholder="ہیڈ منتخب کریں"
                                         onChange={(value) => {
                                             updateDepartmentRow(row.id, 'headSearch', value);
@@ -444,6 +446,13 @@ export const DepartmentManagement = () => {
                 )}
             </div>
 
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="text-sm font-bold text-[var(--color-text-muted)]">کل شعبہ جات: {meta.totalItems}</div>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text-main)] outline-none"><option value="active">فعال</option><option value="inactive">غیر فعال</option></select>
+                    <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="شعبہ تلاش کریں" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none" />
+                </div>
+            </div>
             <div className="grid grid-cols-1  gap-6">
                 {isLoading ? (
                     <div
@@ -584,6 +593,7 @@ export const DepartmentManagement = () => {
                                 </tbody>
                             </table>
                         </div>
+                        <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
                     </div>
                 ) : (
                     <div
@@ -635,7 +645,7 @@ export const DepartmentManagement = () => {
     );
 };
 
-const HeadSearchableSelect = ({ label, value, options, isLoading, onChange, onSelectOption, onClear, placeholder }) => {
+const HeadSearchableSelect = ({ label, value, options, isLoading, onChange, onSelectOption, onClear, onSearch, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     const filteredOptions = useMemo(() => {
@@ -658,6 +668,7 @@ const HeadSearchableSelect = ({ label, value, options, isLoading, onChange, onSe
                     value={value}
                     onChange={(event) => {
                         onChange(event.target.value);
+                        onSearch?.(event.target.value);
                         setIsOpen(true);
                     }}
                     onFocus={() => setIsOpen(true)}

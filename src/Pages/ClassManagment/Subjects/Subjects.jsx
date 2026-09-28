@@ -6,6 +6,7 @@ import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton'
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     name: '',
@@ -22,11 +23,14 @@ const createEmptySubjectRow = () => ({
 
 const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
 const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+const PAGE_SIZE = 25;
 
 export const CreateSubjects = () => {
     const [subjects, setSubjects] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editMode, setEditMode] = useState(null);
     const [formData, setFormData] = useState(emptyForm);
@@ -51,11 +55,11 @@ export const CreateSubjects = () => {
         setError('');
 
         try {
-            const [activeResult, inactiveResult] = await Promise.all([
-                getSubjects('page=1&limit=100&status=active'),
-                getSubjects('page=1&limit=100&status=inactive'),
-            ]);
-            setSubjects([...(activeResult.items || []), ...(inactiveResult.items || [])]);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (search.trim()) params.set('search', search.trim());
+            const result = await getSubjects(params.toString());
+            setSubjects(result.items || []);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'مضامین کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
@@ -78,7 +82,7 @@ export const CreateSubjects = () => {
         return () => {
             window.removeEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
         };
-    }, []);
+    }, [page, search, statusFilter]);
 
     const resetForm = () => {
         setIsFormOpen(false);
@@ -242,16 +246,8 @@ export const CreateSubjects = () => {
     };
 
     const filteredSubjects = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        return subjects.filter((subject) => {
-            if (subject.status !== statusFilter) return false;
-            if (!query) return true;
-
-            return [subject.name, subject.detail]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query));
-        });
-    }, [subjects, search, statusFilter]);
+        return subjects;
+    }, [subjects]);
 
     const exportColumns = useMemo(() => [
         { header: 'Subject', accessor: 'name' },
@@ -264,14 +260,14 @@ export const CreateSubjects = () => {
             <div className="flex flex-col items-center justify-between gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm backdrop-blur-sm md:flex-row">
                 <div className="text-right">
                     <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">مضامین کی فہرست</h2>
-                    <p className="mt-4 text-right text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSubjects.length}</p>
+                    <p className="mt-4 text-right text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {meta.totalItems}</p>
                 </div>
 
                 <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row items-center">
                     <ExportExcelButton rows={filteredSubjects} columns={exportColumns} fileName="subjects-list" className="w-full md:w-auto" />
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
                     >
                         <option value="active">فعال</option>
@@ -281,7 +277,7 @@ export const CreateSubjects = () => {
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             placeholder="مضمون تلاش کریں"
                             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none"
                         />
@@ -463,6 +459,7 @@ export const CreateSubjects = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (

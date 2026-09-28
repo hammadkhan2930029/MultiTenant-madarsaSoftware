@@ -5,6 +5,7 @@ import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows'
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createShifts, deleteShift, getShifts, updateShift } from '../../../Constant/ShiftApi';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     name: '',
@@ -13,6 +14,7 @@ const emptyForm = {
     type: 'Custom',
     status: 'active',
 };
+const PAGE_SIZE = 25;
 
 const createEmptyShiftRow = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -41,6 +43,10 @@ const getShiftIcon = (type) => {
 
 export const ShiftManagement = () => {
     const [shifts, setShifts] = useState([]);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [shiftRows, setShiftRows] = useState([createEmptyShiftRow()]);
     const [rowErrors, setRowErrors] = useState({});
@@ -64,17 +70,17 @@ export const ShiftManagement = () => {
     const loadShifts = useCallback(async () => {
         try {
             setIsLoading(true);
-            const [activeResult, inactiveResult] = await Promise.all([
-                getShifts('page=1&limit=100&status=active'),
-                getShifts('page=1&limit=100&status=inactive'),
-            ]);
-            setShifts([...(activeResult.items || []), ...(inactiveResult.items || [])]);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (search.trim()) params.set('search', search.trim());
+            const result = await getShifts(params.toString());
+            setShifts(result.items || []);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'شفٹس لوڈ نہیں ہو سکیں۔');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [page, search, statusFilter]);
 
     useEffect(() => {
         loadShifts();
@@ -396,6 +402,13 @@ export const ShiftManagement = () => {
                 </div>
             </div>
 
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="text-sm font-bold text-[var(--color-text-muted)]">کل شفٹس: {meta.totalItems}</div>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text-main)] outline-none"><option value="active">فعال</option><option value="inactive">غیر فعال</option></select>
+                    <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="شفٹ تلاش کریں" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none" />
+                </div>
+            </div>
             <div className="grid grid-cols-1 gap-6">
                 {isLoading ? (
                     <div className="col-span-full rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm font-bold text-[var(--color-text-muted)]">
@@ -520,6 +533,7 @@ export const ShiftManagement = () => {
                         ابھی تک کوئی شفٹ شامل نہیں کی گئی۔
                     </div>
                 )}
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (

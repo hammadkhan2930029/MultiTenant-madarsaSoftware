@@ -16,6 +16,7 @@ import {
     X,
 } from 'lucide-react';
 import { createBranch, getBranches, getLegacyBranchMigrationStatus, updateBranch } from '../../Constant/AcademicSetupApi';
+import { PaginationControls } from '../../Components/Common/PaginationControls';
 import StatusBadge from '../../Components/Common/StatusBadge';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import { DeleteConfirmationModal } from '../../Components/Common/DeleteConfirmationModal';
@@ -34,6 +35,7 @@ const emptyLimitMeta = {
     branchesCreated: 0,
     remainingBranches: 0,
 };
+const PAGE_SIZE = 25;
 
 const statusLabels = {
     active: 'فعال',
@@ -91,6 +93,8 @@ const getBranchErrorMessage = (error, fallback) => {
 export const CreateBranch = () => {
     const navigate = useNavigate();
     const [branches, setBranches] = useState([]);
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [branchLimit, setBranchLimit] = useState(emptyLimitMeta);
     const [search, setSearch] = useState('');
     const [formData, setFormData] = useState(emptyForm);
@@ -116,16 +120,7 @@ export const CreateBranch = () => {
         : Math.max(totalAllowedBranches - createdBranches, 0);
     const canCreateBranch = branchLimit.branchEnabled && remainingBranches > 0;
 
-    const filteredBranches = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        if (!query) return branches;
-
-        return branches.filter((branch) => (
-            [branch.name, branch.code, branch.address, branch.contact, branch.status]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query))
-        ));
-    }, [branches, search]);
+    const filteredBranches = branches;
 
     const loadBranches = async () => {
         setIsLoading(true);
@@ -133,11 +128,12 @@ export const CreateBranch = () => {
 
         try {
             const [result, legacyStatus] = await Promise.all([
-                getBranches('page=1&limit=100'),
+                getBranches(`page=${page}&limit=${PAGE_SIZE}${search.trim() ? `&search=${encodeURIComponent(search.trim())}` : ''}`),
                 getLegacyBranchMigrationStatus().catch(() => null),
             ]);
             const items = result.items || [];
             setBranches(items);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: items.length, perPage: PAGE_SIZE });
             setMigrationStatus(legacyStatus);
             setBranchLimit({
                 ...emptyLimitMeta,
@@ -155,7 +151,7 @@ export const CreateBranch = () => {
 
     useEffect(() => {
         loadBranches();
-    }, []);
+    }, [page, search]);
 
     const resetForm = () => {
         setFormData(emptyForm);
@@ -292,7 +288,7 @@ export const CreateBranch = () => {
                 <div className="text-right">
                     <h2 className="text-2xl font-black text-[var(--color-text)] tracking-tight">برانچ مینجمنٹ</h2>
                     <p className="mt-3 text-sm font-medium text-[var(--color-text-muted)]">
-                        کل برانچز: {filteredBranches.length}
+                        کل برانچز: {meta.totalItems}
                     </p>
                 </div>
 
@@ -303,7 +299,7 @@ export const CreateBranch = () => {
                             id="branch-search"
                             aria-label="برانچ تلاش کریں"
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             placeholder="برانچ تلاش کریں"
                             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none"
                         />
@@ -482,6 +478,7 @@ export const CreateBranch = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {statusTarget ? (

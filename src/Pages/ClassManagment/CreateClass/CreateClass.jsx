@@ -7,6 +7,7 @@ import { useNotificationBridge } from '../../../Components/Notifications/useNoti
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     name: '',
@@ -24,12 +25,15 @@ const createEmptyClassRow = () => ({
 
 const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
 const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+const PAGE_SIZE = 25;
 
 export const CreateClasses = () => {
     const [classes, setClasses] = useState([]);
     const [teachers, setTeachers] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [classRows, setClassRows] = useState([createEmptyClassRow()]);
     const [editMode, setEditMode] = useState(null);
@@ -51,10 +55,11 @@ export const CreateClasses = () => {
         return getSelectedBranchContext(session).branchId || null;
     };
 
-    const buildClassesQuery = (status) => {
+    const buildClassesQuery = (status, options = {}) => {
         const selectedBranchId = getActiveBranchId();
-        const params = new URLSearchParams({ page: '1', limit: '100', status });
+        const params = new URLSearchParams({ page: String(options.page || 1), limit: String(options.limit || PAGE_SIZE), status });
         if (selectedBranchId) params.set('branchId', String(selectedBranchId));
+        if (options.search?.trim()) params.set('search', options.search.trim());
         return params.toString();
     };
 
@@ -86,16 +91,12 @@ export const CreateClasses = () => {
             const activeBranchId = getActiveBranchId();
             if (activeBranchId) teacherParams.set('branchId', String(activeBranchId));
 
-            const [activeResult, inactiveResult, teachersResult] = await Promise.all([
-                getClasses(buildClassesQuery('active')),
-                getClasses(buildClassesQuery('inactive')),
+            const [classesResult, teachersResult] = await Promise.all([
+                getClasses(buildClassesQuery(statusFilter, { page, search })),
                 getTeachers(teacherParams.toString()),
             ]);
-
-            setClasses(onlyActiveBranchClasses([
-                ...(activeResult.items || []),
-                ...(inactiveResult.items || []),
-            ]));
+            setClasses(onlyActiveBranchClasses(classesResult.items || []));
+            setMeta(classesResult.meta || { currentPage: page, totalPages: 1, totalItems: classesResult.items?.length || 0, perPage: PAGE_SIZE });
             setTeachers(teachersResult.items || []);
         } catch (loadError) {
             setError(loadError.message || 'جماعتوں کا ڈیٹا لوڈ نہیں ہو سکا۔');
@@ -117,7 +118,7 @@ export const CreateClasses = () => {
         return () => {
             window.removeEventListener(BRANCH_CONTEXT_UPDATED_EVENT, handleBranchContextUpdated);
         };
-    }, [statusFilter]);
+    }, [page, search, statusFilter]);
 
     const resetForm = () => {
         setEditMode(null);
@@ -298,17 +299,7 @@ export const CreateClasses = () => {
         return teachers.find((teacher) => Number(teacher.id) === Number(academicClass.inchargeTeacherId)) || null;
     };
 
-    const filteredClasses = classes.filter((academicClass) => {
-        if (academicClass.status !== statusFilter) return false;
-        const query = search.trim().toLowerCase();
-        const matchesSearch = !query
-            ? true
-            : [academicClass.name, getClassIncharge(academicClass)?.fullName]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(query));
-
-        return matchesSearch;
-    });
+    const filteredClasses = classes;
 
     const exportColumns = [
         { header: 'Class', accessor: 'name' },
@@ -322,14 +313,14 @@ export const CreateClasses = () => {
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت مینجمنٹ</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredClasses.length}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {meta.totalItems}</p>
                 </div>
 
                 <div className="flex w-full flex-row flex-wrap items-center gap-3 md:w-auto">
                     <ExportExcelButton rows={filteredClasses} columns={exportColumns} fileName="classes-list" className="w-full md:w-auto" />
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
                     >
                         <option value="active">فعال</option>
@@ -339,7 +330,7 @@ export const CreateClasses = () => {
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             placeholder="جماعت تلاش کریں"
                             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none"
                         />
@@ -534,6 +525,7 @@ export const CreateClasses = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (

@@ -10,10 +10,12 @@ import {
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { createClientId } from '../../../../Utils/createClientId';
 import { usePermissions } from '../../../../Hooks/usePermissions';
+import { PaginationControls } from '../../../../Components/Common/PaginationControls';
 
 const createIncomeHead = () => ({ id: createClientId(), title: '', category: '', description: '' });
 const createExpenseHead = () => ({ id: createClientId(), title: '', categoryId: '', category: '', description: '', budgetLimit: '' });
 const createExpenseCategoryForm = () => ({ id: null, name: '' });
+const PAGE_SIZE = 25;
 
 const buildExpenseDescription = (item) => {
     const parts = [];
@@ -68,6 +70,10 @@ export const FinanceHeadsSetup = () => {
     const [expenseHeads, setExpenseHeads] = useState(() => [createExpenseHead()]);
     const [existingIncome, setExistingIncome] = useState([]);
     const [existingExpenses, setExistingExpenses] = useState([]);
+    const [incomePage, setIncomePage] = useState(1);
+    const [expensePage, setExpensePage] = useState(1);
+    const [incomeMeta, setIncomeMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
+    const [expenseMeta, setExpenseMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [expenseCategories, setExpenseCategories] = useState([]);
     const [categoryForm, setCategoryForm] = useState(createExpenseCategoryForm);
     const [categoryDeleteTarget, setCategoryDeleteTarget] = useState(null);
@@ -89,8 +95,8 @@ export const FinanceHeadsSetup = () => {
 
         try {
             const [incomeResult, expenseResult] = await Promise.all([
-                getFinanceHeads('page=1&limit=100&type=income&status=active'),
-                getFinanceHeads('page=1&limit=100&type=expense&status=active'),
+                getFinanceHeads(`page=${incomePage}&limit=${PAGE_SIZE}&type=income&status=active`),
+                getFinanceHeads(`page=${expensePage}&limit=${PAGE_SIZE}&type=expense&status=active`),
             ]);
 
             const categoryResult = await getFinanceExpenseCategories('page=1&limit=100&status=active')
@@ -102,6 +108,7 @@ export const FinanceHeadsSetup = () => {
                 category: readCategory(item.description),
                 description: readDetails(item.description),
             })));
+            setIncomeMeta(incomeResult.meta || { currentPage: incomePage, totalPages: 1, totalItems: incomeResult.items?.length || 0, perPage: PAGE_SIZE });
 
             const categories = categoryResult.items || [];
             setExistingExpenses((expenseResult.items || []).map((item) => {
@@ -117,6 +124,7 @@ export const FinanceHeadsSetup = () => {
                 };
             }));
             setExpenseCategories(categories);
+            setExpenseMeta(expenseResult.meta || { currentPage: expensePage, totalPages: 1, totalItems: expenseResult.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             if (reportError) setError(loadError.message || 'مالیاتی اقسام لوڈ نہیں ہو سکیں۔');
             throw loadError;
@@ -127,7 +135,7 @@ export const FinanceHeadsSetup = () => {
 
     useEffect(() => {
         loadHeads().catch(() => {});
-    }, []);
+    }, [incomePage, expensePage]);
 
     const refreshExpenseCategories = async () => {
         setIsLoadingCategories(true);
@@ -378,7 +386,7 @@ export const FinanceHeadsSetup = () => {
 
             {activeTab === 'expense' ? (
                 <div dir="rtl" className="mx-auto mb-8 max-w-6xl rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-                    <div className="mb-5 grid grid-cols-1 items-end gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,640px)]">
+                    <div className="mb-5 grid grid-cols-1 items-center gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,640px)]">
                         <div className="min-w-0 text-right">
                             <h2 className="text-lg font-black text-[var(--color-primary)]">خرچ کی کیٹیگریز</h2>
                             <p className="mt-1 text-xs font-bold text-[var(--color-text-muted)]">یہ فہرست نیچے خرچ کی قسم والے ڈراپ ڈاؤن میں استعمال ہو گی۔</p>
@@ -395,7 +403,7 @@ export const FinanceHeadsSetup = () => {
                                 type="button"
                                 onClick={saveExpenseCategory}
                                 disabled={!canManageHeads || isSaving}
-                                className="flex h-[52px] w-full min-w-32 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-bg)] disabled:opacity-60 sm:w-auto"
+                                className="flex h-[78px] w-full min-w-32 items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-black text-[var(--color-bg)] disabled:opacity-60 sm:w-auto"
                             >
                                 <Save size={16} />
                                 {categoryForm.id ? 'تبدیل کریں' : 'محفوظ کریں'}
@@ -404,7 +412,7 @@ export const FinanceHeadsSetup = () => {
                                 <button
                                     type="button"
                                     onClick={cancelCategoryEdit}
-                                    className="h-[52px] w-full min-w-24 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text-muted)] sm:w-auto"
+                                    className="h-[78px] w-full min-w-24 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-black text-[var(--color-text-muted)] sm:w-auto"
                                 >
                                     منسوخ
                                 </button>
@@ -459,7 +467,7 @@ export const FinanceHeadsSetup = () => {
                                     }}
                                 />
                             ) : (
-                                <input dir="rtl" type="text" placeholder="Sub-category (اختیاری)" value={item.category}
+                                <input dir="rtl" type="text" placeholder="ذیلی قسم (اختیاری)" value={item.category}
                                     onChange={(e) => handleInputChange(item.id, 'category', e.target.value)}
                                     className="h-[78px] min-w-0 w-full border rounded-xl px-3 text-sm outline-none bg-black/20 text-right focus:border-[var(--color-primary)] border-white/10"
                                 />
@@ -502,7 +510,7 @@ export const FinanceHeadsSetup = () => {
                             <tr>
                                 <th className="p-4">نمبر</th>
                                 <th className="p-4">{activeTab === 'income' ? 'آمدنی کا نام' : 'خرچ کا نام'}</th>
-                                <th className="p-4">Sub-category</th>
+                                <th className="p-4">ذیلی قسم</th>
                                 <th className="p-4">تفصیلات</th>
                                 {activeTab === 'expense' ? <th className="p-4">خرچ کی حد</th> : null}
                                 <th className="p-4 text-center">کارروائی</th>
@@ -568,6 +576,12 @@ export const FinanceHeadsSetup = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls
+                    meta={activeTab === 'income' ? incomeMeta : expenseMeta}
+                    page={activeTab === 'income' ? incomePage : expensePage}
+                    onPageChange={activeTab === 'income' ? setIncomePage : setExpensePage}
+                    disabled={isLoading}
+                />
             </div>
 
             <div className="mt-12 max-w-6xl mx-auto flex flex-row items-center gap-4 p-5 rounded-3xl border border-white/5 bg-white/5">

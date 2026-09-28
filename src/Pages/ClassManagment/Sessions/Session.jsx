@@ -6,6 +6,7 @@ import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton'
 import { BRANCH_CONTEXT_UPDATED_EVENT } from '../../../Constant/AdminAuth';
 import StatusBadge from '../../../Components/Common/StatusBadge';
 import { DateField } from '../../../Components/HR/FormElements';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     name: '',
@@ -16,6 +17,7 @@ const emptyForm = {
 
 const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
 const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+const PAGE_SIZE = 25;
 
 const formatDateInput = (value) => {
     if (!value) return '';
@@ -28,6 +30,8 @@ export const CreateSessions = () => {
     const [sessions, setSessions] = useState([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [editMode, setEditMode] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -51,11 +55,11 @@ export const CreateSessions = () => {
         setError('');
 
         try {
-            const [activeResult, inactiveResult] = await Promise.all([
-                getSessions('page=1&limit=100&status=active'),
-                getSessions('page=1&limit=100&status=inactive'),
-            ]);
-            setSessions([...(activeResult.items || []), ...(inactiveResult.items || [])]);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (search.trim()) params.set('search', search.trim());
+            const result = await getSessions(params.toString());
+            setSessions(result.items || []);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'سیشنز کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
@@ -65,7 +69,7 @@ export const CreateSessions = () => {
 
     useEffect(() => {
         loadSessions();
-    }, [statusFilter]);
+    }, [page, search, statusFilter]);
 
     useEffect(() => {
         const handleBranchContextUpdated = () => {
@@ -185,13 +189,7 @@ export const CreateSessions = () => {
     };
 
     const filteredSessions = sessions.filter((session) => {
-        if (session.status !== statusFilter) return false;
-        const query = search.trim().toLowerCase();
-        if (!query) return true;
-
-        return [session.name, formatDateInput(session.startDate), formatDateInput(session.endDate)]
-            .filter(Boolean)
-            .some((value) => String(value).toLowerCase().includes(query));
+        return true;
     });
 
     const exportColumns = [
@@ -206,14 +204,14 @@ export const CreateSessions = () => {
             <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div className="text-right">
                     <h2 className="text-3xl font-black tracking-tight text-[var(--color-text)]">تعلیمی سیشن</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSessions.length}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {meta.totalItems}</p>
                 </div>
 
                 <div className="flex w-full items-center flex-col gap-3 md:w-auto md:flex-row">
                     <ExportExcelButton rows={filteredSessions} columns={exportColumns} fileName="sessions-list" className="w-full md:w-auto" />
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
                     >
                         <option value="active">فعال</option>
@@ -223,7 +221,7 @@ export const CreateSessions = () => {
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             placeholder="سیشن تلاش کریں"
                             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none"
                         />
@@ -355,6 +353,7 @@ export const CreateSessions = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (

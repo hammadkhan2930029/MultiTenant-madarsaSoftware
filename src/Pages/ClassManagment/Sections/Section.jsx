@@ -6,6 +6,7 @@ import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton'
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
 import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     classId: '',
@@ -21,6 +22,7 @@ const createEmptySectionRow = () => ({
 
 const activeDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود ہے۔ براہ کرام معلومات درست کیجیے۔';
 const inactiveDuplicateMessage = 'درج کردہ معلومات پہلے سے موجود اور غیر فعال ہے۔ براہ کرام معلومات درست کیجیے۔';
+const PAGE_SIZE = 25;
 
 export const CreateSections = () => {
     const [classes, setClasses] = useState([]);
@@ -28,6 +30,8 @@ export const CreateSections = () => {
     const [search, setSearch] = useState('');
     const [selectedClassFilter, setSelectedClassFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [sectionRows, setSectionRows] = useState([createEmptySectionRow()]);
     const [editMode, setEditMode] = useState(null);
@@ -58,17 +62,17 @@ export const CreateSections = () => {
         setError('');
 
         try {
-            const [classesResult, activeSectionsResult, inactiveSectionsResult] = await Promise.all([
+            const sectionParams = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (search.trim()) sectionParams.set('search', search.trim());
+            if (selectedClassFilter) sectionParams.set('classId', selectedClassFilter);
+            const [classesResult, sectionsResult] = await Promise.all([
                 getClasses('page=1&limit=100&status=active'),
-                getSections('page=1&limit=100&status=active'),
-                getSections('page=1&limit=100&status=inactive'),
+                getSections(sectionParams.toString()),
             ]);
 
             setClasses(classesResult.items || []);
-            setSections([
-                ...(activeSectionsResult.items || []),
-                ...(inactiveSectionsResult.items || []),
-            ]);
+            setSections(sectionsResult.items || []);
+            setMeta(sectionsResult.meta || { currentPage: page, totalPages: 1, totalItems: sectionsResult.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'سیکشنز کا ڈیٹا لوڈ نہیں ہو سکا۔');
         } finally {
@@ -78,7 +82,7 @@ export const CreateSections = () => {
 
     useEffect(() => {
         loadDependencies();
-    }, [statusFilter]);
+    }, [page, search, selectedClassFilter, statusFilter]);
 
     const resetForm = () => {
         setFormData(emptyForm);
@@ -262,18 +266,7 @@ export const CreateSections = () => {
         }
     };
 
-    const filteredSections = sections.filter((section) => {
-        if (section.status !== statusFilter) return false;
-        const matchesClass = selectedClassFilter ? String(section.classId) === selectedClassFilter : true;
-        const query = search.trim().toLowerCase();
-        const matchesSearch = !query
-            ? true
-            : [section.name, section.class?.name]
-                  .filter(Boolean)
-                  .some((value) => String(value).toLowerCase().includes(query));
-
-        return matchesClass && matchesSearch;
-    });
+    const filteredSections = sections;
 
     const exportColumns = [
         { header: 'Section', accessor: 'name' },
@@ -286,14 +279,14 @@ export const CreateSections = () => {
             <div className="flex flex-row items-center justify-between gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
                 <div className="text-right">
                     <h2 className="text-3xl font-black text-[var(--color-text)] tracking-tight">جماعت سیکشن مینجمنٹ</h2>
-                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {filteredSections.length}</p>
+                    <p className="mt-4 text-sm font-medium text-[var(--color-text-muted)]">کل فہرست: {meta.totalItems}</p>
                 </div>
 
                 <div className="flex w-auto flex-row flex-wrap items-center gap-3">
                     <ExportExcelButton rows={filteredSections} columns={exportColumns} fileName="sections-list" className="w-full md:w-auto" />
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
                         className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-40"
                     >
                         <option value="active">فعال</option>
@@ -301,7 +294,7 @@ export const CreateSections = () => {
                     </select>
                     <select
                         value={selectedClassFilter}
-                        onChange={(e) => setSelectedClassFilter(e.target.value)}
+                        onChange={(e) => { setSelectedClassFilter(e.target.value); setPage(1); }}
                         className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text)] outline-none md:min-w-44"
                     >
                         <option value="">تمام جماعتیں</option>
@@ -316,7 +309,7 @@ export const CreateSections = () => {
                         <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                         <input
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             placeholder="سیکشن تلاش کریں"
                             className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-sm font-bold text-[var(--color-text)] outline-none"
                         />
@@ -495,6 +488,7 @@ export const CreateSections = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (

@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import StatusBadge from '../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../Components/Common/PaginationControls';
 import { getBranches, getClasses } from '../../Constant/AcademicSetupApi';
 import { getTeachers } from '../../Constant/TeachersApi';
 import { ROLE_PERMISSION_MODULES, SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
@@ -13,6 +14,7 @@ import { usePermissions } from '../../Hooks/usePermissions';
 import { clearFieldError, focusFirstInvalidField, normalizeValidationErrors } from '../../Utils/formValidation';
 
 const emptyForm = { roleName: '', description: '', status: 'active', branchId: '', classScopeMode: 'all', classIds: [], teacherId: '' };
+const PAGE_SIZE = 25;
 const BRANCH_RESTRICTED_PERMISSION_MODULES = new Set(['tenant_management', 'branches']);
 const BRANCH_RESTRICTED_PERMISSION_PREFIXES = ['tenant_management.', 'branches.'];
 
@@ -532,6 +534,8 @@ export const RoleManagement = () => {
   const [permissionModules, setPermissionModules] = useState(ROLE_PERMISSION_MODULES);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [rolesMeta, setRolesMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
   const [formData, setFormData] = useState(emptyForm);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [savedPermissions, setSavedPermissions] = useState([]);
@@ -636,7 +640,6 @@ export const RoleManagement = () => {
   };
   const visibleRoles = useMemo(
     () => roles
-      .filter((role) => !statusFilter || getRoleStatus(role) === statusFilter)
       .filter((role) => (
         !branchScopedSession ||
         (
@@ -646,7 +649,7 @@ export const RoleManagement = () => {
           !['admin', SUPER_ADMIN_ROLE].includes(getRoleName(role))
         )
       )),
-    [branchScopedSession, roles, sessionBranchId, statusFilter],
+    [branchScopedSession, roles, sessionBranchId],
   );
   const branchOptions = useMemo(() => {
     const mainBranch = branches.find(isMainBranch);
@@ -728,19 +731,20 @@ export const RoleManagement = () => {
     setError('');
     try {
       const result = await getRoles({
-        page: 1,
-        limit: 100,
+        page,
+        limit: PAGE_SIZE,
         search,
         status: statusFilter,
         branchId: canAssignRoleBranch ? selectedTenantBranchId || undefined : undefined,
       });
       setRoles(result.items || []);
+      setRolesMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
     } catch (loadError) {
       setError(loadError.message || 'کردار لوڈ نہیں ہو سکے۔');
     } finally {
       setIsLoading(false);
     }
-  }, [canAssignRoleBranch, search, selectedTenantBranchId, statusFilter]);
+  }, [canAssignRoleBranch, page, search, selectedTenantBranchId, statusFilter]);
 
   const loadRole = useCallback(async () => {
     if (!roleId || mode === 'create' || mode === 'list') return;
@@ -1390,13 +1394,12 @@ export const RoleManagement = () => {
     <>
       <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:flex-row md:items-center md:justify-between">
         <div className="text-sm font-bold text-[var(--color-text-muted)]">
-          کل کردار: {visibleRoles.length}
-          {visibleRoles.length !== roles.length ? <span className="mr-2 text-xs">/ {roles.length}</span> : null}
+          کل کردار: {rolesMeta.totalItems}
         </div>
         <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
           <select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
             className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
           >
             <option value="">تمام اسٹیٹس</option>
@@ -1407,7 +1410,7 @@ export const RoleManagement = () => {
             <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => { setSearch(event.target.value); setPage(1); }}
               placeholder="کردار تلاش کریں"
               className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]"
             />
@@ -1481,6 +1484,7 @@ export const RoleManagement = () => {
             </tbody>
           </table>
         </div>
+        <PaginationControls meta={rolesMeta} page={page} onPageChange={setPage} disabled={isLoading} />
       </div>
     </>
   );

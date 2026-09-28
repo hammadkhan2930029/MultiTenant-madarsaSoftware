@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { InputField, SelectField } from '../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
 import StatusBadge from '../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../Components/Common/PaginationControls';
 import { SUPER_ADMIN_ROLE } from '../../Constant/Permissions';
 import { getRoles } from '../../Constant/RoleManagementApi';
 import { assignUserRole, createUser, deleteUser, getUserById, getUsers, updateUser } from '../../Constant/UserManagementApi';
@@ -26,6 +27,8 @@ const emptyForm = {
   teacherId: '',
   status: 'active',
 };
+
+const PAGE_SIZE = 25;
 
 const roleDisplayNames = {
   super_admin: 'سپر ایڈمن',
@@ -188,6 +191,8 @@ export const UserManagement = () => {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [usersMeta, setUsersMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -321,14 +326,15 @@ export const UserManagement = () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await getUsers({ page: 1, limit: 100, search, roleId: roleFilter, status: statusFilter });
+      const result = await getUsers({ page, limit: PAGE_SIZE, search, roleId: roleFilter, status: statusFilter });
       setUsers(result.items || []);
+      setUsersMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
     } catch (loadError) {
       setError(loadError.message || 'صارفین لوڈ نہیں ہو سکے۔');
     } finally {
       setIsLoading(false);
     }
-  }, [roleFilter, search, statusFilter]);
+  }, [page, roleFilter, search, statusFilter]);
 
   const loadTeachers = useCallback(async () => {
     if (mode === 'list' || !assignmentBranchId) {
@@ -676,9 +682,9 @@ export const UserManagement = () => {
   const renderList = () => (
     <>
       <div className="flex flex-col gap-4 rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-        <div className="text-sm font-bold text-[var(--color-text-muted)]">کل صارفین: {users.length}</div>
+        <div className="text-sm font-bold text-[var(--color-text-muted)]">کل صارفین: {usersMeta.totalItems}</div>
         <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-          <SelectField options={roleFilterOptions} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="h-12 py-0 md:w-48" />
+          <SelectField options={roleFilterOptions} value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setPage(1); }} className="h-12 py-0 md:w-48" />
           <SelectField
             options={[
               { value: '', label: 'تمام اسٹیٹس' },
@@ -686,14 +692,15 @@ export const UserManagement = () => {
               { value: 'inactive', label: 'غیر فعال' },
             ]}
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
             className="h-12 py-0 md:w-44"
           />
           <div className="relative w-full md:w-80">
             <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="صارف تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="صارف تلاش کریں" className="h-12 w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] pr-12 pl-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]" />
           </div>
         </div>
+        <PaginationControls meta={usersMeta} page={page} onPageChange={setPage} disabled={isLoading} />
       </div>
 
       <div className="overflow-hidden rounded-[2.5rem] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">

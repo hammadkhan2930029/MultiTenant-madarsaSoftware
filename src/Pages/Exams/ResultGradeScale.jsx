@@ -2,6 +2,7 @@
 import { Award, Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { createResultGrade, deleteResultGrade, getResultGrades, updateResultGrade } from '../../Constant/ResultGradesApi';
 import { useNotificationBridge } from '../../Components/Notifications/useNotificationBridge';
+import { PaginationControls } from '../../Components/Common/PaginationControls';
 
 const emptyForm = {
     title: '',
@@ -9,9 +10,12 @@ const emptyForm = {
     from: '',
     to: '',
 };
+const PAGE_SIZE = 25;
 
 export const ResultGradeScale = () => {
     const [grades, setGrades] = useState([]);
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [editId, setEditId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -32,14 +36,15 @@ export const ResultGradeScale = () => {
         setIsLoading(true);
         setError('');
         try {
-            const result = await getResultGrades('page=1&limit=100');
+            const result = await getResultGrades(`page=${page}&limit=${PAGE_SIZE}`);
             setGrades(sortGrades(result.items));
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'رینجز لوڈ نہیں ہو سکیں۔');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [page]);
 
     useEffect(() => {
         loadGrades();
@@ -257,6 +262,7 @@ export const ResultGradeScale = () => {
                                 </tbody>
                             </table>
                         </div>
+                        <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
                     </div>
                 </div>
             </div>

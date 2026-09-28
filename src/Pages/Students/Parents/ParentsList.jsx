@@ -9,6 +9,9 @@ import { CNIC_INPUT_MAX_LENGTH, formatCnicInput, isCompleteCnic } from '../../..
 import { PHONE_INPUT_PROPS, PHONE_VALIDATION_MESSAGE, isValidPhoneNumber, normalizePhoneNumber, sanitizePhoneInput } from '../../../Utils/phoneValidation';
 import { usePermissions } from '../../../Hooks/usePermissions';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
+
+const PAGE_SIZE = 25;
 
 const INITIAL_FORM = {
     registrationNumber: '',
@@ -83,6 +86,9 @@ export const ParentsList = () => {
     const [parents, setParents] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
+    const [isLoading, setIsLoading] = useState(false);
     const [formValues, setFormValues] = useState(INITIAL_FORM);
     const [editingParentId, setEditingParentId] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
@@ -93,8 +99,12 @@ export const ParentsList = () => {
 
     const loadParents = useCallback(async () => {
         try {
-            const result = await getParents(`page=1&limit=100&status=${statusFilter}`);
+            setIsLoading(true);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            const result = await getParents(params.toString());
             setParents(result.items || []);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             const loadMessage = loadError?.message || '';
             const isEmptyParentsList =
@@ -104,12 +114,15 @@ export const ParentsList = () => {
 
             if (isEmptyParentsList) {
                 setParents([]);
+                setMeta({ currentPage: page, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
                 return;
             }
 
             setError(loadMessage || 'سرپرست کی فہرست لوڈ نہیں ہو سکی۔');
+        } finally {
+            setIsLoading(false);
         }
-    }, [statusFilter]);
+    }, [page, searchTerm, statusFilter]);
 
     useEffect(() => {
         let isMounted = true;
@@ -220,17 +233,7 @@ export const ParentsList = () => {
         }
     };
 
-    const filteredParents = useMemo(
-        () =>
-            parents.filter((parent) =>
-                [parent.registrationNumber, parent.fullName, parent.familyNumber, parent.phone, parent.occupation, parent.address, parent.email]
-                    .filter(Boolean)
-                    .some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
-            ),
-        [parents, searchTerm],
-    );
-
-    const exportRows = useMemo(() => filteredParents.map(mapParentForExport), [filteredParents]);
+    const exportRows = useMemo(() => parents.map(mapParentForExport), [parents]);
 
     const exportColumns = useMemo(() => [
         { header: 'Registration No.', accessor: 'registrationNumber' },
@@ -262,7 +265,7 @@ export const ParentsList = () => {
                             </div>
                             سرپرست
                         </h2>
-                        <p className="mr-14 mt-2 text-sm font-bold text-[var(--color-text-muted)]">کل اندراجات: {filteredParents.length}</p>
+                        <p className="mr-14 mt-2 text-sm font-bold text-[var(--color-text-muted)]">کل اندراجات: {meta.totalItems}</p>
                     </div>
                 </div>
 
@@ -339,7 +342,7 @@ export const ParentsList = () => {
                         {canExportParents ? <ExportExcelButton rows={exportRows} columns={exportColumns} fileName="parents-complete-list" className="w-full md:w-auto" /> : null}
                         <select
                             value={statusFilter}
-                            onChange={(event) => setStatusFilter(event.target.value)}
+                            onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
                             className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] px-5 py-4 text-sm font-bold text-[var(--color-text-main)] outline-none focus:border-[var(--color-primary)]/50 md:w-44"
                         >
                             <option value="active">فعال</option>
@@ -350,7 +353,7 @@ export const ParentsList = () => {
                             <input
                                 type="text"
                                 value={searchTerm}
-                                onChange={(event) => setSearchTerm(event.target.value)}
+                            onChange={(event) => { setSearchTerm(event.target.value); setPage(1); }}
                                 placeholder="رجسٹریشن نمبر، نام، فیملی نمبر یا فون نمبر سے تلاش کریں..."
                                 className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-input)] py-4 pr-14 pl-6 text-sm font-bold text-[var(--color-text-main)] outline-none placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-primary)]/50"
                             />
@@ -374,7 +377,7 @@ export const ParentsList = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-border)]">
-                            {filteredParents.map((parent) => (
+                            {parents.map((parent) => (
                                 <tr key={parent.id} className="transition-colors hover:bg-white/[0.02]">
                                     <td className="p-5 text-sm font-black text-[var(--color-primary)]">{parent.registrationNumber || '---'}</td>
                                     <td className="p-5">
@@ -409,6 +412,7 @@ export const ParentsList = () => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (

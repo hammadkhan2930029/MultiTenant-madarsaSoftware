@@ -5,6 +5,7 @@ import { MultipleEntryRows } from '../../../Components/Common/MultipleEntryRows'
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { createQualification, deleteQualification, getQualifications, updateQualification } from '../../../Constant/QualificationApi';
 import StatusBadge from '../../../Components/Common/StatusBadge';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 
 const emptyForm = {
     title: '',
@@ -12,6 +13,7 @@ const emptyForm = {
     level: '',
     status: 'active',
 };
+const PAGE_SIZE = 25;
 
 const createEmptyQualificationRow = () => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -20,6 +22,10 @@ const createEmptyQualificationRow = () => ({
 
 export const QualificationManagement = () => {
     const [qualifications, setQualifications] = useState([]);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [formData, setFormData] = useState(emptyForm);
     const [qualificationRows, setQualificationRows] = useState([createEmptyQualificationRow()]);
     const [editMode, setEditMode] = useState(null);
@@ -42,17 +48,17 @@ export const QualificationManagement = () => {
     const loadQualifications = useCallback(async () => {
         try {
             setIsLoading(true);
-            const [activeResult, inactiveResult] = await Promise.all([
-                getQualifications('page=1&limit=100&status=active'),
-                getQualifications('page=1&limit=100&status=inactive'),
-            ]);
-            setQualifications([...(activeResult.items || []), ...(inactiveResult.items || [])]);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter });
+            if (search.trim()) params.set('search', search.trim());
+            const result = await getQualifications(params.toString());
+            setQualifications(result.items || []);
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || 'تعلیمی اسناد لوڈ نہیں ہو سکیں۔');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [page, search, statusFilter]);
 
     useEffect(() => {
         loadQualifications();
@@ -273,6 +279,13 @@ export const QualificationManagement = () => {
                 </div>
             </div>
 
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="text-sm font-bold text-[var(--color-text-muted)]">کل تعلیمی اسناد: {meta.totalItems}</div>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                    <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-sm font-bold text-[var(--color-text-main)] outline-none"><option value="active">فعال</option><option value="inactive">غیر فعال</option></select>
+                    <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="تعلیمی سند تلاش کریں" className="h-12 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 text-right text-sm font-bold text-[var(--color-text-main)] outline-none" />
+                </div>
+            </div>
             <div className="w-full overflow-x-auto">
                 {isLoading ? (
                     <div
@@ -405,6 +418,7 @@ export const QualificationManagement = () => {
                                 </tbody>
                             </table>
                         </div>
+                        <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
                     </div>
                 ) : (
                     <div

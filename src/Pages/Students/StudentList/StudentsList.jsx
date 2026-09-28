@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { deleteStudent, getStudents } from '../../../Constant/StudentsApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 import { Can } from '../../../Components/Auth/Can';
 import StatusBadge from '../../../Components/Common/StatusBadge';
 import { formatStudentRegistrationNumber } from '../../../Utils/studentRegistration';
 import { getCurrentParent } from '../../../Utils/parentRelations';
 
 const emptyValue = '-';
+const PAGE_SIZE = 25;
 
 const formatDate = (value) => {
     if (!value) return '';
@@ -151,6 +153,7 @@ export const StudentList = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedSection, setSelectedSection] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
+    const [page, setPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -166,7 +169,7 @@ export const StudentList = () => {
             setError('');
 
             try {
-                const result = await getStudents('page=1&limit=100&status=active');
+                const result = await getStudents(`page=1&limit=${PAGE_SIZE}&status=active`);
                 const items = result.items || [];
                 setStudentRecords(items);
                 setStudents(mapStudentsForList(items));
@@ -190,7 +193,7 @@ export const StudentList = () => {
             setError('');
 
             try {
-                const result = await getStudents(`page=1&limit=100&status=${statusFilter}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
+                const result = await getStudents(`page=${page}&limit=${PAGE_SIZE}&status=${statusFilter}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ''}`);
                 if (!isCurrentSearch) return;
                 const items = result.items || [];
                 setStudentRecords(items);
@@ -211,7 +214,7 @@ export const StudentList = () => {
             isCurrentSearch = false;
             window.clearTimeout(timeoutId);
         };
-    }, [searchTerm, statusFilter]);
+    }, [page, searchTerm, statusFilter]);
 
     const handleDelete = async () => {
         if (!deleteTarget) return;
@@ -362,7 +365,7 @@ export const StudentList = () => {
         { header: 'Updated At', accessor: 'updatedAt' },
     ], []);
 
-    const visibleTotal = selectedSession || selectedClass || selectedSection || statusFilter !== 'active' ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
+    const visibleTotal = selectedSession || selectedClass || selectedSection ? filteredStudents.length : Number(studentMeta.totalItems ?? filteredStudents.length);
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700 pb-10" dir="rtl">
@@ -399,12 +402,12 @@ export const StudentList = () => {
                                 value={searchTerm}
                                 placeholder="نام، آئی ڈی یا فون سے تلاش کریں..."
                                 className="w-full pr-14 pl-6 py-4 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]"
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                             />
                         </div>
                         <select
                             value={selectedSession}
-                            onChange={(event) => setSelectedSession(event.target.value)}
+                            onChange={(event) => { setSelectedSession(event.target.value); setPage(1); }}
                             className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
                         >
                             <option value="">تمام سیشن</option>
@@ -419,6 +422,7 @@ export const StudentList = () => {
                             onChange={(event) => {
                                 setSelectedClass(event.target.value);
                                 setSelectedSection('');
+                                setPage(1);
                             }}
                             className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
                         >
@@ -431,7 +435,7 @@ export const StudentList = () => {
                         </select>
                         <select
                             value={selectedSection}
-                            onChange={(event) => setSelectedSection(event.target.value)}
+                            onChange={(event) => { setSelectedSection(event.target.value); setPage(1); }}
                             disabled={!selectedClass}
                             className="w-full sm:w-56 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -444,7 +448,7 @@ export const StudentList = () => {
                         </select>
                         <select
                             value={statusFilter}
-                            onChange={(event) => setStatusFilter(event.target.value)}
+                            onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
                             className="w-full sm:w-44 py-4 px-5 bg-[var(--color-input)] border shadow-[2px_6px_26px_2px_rgba(0,_0,_0,_0.1)] border-[var(--color-border)] focus:border-[var(--color-primary)]/50 rounded-2xl outline-none font-bold text-sm transition-all text-[var(--color-text)]"
                         >
                             <option value="active">فعال</option>
@@ -611,6 +615,8 @@ export const StudentList = () => {
                     </tbody>
                 </table>
             </div>
+
+            <PaginationControls meta={studentMeta} page={page} onPageChange={setPage} disabled={isLoading} />
 
             {!isLoading && filteredStudents.length === 0 ? (
                 <div className="p-24 text-center bg-[var(--color-surface)] rounded-[3rem] border border-[var(--color-border)]">

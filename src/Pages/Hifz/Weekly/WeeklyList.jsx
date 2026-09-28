@@ -1,8 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BookOpen, CalendarDays, Check, Pencil, Printer, Search, Trash2, UserRound, X } from 'lucide-react';
 import { deactivateWeeklyHifzEntry, getWeeklyHifzEntries, updateWeeklyHifzEntry } from '../../../Constant/HifzApi';
 import { formatDateForDisplay, formatDateForInput } from '../HifzUi';
 import { useNotifier } from '../../../Components/Notifications/useNotifier';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
+
+const PAGE_SIZE = 25;
 
 const reportMeta = {
     campus: 'مدرسہ الہدیٰ',
@@ -86,6 +89,8 @@ const buildUpdatePayload = (row) => {
 export const WeeklyJaizaList = () => {
     const notify = useNotifier();
     const [searchQuery, setSearchQuery] = useState('');
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
     const [savedRows, setSavedRows] = useState([]);
     const [editingRowId, setEditingRowId] = useState('');
     const [draftRow, setDraftRow] = useState(null);
@@ -93,40 +98,29 @@ export const WeeklyJaizaList = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const loadWeeklyEntries = async () => {
+    const loadWeeklyEntries = useCallback(async () => {
         try {
             setIsLoading(true);
-            const result = await getWeeklyHifzEntries('page=1&limit=100&status=active');
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: 'active' });
+            if (searchQuery.trim()) params.set('search', searchQuery.trim());
+            const result = await getWeeklyHifzEntries(params.toString());
             setSavedRows((result.items || []).map(mapWeeklyEntryToRow));
+            setMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (error) {
             notify.error(error?.message || 'ہفتہ وار جائزے کی فہرست لوڈ نہیں ہو سکی۔');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [notify, page, searchQuery]);
 
     useEffect(() => {
         loadWeeklyEntries();
-    }, []);
+    }, [loadWeeklyEntries]);
 
     const rows = useMemo(() => savedRows, [savedRows]);
     const firstRow = rows[0] || null;
 
-    const filteredRows = useMemo(() => {
-        const query = searchQuery.trim().toLowerCase();
-
-        if (!query) {
-            return rows;
-        }
-
-        return rows.filter((row) =>
-            (row.studentName || '').toLowerCase().includes(query) ||
-            (row.studentNo || '').toLowerCase().includes(query) ||
-            (row.className || '').toLowerCase().includes(query) ||
-            (row.teacherName || '').toLowerCase().includes(query) ||
-            (row.weekLabel || '').toLowerCase().includes(query)
-        );
-    }, [rows, searchQuery]);
+    const filteredRows = useMemo(() => rows, [rows]);
 
     const startEditing = (row) => {
         setEditingRowId(row.id);
@@ -226,7 +220,7 @@ export const WeeklyJaizaList = () => {
                                 <input
                                     type="text"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
                                     placeholder="طالب علم کا نام یا نمبر تلاش کریں"
                                     className="w-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] py-3 pr-12 pl-4 text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                                 />
@@ -374,6 +368,7 @@ export const WeeklyJaizaList = () => {
                         </table>
                     </div>
                 </div>
+                <PaginationControls meta={meta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
             {deleteRow && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

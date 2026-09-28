@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { deleteTeacher, getTeachers } from '../../../Constant/TeachersApi';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { ExportExcelButton } from '../../../Components/Export/ExportExcelButton';
+import { PaginationControls } from '../../../Components/Common/PaginationControls';
 import { Can } from '../../../Components/Auth/Can';
 import StatusBadge from '../../../Components/Common/StatusBadge';
 import { getEmploymentTypeLabel } from '../../../Constant/EmploymentTypes';
@@ -33,6 +34,8 @@ const listConfig = {
         addPath: '/HRManagement?staffType=staff',
     },
 };
+
+const PAGE_SIZE = 25;
 
 const formatDate = (value) => {
     if (!value) return '';
@@ -129,7 +132,9 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
     const [shiftFilter, setShiftFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('active');
     const [teachers, setTeachers] = useState([]);
-    const [teacherMeta, setTeacherMeta] = useState({ totalItems: 0 });
+    const [teacherMeta, setTeacherMeta] = useState({ currentPage: 1, totalPages: 1, totalItems: 0, perPage: PAGE_SIZE });
+    const [page, setPage] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
@@ -138,13 +143,18 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
 
     const loadTeachers = useCallback(async () => {
         try {
-            const result = await getTeachers(`page=1&limit=100&status=${statusFilter}&staffType=${staffType}`);
+            setIsLoading(true);
+            const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), status: statusFilter, staffType });
+            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            const result = await getTeachers(params.toString());
             setTeachers(result.items || []);
-            setTeacherMeta(result.meta || { totalItems: result.items?.length || 0 });
+            setTeacherMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
         } catch (loadError) {
             setError(loadError.message || config.loadError);
+        } finally {
+            setIsLoading(false);
         }
-    }, [config.loadError, staffType, statusFilter]);
+    }, [config.loadError, page, searchTerm, staffType, statusFilter]);
 
     useEffect(() => {
         loadTeachers();
@@ -254,7 +264,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                                 type="text"
                                 placeholder={config.searchPlaceholder}
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                                 dir="rtl"
                                 className="h-[72px] pr-5 pl-14 text-right leading-[1.8]"
                             />
@@ -277,7 +287,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         </select>
                         <select
                             value={statusFilter}
-                            onChange={(event) => setStatusFilter(event.target.value)}
+                            onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}
                             className="h-[72px] w-full rounded-2xl border border-transparent bg-[var(--color-input)] px-5 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)]"
                         >
                             <option value="active">فعال</option>
@@ -408,6 +418,7 @@ export const TeachersList = ({ staffType = 'teacher' }) => {
                         </tbody>
                     </table>
                 </div>
+                <PaginationControls meta={teacherMeta} page={page} onPageChange={setPage} disabled={isLoading} />
             </div>
 
             {deleteTarget ? (
