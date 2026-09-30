@@ -7,3 +7,8 @@ export const getAuditLogs = async (query = '') => {
   const result = await apiRequest(`/audit-logs${query ? `?${query}` : ''}`, withToken({ method: 'GET', skipBranchContext: true }));
   return result?.data || { items: [], meta: null };
 };
+
+export const getAuditLogFilterOptions = async (query = '') => {
+  const result = await apiRequest(`/audit-logs/filter-options${query ? `?${query}` : ''}`, withToken({ method: 'GET', skipBranchContext: true }));
+  return result?.data || { tenants: [], branches: [], users: [], actions: [] };
+};
