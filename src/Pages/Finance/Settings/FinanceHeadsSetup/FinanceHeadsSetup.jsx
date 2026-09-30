@@ -14,7 +14,7 @@ import { PaginationControls } from '../../../../Components/Common/PaginationCont
 
 const createIncomeHead = () => ({ id: createClientId(), title: '', category: '', description: '' });
 const createExpenseHead = () => ({ id: createClientId(), title: '', categoryId: '', category: '', description: '', budgetLimit: '' });
-const createExpenseCategoryForm = () => ({ id: null, name: '' });
+const createExpenseCategoryForm = () => ({ id: null, name: '', editReason: '' });
 const PAGE_SIZE = 25;
 
 const buildExpenseDescription = (item) => {
@@ -200,7 +200,12 @@ export const FinanceHeadsSetup = () => {
         const wasEditing = Boolean(categoryForm.id);
         try {
             if (categoryForm.id) {
-                savedCategory = await updateFinanceExpenseCategory(categoryForm.id, { name, status: 'active' });
+                if (!categoryForm.editReason.trim()) {
+                    setError('براہ کرم ترمیم کی وجہ / تفصیل درج کریں۔');
+                    setIsSaving(false);
+                    return;
+                }
+                savedCategory = await updateFinanceExpenseCategory(categoryForm.id, { name, status: 'active', editReason: categoryForm.editReason.trim() });
             } else {
                 savedCategory = await createFinanceExpenseCategory({ name, status: 'active' });
             }
@@ -225,7 +230,7 @@ export const FinanceHeadsSetup = () => {
 
     const startCategoryEdit = (category) => {
         resetMessages();
-        setCategoryForm({ id: category.id, name: category.name || '' });
+        setCategoryForm({ id: category.id, name: category.name || '', editReason: '' });
     };
 
     const cancelCategoryEdit = () => {
@@ -288,7 +293,7 @@ export const FinanceHeadsSetup = () => {
 
     const startEdit = (item) => {
         setEditingId(item.id);
-        setEditForm({ ...item });
+        setEditForm({ ...item, editReason: '' });
     };
 
     const cancelEdit = () => {
@@ -302,12 +307,17 @@ export const FinanceHeadsSetup = () => {
             return;
         }
 
+        if (!editForm.editReason?.trim()) {
+            setError('براہ کرم ترمیم کی وجہ / تفصیل درج کریں۔');
+            return;
+        }
+
         setIsSaving(true);
         resetMessages();
         try {
             const savedHead = await updateFinanceHead(
                 editingId,
-                buildFinanceHeadPayload(editForm, activeTab),
+                { ...buildFinanceHeadPayload(editForm, activeTab), editReason: editForm.editReason.trim() },
             );
             cancelEdit();
             try {
@@ -399,6 +409,16 @@ export const FinanceHeadsSetup = () => {
                                 placeholder="مثلاً انتظامی اخراجات"
                                 className="h-[52px] min-w-0 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)]"
                             />
+                            {categoryForm.id ? (
+                                <input
+                                    dir="rtl"
+                                    required
+                                    value={categoryForm.editReason}
+                                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, editReason: event.target.value }))}
+                                    placeholder="ترمیم کی وجہ / تفصیل *"
+                                    className="h-[52px] min-w-0 w-full rounded-xl border border-white/10 bg-black/20 px-4 text-right text-sm font-bold outline-none focus:border-[var(--color-primary)] sm:col-span-3"
+                                />
+                            ) : null}
                             <button
                                 type="button"
                                 onClick={saveExpenseCategory}
@@ -505,7 +525,7 @@ export const FinanceHeadsSetup = () => {
             <div className="max-w-6xl mx-auto space-y-4">
                 <h2 className="text-lg font-semibold mb-4 text-right border-r-4 border-blue-500 pr-3">موجودہ فہرست ({activeTab === 'income' ? 'آمدنی' : 'اخراجات'})</h2>
                 <div className="overflow-hidden rounded-3xl border border-white/5" style={{ backgroundColor: 'var(--color-surface)' }}>
-                    <table className="w-full text-right" dir="rtl">
+                    <table className="w-full table-fixed text-right" dir="rtl">
                         <thead className="bg-black/20 text-gray-400 text-xs uppercase">
                             <tr>
                                 <th className="p-4">نمبر</th>
@@ -513,18 +533,19 @@ export const FinanceHeadsSetup = () => {
                                 <th className="p-4">ذیلی قسم</th>
                                 <th className="p-4">تفصیلات</th>
                                 {activeTab === 'expense' ? <th className="p-4">خرچ کی حد</th> : null}
+                                <th className="p-4">ترمیم کی وجہ</th>
                                 <th className="p-4 text-center">کارروائی</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm">
                             {isLoading ? (
-                                <tr><td className="p-6 text-center text-gray-400" colSpan={activeTab === 'expense' ? 6 : 5}>مالیاتی اقسام لوڈ ہو رہی ہیں...</td></tr>
+                                <tr><td className="p-6 text-center text-gray-400" colSpan={activeTab === 'expense' ? 7 : 6}>مالیاتی اقسام لوڈ ہو رہی ہیں...</td></tr>
                             ) : activeExistingRows.length ? activeExistingRows.map((item, idx) => (
                                 <tr key={item.id} className="border-t border-white/5 hover:bg-white/5 transition-colors">
                                     <td className="p-4 text-gray-500">{idx + 1}</td>
                                     <td className="p-4 font-medium text-[var(--color-primary)]">
                                         {editingId === item.id ? (
-                                            <input dir="rtl" required className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.title} onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))} />
+                                            <input dir="rtl" required className="h-[78px] w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.title} onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))} />
                                         ) : item.title}
                                     </td>
                                     <td className="p-4">
@@ -538,22 +559,34 @@ export const FinanceHeadsSetup = () => {
                                                     onChange={(categoryId, category) => setEditForm((prev) => ({ ...prev, categoryId: String(categoryId), category: category?.name || '' }))}
                                                 />
                                             ) : (
-                                                <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.category || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))} />
+                                                <input dir="rtl" className="h-[78px] w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.category || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))} />
                                             )
                                         ) : item.category || '---'}
                                     </td>
                                     <td className="p-4">
                                         {editingId === item.id ? (
-                                            <input dir="rtl" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.description || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} />
+                                            <input dir="rtl" className="h-[78px] w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.description || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} />
                                         ) : <span className="text-gray-400">{item.description || '---'}</span>}
                                     </td>
                                     {activeTab === 'expense' ? (
                                         <td className="p-4">
                                             {editingId === item.id ? (
-                                                <input dir="rtl" type="number" className="w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.budgetLimit || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, budgetLimit: e.target.value }))} />
+                                                <input dir="rtl" type="number" className="h-[78px] w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10" value={editForm.budgetLimit || ''} onChange={(e) => setEditForm((prev) => ({ ...prev, budgetLimit: e.target.value }))} />
                                             ) : item.budgetLimit || '---'}
                                         </td>
                                     ) : null}
+                                    <td className="p-4">
+                                        {editingId === item.id ? (
+                                            <input
+                                                dir="rtl"
+                                                required
+                                                value={editForm.editReason || ''}
+                                                onChange={(e) => setEditForm((prev) => ({ ...prev, editReason: e.target.value }))}
+                                                placeholder="ترمیم کی وجہ *"
+                                                className="h-[78px] w-full border rounded-xl p-2 text-sm outline-none bg-black/20 text-right border-white/10"
+                                            />
+                                        ) : '---'}
+                                    </td>
                                     <td className="p-4">
                                         <div className="flex justify-center gap-2">
                                             {editingId === item.id ? (
@@ -571,7 +604,7 @@ export const FinanceHeadsSetup = () => {
                                     </td>
                                 </tr>
                             )) : (
-                                <tr><td className="p-6 text-center text-gray-400" colSpan={activeTab === 'expense' ? 6 : 5}>کوئی ریکارڈ موجود نہیں۔</td></tr>
+                                <tr><td className="p-6 text-center text-gray-400" colSpan={activeTab === 'expense' ? 7 : 6}>کوئی ریکارڈ موجود نہیں۔</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -712,7 +745,7 @@ function CategoryDropdown({ value, categories, onChange, compact = false, isLoad
                 type="button"
                 disabled={!hasOptions}
                 onClick={() => hasOptions && setIsOpen((prev) => !prev)}
-                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60 ${compact ? 'min-h-[42px] py-2' : 'h-[78px]'}`}
+                className={`flex h-[78px] w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-right text-sm font-bold text-[var(--color-text-main)] outline-none transition-all focus:border-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60`}
             >
                 <ChevronDown size={16} className={`shrink-0 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 <span className="min-w-0 flex-1 truncate">{displayValue}</span>

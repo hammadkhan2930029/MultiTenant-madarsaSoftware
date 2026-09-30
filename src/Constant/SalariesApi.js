@@ -6,14 +6,14 @@ const withToken = (options = {}) => ({
   token: getAdminToken(),
 });
 
-const withJson = (method, body) =>
-  withToken({
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+const withPayload = (method, payload, paymentProof = null) => {
+  const body = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) body.append(key, String(value));
   });
+  if (paymentProof) body.append('paymentProof', paymentProof);
+  return withToken({ method, body });
+};
 
 export const getSalaryEntries = async (query = '') => {
   const result = await apiRequest(`/finance/salaries${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
@@ -27,13 +27,13 @@ export const getSalaryTeachers = async (query = '') => {
   return { items: Array.isArray(data?.items) ? data.items : [], meta: data?.meta || null };
 };
 
-export const createSalaryEntry = async (payload) => {
-  const result = await apiRequest('/finance/salaries', withJson('POST', payload));
+export const createSalaryEntry = async (payload, paymentProof = null) => {
+  const result = await apiRequest('/finance/salaries', withPayload('POST', payload, paymentProof));
   return result?.data;
 };
 
-export const updateSalaryEntry = async (id, payload) => {
-  const result = await apiRequest(`/finance/salaries/${id}`, withJson('PUT', payload));
+export const updateSalaryEntry = async (id, payload, paymentProof = null) => {
+  const result = await apiRequest(`/finance/salaries/${id}`, withPayload('PUT', payload, paymentProof));
   return result?.data;
 };
 

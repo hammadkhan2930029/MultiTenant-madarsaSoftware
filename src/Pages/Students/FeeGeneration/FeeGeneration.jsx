@@ -826,7 +826,6 @@ export const FeesCollection = () => {
                                 <option value="Cash">Cash</option>
                                 <option value="Online">Online</option>
                                 <option value="Cheque">Cheque</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
                             </Select>
                         </div>
                         <div className="mt-6 flex gap-3">

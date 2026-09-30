@@ -1,11 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X, Eye, FileDown } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { User, Calendar, Plus, Save, Search, Wallet, FileText, RefreshCw, Edit2, Trash2, X, Eye, FileDown, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { DateField } from '../../../../Components/HR/FormElements';
+import { BankSearchField, DateField, InputField } from '../../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
 import { getFinanceHeads } from '../../../../Constant/FinanceHeadsApi';
 import { createSalaryEntry, deactivateSalaryEntry, getSalaryEntries, getSalaryTeachers, updateSalaryEntry } from '../../../../Constant/SalariesApi';
+import { pakistanBanks } from '../../../../Constant/AllBanks';
+import { getApiAssetUrl } from '../../../../Constant/AdminAuth';
 import StatusBadge from '../../../../Components/Common/StatusBadge';
 
 const today = () => new Date().toISOString().split('T')[0];
@@ -21,6 +23,13 @@ const createEmptyForm = (financeHeadId = '') => ({
     salaryMonth: currentMonth(),
     paymentDate: today(),
     paymentMethod: 'Cash',
+    chequeBankName: '',
+    chequeBranchCode: '',
+    chequeNumber: '',
+    chequeDate: '',
+    onlineWalletOrBank: '',
+    onlineReferenceNo: '',
+    paymentProof: null,
     remarks: '',
     status: 'active',
 });
@@ -34,7 +43,7 @@ const readMonthParts = (value) => {
     const [year, month] = value.split('-').map(Number);
     return { salaryYear: year, salaryMonth: month };
 };
-const paymentMethods = ['Cash', 'Online', 'Cheque', 'Bank Transfer'];
+const paymentMethods = ['Cash', 'Online', 'Cheque'];
 
 const getStaffResponsibilities = (teacher) => Array.from(new Set([
     teacher?.subject,
@@ -132,6 +141,7 @@ const toUrduSalaryError = (message, fallback) => {
 };
 
 export const SalaryEntry = ({ staffType = '' }) => {
+    const paymentProofInputRef = useRef(null);
     const [teachers, setTeachers] = useState([]);
     const [entries, setEntries] = useState([]);
     const [formData, setFormData] = useState(createEmptyForm());
@@ -229,6 +239,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
     const resetForm = () => {
         setFormData((prev) => createEmptyForm(prev.financeHeadId));
+        if (paymentProofInputRef.current) paymentProofInputRef.current.value = '';
         setSearchQuery('');
         setEditingEntry(null);
     };
@@ -242,6 +253,12 @@ export const SalaryEntry = ({ staffType = '' }) => {
             salaryYear: monthParts.salaryYear,
             paymentDate: formData.paymentDate,
             paymentMethod: formData.paymentMethod,
+            chequeBankName: formData.chequeBankName.trim(),
+            chequeBranchCode: formData.chequeBranchCode.trim(),
+            chequeNumber: formData.chequeNumber.trim(),
+            chequeDate: formData.chequeDate || null,
+            onlineWalletOrBank: formData.onlineWalletOrBank.trim(),
+            onlineReferenceNo: formData.onlineReferenceNo.trim(),
             remarks: formData.remarks,
             status: formData.status || 'active',
         };
@@ -268,14 +285,23 @@ export const SalaryEntry = ({ staffType = '' }) => {
             return;
         }
 
+        if (formData.paymentMethod === 'Online' && !formData.onlineReferenceNo.trim()) {
+            setError('آن لائن ٹرانزیکشن / ریفرنس نمبر درج کریں۔');
+            return;
+        }
+        if (['Cheque', 'Online'].includes(formData.paymentMethod) && !formData.paymentProof && !editingEntry?.paymentProofUrl) {
+            setError('چیک یا آن لائن ادائیگی کے لیے ثبوت کی تصویر ضروری ہے۔');
+            return;
+        }
+
         setIsSaving(true);
         try {
             const wasEditing = Boolean(editingEntry);
             let savedEntry;
             if (editingEntry) {
-                savedEntry = await updateSalaryEntry(editingEntry.id, buildPayload());
+                savedEntry = await updateSalaryEntry(editingEntry.id, buildPayload(), formData.paymentProof);
             } else {
-                savedEntry = await createSalaryEntry(buildPayload());
+                savedEntry = await createSalaryEntry(buildPayload(), formData.paymentProof);
             }
             resetForm();
             try {
@@ -304,6 +330,13 @@ export const SalaryEntry = ({ staffType = '' }) => {
             salaryMonth: toMonthInputValue(entry.salaryMonth, entry.salaryYear),
             paymentDate: toDateInputValue(entry.paymentDate),
             paymentMethod: entry.paymentMethod || 'Cash',
+            chequeBankName: entry.chequeBankName || '',
+            chequeBranchCode: entry.chequeBranchCode || '',
+            chequeNumber: entry.chequeNumber || '',
+            chequeDate: toDateInputValue(entry.chequeDate),
+            onlineWalletOrBank: entry.onlineWalletOrBank || '',
+            onlineReferenceNo: entry.onlineReferenceNo || '',
+            paymentProof: null,
             remarks: entry.remarks || '',
             status: entry.status || 'active',
         });
@@ -336,6 +369,27 @@ export const SalaryEntry = ({ staffType = '' }) => {
             setIsDeleting(false);
         }
     };
+
+    const viewPaymentProofUrl = viewTarget?.paymentProofUrl ? getApiAssetUrl(viewTarget.paymentProofUrl) : '';
+    const viewDetails = viewTarget ? [
+        ['نام', viewTarget.teacher?.fullName],
+        ['مضمون / مد', viewTarget.teacher?.subject || viewTarget.financeHead?.name],
+        ['مہینہ', formatMonth(viewTarget.salaryMonth, viewTarget.salaryYear)],
+        ['ادائیگی کی تاریخ', formatDate(viewTarget.paymentDate)],
+        ['طریقہ ادائیگی', viewTarget.paymentMethod],
+        ['رقم', `${formatAmount(viewTarget.amount)}/-`],
+        ...(viewTarget.remarks ? [['تفصیل / نوٹ', viewTarget.remarks]] : []),
+        ...(viewTarget.paymentMethod === 'Cheque' ? [
+            ['بینک کا نام', viewTarget.chequeBankName],
+            ['برانچ کوڈ', viewTarget.chequeBranchCode],
+            ['چیک نمبر', viewTarget.chequeNumber],
+            ['چیک کی تاریخ', viewTarget.chequeDate ? formatDate(viewTarget.chequeDate) : null],
+        ] : []),
+        ...(viewTarget.paymentMethod === 'Online' ? [
+            ['بینک / والٹ کا نام', viewTarget.onlineWalletOrBank],
+            ['ٹرانزیکشن / ریفرنس نمبر', viewTarget.onlineReferenceNo],
+        ] : []),
+    ].filter(([, value]) => value !== null && value !== undefined && value !== '') : [];
 
     return (
         <div className="min-h-screen p-3 md:p-5 font-urdu bg-[var(--color-bg)] text-[var(--color-text-main)]" dir="rtl">
@@ -432,6 +486,36 @@ export const SalaryEntry = ({ staffType = '' }) => {
                                     ))}
                                 </select>
                             </div>
+
+                            {formData.paymentMethod === 'Cheque' ? (
+                                <div className="grid grid-cols-1 gap-3 md:col-span-2 sm:grid-cols-2 lg:grid-cols-4">
+                                    <BankSearchField label="بینک کا نام" value={formData.chequeBankName} options={pakistanBanks} isDark onSelect={(bank) => setFormData({ ...formData, chequeBankName: bank })} onChange={(bank) => setFormData({ ...formData, chequeBankName: bank })} />
+                                    <InputField label="برانچ کوڈ" value={formData.chequeBranchCode} onChange={(event) => setFormData({ ...formData, chequeBranchCode: event.target.value })} />
+                                    <InputField label="چیک نمبر" value={formData.chequeNumber} onChange={(event) => setFormData({ ...formData, chequeNumber: event.target.value })} />
+                                    <DateField label="چیک کی تاریخ" required value={formData.chequeDate} onChange={(nextValue) => setFormData({ ...formData, chequeDate: nextValue })} />
+                                </div>
+                            ) : null}
+
+                            {formData.paymentMethod === 'Online' ? (
+                                <div className="grid grid-cols-1 gap-3 md:col-span-2 sm:grid-cols-2">
+                                    <InputField label="بینک / والٹ کا نام" value={formData.onlineWalletOrBank} onChange={(event) => setFormData({ ...formData, onlineWalletOrBank: event.target.value })} />
+                                    <InputField label="ٹرانزیکشن / ریفرنس نمبر" required value={formData.onlineReferenceNo} onChange={(event) => setFormData({ ...formData, onlineReferenceNo: event.target.value })} />
+                                </div>
+                            ) : null}
+
+                            {['Cash', 'Cheque', 'Online'].includes(formData.paymentMethod) ? (
+                                <div className="md:col-span-2">
+                                    <label className="block text-base font-bold text-[var(--color-text-muted)] mb-2 mr-2">ثبوت کی تصویر{['Cheque', 'Online'].includes(formData.paymentMethod) ? <span className="text-red-500"> *</span> : ' (اختیاری)'}</label>
+                                    <input
+                                        ref={paymentProofInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        required={['Cheque', 'Online'].includes(formData.paymentMethod) && !editingEntry?.paymentProofUrl}
+                                        onChange={(event) => setFormData({ ...formData, paymentProof: event.target.files?.[0] || null })}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-input)] text-base focus:outline-none"
+                                    />
+                                </div>
+                            ) : null}
 
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
@@ -645,7 +729,7 @@ export const SalaryEntry = ({ staffType = '' }) => {
 
             {viewTarget ? (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
-                    <div className="w-full max-w-lg rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl" dir="rtl">
+                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl" dir="rtl">
                         <div className="mb-6 flex items-start justify-between gap-4">
                             <div>
                                 <h3 className="text-2xl font-black text-[var(--color-text-main)]">تنخواہ کی تفصیل</h3>
@@ -662,30 +746,21 @@ export const SalaryEntry = ({ staffType = '' }) => {
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="text-sm font-black text-[var(--color-text-muted)]">نام</p>
-                                <p className="mt-1 text-lg font-bold">{viewTarget.teacher?.fullName || '---'}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="text-sm font-black text-[var(--color-text-muted)]">مضمون / مد</p>
-                                <p className="mt-1 text-lg font-bold">{viewTarget.teacher?.subject || viewTarget.financeHead?.name || '---'}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="text-sm font-black text-[var(--color-text-muted)]">مہینہ</p>
-                                <p className="mt-1 text-lg font-bold">{formatMonth(viewTarget.salaryMonth, viewTarget.salaryYear)}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="text-sm font-black text-[var(--color-text-muted)]">ادائیگی کی تاریخ</p>
-                                <p className="mt-1 text-lg font-bold">{formatDate(viewTarget.paymentDate)}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="text-sm font-black text-[var(--color-text-muted)]">طریقہ ادائیگی</p>
-                                <p className="mt-1 text-lg font-bold">{viewTarget.paymentMethod || 'Cash'}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-                                <p className="text-sm font-black text-[var(--color-text-muted)]">رقم</p>
-                                <p className="mt-1 text-lg font-black text-[var(--color-primary)]">{formatAmount(viewTarget.amount)}</p>
-                            </div>
+                            {viewDetails.map(([label, value]) => (
+                                <div key={label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                    <p className="text-sm font-black text-[var(--color-text-muted)]">{label}</p>
+                                    <p className={`mt-1 break-words text-lg font-bold ${label === 'رقم' ? 'text-[var(--color-primary)]' : ''}`}>{value}</p>
+                                </div>
+                            ))}
+                            {viewPaymentProofUrl ? (
+                                <div className="sm:col-span-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <p className="text-sm font-black text-[var(--color-text-muted)]">ادائیگی کی سلپ / ثبوت کی تصویر</p>
+                                        <a href={viewPaymentProofUrl} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-3 py-2 text-xs font-black text-[#0b1120]"><Download size={15} /> ڈاؤن لوڈ کریں</a>
+                                    </div>
+                                    <a href={viewPaymentProofUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-[var(--color-border)]"><img src={viewPaymentProofUrl} alt="ادائیگی کی سلپ" className="max-h-80 w-full object-contain" /></a>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>

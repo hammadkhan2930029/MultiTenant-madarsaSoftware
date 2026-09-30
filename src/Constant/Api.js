@@ -215,6 +215,7 @@ const shouldPreserveBodyBranchId = (endpoint, method = 'GET') => {
 };
 
 const appendSelectedBranchFilter = (endpoint, options = {}) => {
+  if (options.skipBranchContext) return endpoint;
   const method = options.method || 'GET';
   const branchId = shouldApplyBranchFilter(endpoint, method) ? getSelectedTenantBranchId() : null;
   if (!branchId) return endpoint;
@@ -226,6 +227,7 @@ const appendSelectedBranchFilter = (endpoint, options = {}) => {
 export const appendApiBranchContext = (endpoint, options = {}) => appendSelectedBranchFilter(endpoint, options);
 
 const buildBranchScopedRequest = (endpoint, options = {}) => {
+  if (options.skipBranchContext) return { endpoint, options };
   const method = String(options.method || 'GET').toUpperCase();
   const branchId = shouldApplyBranchContext(endpoint) ? getSelectedTenantBranchId() : null;
 

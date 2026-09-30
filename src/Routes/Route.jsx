@@ -33,6 +33,7 @@ import { CommissionTiers } from '../Pages/Affiliate/CommissionTiers';
 import { AffiliateOverview } from '../Pages/Affiliate/AffiliateOverview';
 import { AffiliateWallet } from '../Pages/Affiliate/AffiliateWallet';
 import { AffiliateWithdrawals } from '../Pages/Affiliate/AffiliateWithdrawals';
+import { AuditLogs } from '../Pages/AuditLogs/AuditLogs';
 
 const LoginRoute = () => {
   if (isAdminAuthenticated()) {
@@ -131,6 +132,7 @@ export const AppRoutes = () => {
         <Route path="role-management/users/create" element={withPermission(<UserManagement />, 'users.manage')} />
         <Route path="role-management/users/:userId" element={withPermission(<UserManagement />, 'users.view')} />
         <Route path="role-management/users/:userId/edit" element={withPermission(<UserManagement />, 'users.manage')} />
+        <Route path="audit-logs" element={withPermission(<AuditLogs />, 'audit.view')} />
         <Route path="tenant-management" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="tenant-management/create" element={withPermission(<TenantManagement />, 'tenant_management.view')} />
         <Route path="tenant-management/:tenantId" element={withPermission(<TenantManagement />, 'tenant_management.view')} />

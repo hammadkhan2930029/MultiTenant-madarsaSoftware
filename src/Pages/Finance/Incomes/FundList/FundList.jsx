@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Edit2, Eye, FileText, Phone, Printer, Save, Trash2, Wallet, X } from 'lucide-react';
-import { DateField, InputField } from '../../../../Components/HR/FormElements';
+import { ChevronLeft, ChevronRight, Download, Edit2, Eye, FileText, Phone, Printer, Save, Trash2, Wallet, X } from 'lucide-react';
+import { BankSearchField, DateField, InputField } from '../../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
-import { deactivateFundCollection, getFundCollections, updateFundCollection } from '../../../../Constant/FundCollectionsApi';
+import { deactivateFundCollection, getFundCollections, logFundCollectionPrint, updateFundCollection } from '../../../../Constant/FundCollectionsApi';
 import { printFundReceipt } from '../../../../Utils/FundReceiptPrint';
+import { getApiAssetUrl } from '../../../../Constant/AdminAuth';
+import { pakistanBanks } from '../../../../Constant/AllBanks';
 
 const PAGE_SIZE = 10;
 
@@ -18,6 +20,12 @@ const formatAmount = (value) => Number(value || 0).toLocaleString('en-US');
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ur-PK') : '---');
 const toDateInputValue = (value) => (value ? new Date(value).toISOString().split('T')[0] : '');
 const getFieldValue = (valueOrEvent) => valueOrEvent?.target?.value ?? valueOrEvent ?? '';
+const getRemarkValue = (remarks, label) => String(remarks || '')
+    .split('|')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${label}:`))
+    ?.slice(label.length + 1)
+    .trim() || '';
 
 const createEditForm = (fund) => ({
     collectionGroupId: fund.collectionGroupId || `FG-${fund.id}`,
@@ -33,6 +41,14 @@ const createEditForm = (fund) => ({
     details: fund.details || '',
     paymentDate: toDateInputValue(fund.paymentDate),
     chequeDate: toDateInputValue(fund.chequeDate),
+    chequeBankName: fund.chequeBankName || getRemarkValue(fund.remarks, 'بینک'),
+    chequeBranchCode: fund.chequeBranchCode || getRemarkValue(fund.remarks, 'برانچ کوڈ'),
+    chequeNumber: fund.chequeNumber || getRemarkValue(fund.remarks, 'چیک نمبر'),
+    onlineWalletOrBank: fund.onlineWalletOrBank || '',
+    onlineReferenceNo: fund.onlineReferenceNo || '',
+    paymentProof: null,
+    paymentProofUrl: fund.paymentProofUrl || '',
+    editReason: '',
     remarks: fund.remarks || '',
 });
 
@@ -106,6 +122,7 @@ export const FundList = () => {
     const handleGroupedPrint = async (fund) => {
         try {
             setError('');
+            void logFundCollectionPrint(fund.id).catch(() => {});
             const groupId = fund.collectionGroupId || `FG-${fund.id}`;
             const data = await getFundCollections(`collectionGroupId=${encodeURIComponent(groupId)}&page=1&limit=100&status=active`);
             const receiptFunds = data.items?.length ? data.items : [fund];
@@ -161,6 +178,10 @@ export const FundList = () => {
             setError('براہ کرم چیک کی تاریخ درج کریں۔');
             return;
         }
+        if (!editForm.editReason.trim()) {
+            setError('براہ کرم ترمیم کی وجہ / تفصیل درج کریں۔');
+            return;
+        }
 
         setIsSaving(true);
         try {
@@ -174,9 +195,10 @@ export const FundList = () => {
                 receiptNo: editForm.receiptNo.trim(),
                 details: editForm.details.trim(),
                 chequeDate: editForm.paymentMode === 'چیک' ? editForm.chequeDate : null,
+                editReason: editForm.editReason.trim(),
                 remarks: editForm.remarks.trim(),
                 status: 'active',
-            });
+            }, editForm.paymentProof);
             closeEdit();
             try {
                 await loadFunds(page);
@@ -394,9 +416,12 @@ export const FundList = () => {
     );
 };
 
-const ViewModal = ({ fund, onClose, onPrint }) => (
+const ViewModal = ({ fund, onClose, onPrint }) => {
+    const paymentProofUrl = fund.paymentProofUrl ? getApiAssetUrl(fund.paymentProofUrl) : '';
+
+    return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div className="w-full max-w-xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xl">
+        <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3 mb-4">
                 <h2 className="text-xl font-bold text-[var(--color-primary)]">عطیہ کی تفصیل</h2>
                 <div className="flex items-center gap-2">
@@ -423,10 +448,24 @@ const ViewModal = ({ fund, onClose, onPrint }) => (
                 <div className="sm:col-span-2">
                     <DetailItem label="تفصیل" value={fund.details || fund.remarks} />
                 </div>
+                {paymentProofUrl ? (
+                    <div className="sm:col-span-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <p className="text-xs text-[var(--color-text-muted)]">ادائیگی کی سلپ</p>
+                            <a href={paymentProofUrl} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-xs font-black text-[#0b1120]">
+                                <Download size={15} /> ڈاؤن لوڈ کریں
+                            </a>
+                        </div>
+                        <a href={paymentProofUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-[var(--color-border)]">
+                            <img src={paymentProofUrl} alt="ادائیگی کی سلپ" className="max-h-72 w-full object-contain" />
+                        </a>
+                    </div>
+                ) : null}
             </div>
         </div>
     </div>
-);
+    );
+};
 
 const EditModal = ({ editForm, isSaving, onClose, onSubmit, onChange }) => (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -467,12 +506,39 @@ const EditModal = ({ editForm, isSaving, onClose, onSubmit, onChange }) => (
 
                 <DateField label="تاریخ" required value={editForm.paymentDate} onChange={(nextValue) => onChange('paymentDate', nextValue)} />
                 {editForm.paymentMode === 'چیک' && (
-                    <DateField label="چیک کی تاریخ" required value={editForm.chequeDate} onChange={(nextValue) => onChange('chequeDate', nextValue)} />
+                    <>
+                        <BankSearchField label="بینک کا نام" value={editForm.chequeBankName} options={pakistanBanks} isDark onSelect={(bank) => onChange('chequeBankName', bank)} onChange={(bank) => onChange('chequeBankName', bank)} />
+                        <InputField label="برانچ کوڈ" value={editForm.chequeBranchCode} onChange={(e) => onChange('chequeBranchCode', e.target.value)} />
+                        <InputField label="چیک نمبر" value={editForm.chequeNumber} onChange={(e) => onChange('chequeNumber', e.target.value)} />
+                        <DateField label="چیک کی تاریخ" required value={editForm.chequeDate} onChange={(nextValue) => onChange('chequeDate', nextValue)} />
+                    </>
                 )}
+                {editForm.paymentMode === 'آن لائن' && (
+                    <>
+                        <InputField label="بینک / والٹ کا نام" value={editForm.onlineWalletOrBank} onChange={(e) => onChange('onlineWalletOrBank', e.target.value)} />
+                        <InputField label="ٹرانزیکشن / ریفرنس نمبر" required value={editForm.onlineReferenceNo} onChange={(e) => onChange('onlineReferenceNo', e.target.value)} />
+                    </>
+                )}
+                {['چیک', 'آن لائن'].includes(editForm.paymentMode) ? (
+                    <div className="md:col-span-2">
+                        <label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ثبوت کی تصویر <span className="text-red-500">*</span></label>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            required={!editForm.paymentProof && !editForm.paymentProofUrl}
+                            onChange={(event) => onChange('paymentProof', event.target.files?.[0] || null)}
+                            className="mt-2 w-full p-4 rounded-2xl border outline-none font-bold bg-[var(--color-input)] border-transparent focus:border-[var(--color-primary)]"
+                        />
+                        {editForm.paymentProofUrl ? <p className="mt-2 text-xs font-bold text-[var(--color-text-muted)]">موجودہ تصویر محفوظ رہے گی؛ نئی image منتخب کرنے پر replace ہو جائے گی۔</p> : null}
+                    </div>
+                ) : null}
                 <InputField label="مقصد" value={editForm.purpose} onChange={(e) => onChange('purpose', e.target.value)} />
                 <InputField label="رسید نمبر" value={editForm.receiptNo} onChange={(e) => onChange('receiptNo', e.target.value)} />
                 <div className="md:col-span-2">
                     <InputField label="تفصیل" value={editForm.details} onChange={(e) => onChange('details', e.target.value)} />
+                </div>
+                <div className="md:col-span-2">
+                    <InputField label="ترمیم کی وجہ / تفصیل" required value={editForm.editReason} onChange={(e) => onChange('editReason', e.target.value)} />
                 </div>
             </div>
 

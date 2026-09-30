@@ -6,14 +6,14 @@ const withToken = (options = {}) => ({
   token: getAdminToken(),
 });
 
-const withJson = (method, body) =>
-  withToken({
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+const withPayload = (method, payload, paymentProof = null) => {
+  const body = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (key !== 'paymentProof' && key !== 'paymentProofUrl' && value !== null && value !== undefined) body.append(key, String(value));
   });
+  if (paymentProof) body.append('paymentProof', paymentProof);
+  return withToken({ method, body });
+};
 
 export const getFundCollections = async (query = '') => {
   const result = await apiRequest(`/finance/fund-collections${query ? `?${query}` : ''}`, withToken({ method: 'GET' }));
@@ -21,17 +21,24 @@ export const getFundCollections = async (query = '') => {
   return { items: Array.isArray(data?.items) ? data.items : [], meta: data?.meta || null };
 };
 
-export const createFundCollection = async (payload) => {
-  const result = await apiRequest('/finance/fund-collections', withJson('POST', payload));
+export const createFundCollection = async (payload, paymentProof = null) => {
+  const body = new FormData();
+  Object.entries(payload).forEach(([key, value]) => { if (value !== null && value !== undefined) body.append(key, String(value)); });
+  if (paymentProof) body.append('paymentProof', paymentProof);
+  const result = await apiRequest('/finance/fund-collections', withToken({ method: 'POST', body }));
   return result?.data;
 };
 
-export const updateFundCollection = async (id, payload) => {
-  const result = await apiRequest(`/finance/fund-collections/${id}`, withJson('PUT', payload));
+export const updateFundCollection = async (id, payload, paymentProof = null) => {
+  const result = await apiRequest(`/finance/fund-collections/${id}`, withPayload('PUT', payload, paymentProof));
   return result?.data;
 };
 
 export const deactivateFundCollection = async (id) => {
   const result = await apiRequest(`/finance/fund-collections/${id}/deactivate`, withToken({ method: 'PATCH' }));
   return result?.data;
+};
+
+export const logFundCollectionPrint = async (id) => {
+  await apiRequest(`/finance/fund-collections/${id}/print`, withToken({ method: 'POST' }));
 };

@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import StatusBadge from '../../../Components/Common/StatusBadge';
-import { ChevronLeft, ChevronRight, Edit2, Receipt, Save, Search, Trash2, Wallet, X } from 'lucide-react';
-import { DateField, InputField } from '../../../Components/HR/FormElements';
+import { ChevronLeft, ChevronRight, Download, Edit2, Eye, Printer, Receipt, Save, Search, Trash2, Wallet, X } from 'lucide-react';
+import { BankSearchField, DateField, InputField } from '../../../Components/HR/FormElements';
 import { useNotificationBridge } from '../../../Components/Notifications/useNotificationBridge';
 import { getFinanceHeads } from '../../../Constant/FinanceHeadsApi';
-import { createFinanceTransaction, deactivateFinanceTransaction, getFinanceTransactions, updateFinanceTransaction } from '../../../Constant/FinanceTransactionsApi';
+import { createFinanceTransaction, deactivateFinanceTransaction, getFinanceTransactions, logFinanceTransactionPrint, updateFinanceTransaction } from '../../../Constant/FinanceTransactionsApi';
 import { usePermissions } from '../../../Hooks/usePermissions';
+import { pakistanBanks } from '../../../Constant/AllBanks';
+import { getAdminSession, getApiAssetUrl } from '../../../Constant/AdminAuth';
+import { AppImages } from '../../../Constant/AppImages';
 
 const today = () => new Date().toISOString().split('T')[0];
 const PAGE_SIZE = 10;
 const formatAmount = (value) => Number(value || 0).toLocaleString('en-US');
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('ur-PK') : '---');
 const toDateInputValue = (value) => (value ? new Date(value).toISOString().split('T')[0] : today());
+const escapeHtml = (value) => String(value ?? '---').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 
 const createForm = () => ({
     transactionDate: today(),
@@ -22,6 +26,7 @@ const createForm = () => ({
     amount: '',
     slipNo: '',
     details: '',
+    chequeBankName: '', chequeBranchCode: '', chequeNumber: '', chequeDate: '', onlineWalletOrBank: '', onlineReferenceNo: '', paymentProof: null, editReason: '',
 });
 
 const toUrduError = (message, fallback) => {
@@ -61,6 +66,7 @@ export const OtherIncomeExpense = () => {
         toDate: '',
     });
     const [editingEntry, setEditingEntry] = useState(null);
+    const [viewTarget, setViewTarget] = useState(null);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -177,6 +183,14 @@ export const OtherIncomeExpense = () => {
             amount: String(entry.amount || ''),
             slipNo: entry.slipNo || '',
             details: entry.details || '',
+            chequeBankName: entry.chequeBankName || '',
+            chequeBranchCode: entry.chequeBranchCode || '',
+            chequeNumber: entry.chequeNumber || '',
+            chequeDate: toDateInputValue(entry.chequeDate),
+            onlineWalletOrBank: entry.onlineWalletOrBank || '',
+            onlineReferenceNo: entry.onlineReferenceNo || '',
+            paymentProof: null,
+            editReason: '',
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -195,6 +209,9 @@ export const OtherIncomeExpense = () => {
             setError('خرچ کے لیے ادائیگی کا طریقہ اور حالت منتخب کریں۔');
             return;
         }
+        if (['چیک', 'آن لائن'].includes(formData.paymentMode) && !formData.paymentProof && !editingEntry) { setError('ثبوت کی تصویر ضروری ہے۔'); return; }
+        if (formData.paymentMode === 'آن لائن' && !formData.onlineReferenceNo.trim()) { setError('آن لائن ریفرنس نمبر ضروری ہے۔'); return; }
+        if (editingEntry && !formData.editReason.trim()) { setError('براہ کرم ترمیم کی وجہ / تفصیل درج کریں۔'); return; }
 
         setIsSaving(true);
         let savedEntry;
@@ -209,13 +226,15 @@ export const OtherIncomeExpense = () => {
                 paymentStatus: formData.paymentStatus,
                 slipNo: formData.slipNo.trim(),
                 details: formData.details.trim(),
+                chequeBankName: formData.chequeBankName.trim(), chequeBranchCode: formData.chequeBranchCode.trim(), chequeNumber: formData.chequeNumber.trim(), chequeDate: formData.chequeDate || null, onlineWalletOrBank: formData.onlineWalletOrBank.trim(), onlineReferenceNo: formData.onlineReferenceNo.trim(),
                 status: 'active',
+                ...(editingEntry ? { editReason: formData.editReason.trim() } : {}),
             };
 
             if (editingEntry) {
-                savedEntry = await updateFinanceTransaction(editingEntry.id, payload);
+                savedEntry = await updateFinanceTransaction(editingEntry.id, payload, formData.paymentProof);
             } else {
-                savedEntry = await createFinanceTransaction(payload);
+                savedEntry = await createFinanceTransaction(payload, formData.paymentProof);
             }
         } catch (saveError) {
             setIsSaving(false);
@@ -271,6 +290,36 @@ export const OtherIncomeExpense = () => {
 
     const canGoPrev = page > 1;
     const canGoNext = page < (meta.totalPages || 1);
+    const viewPaymentProofUrl = viewTarget?.paymentProofUrl ? getApiAssetUrl(viewTarget.paymentProofUrl) : '';
+    const viewDetails = viewTarget ? [
+        ['تاریخ', formatDate(viewTarget.transactionDate)], ['قسم', viewTarget.type === 'income' ? 'آمدن' : 'خرچ'], ['مد', viewTarget.financeHead?.name || '---'], ['ادائیگی کا طریقہ', viewTarget.paymentMode || '---'], ['ادائیگی کی حالت', viewTarget.paymentStatus || '---'], ['سلپ نمبر', viewTarget.slipNo || '---'], ['رقم', `${formatAmount(viewTarget.amount)}/-`], ['تفصیل', viewTarget.details || '---'],
+        ...(viewTarget.paymentMode === 'چیک' ? [['بینک کا نام', viewTarget.chequeBankName || '---'], ['برانچ کوڈ', viewTarget.chequeBranchCode || '---'], ['چیک نمبر', viewTarget.chequeNumber || '---'], ['چیک کی تاریخ', formatDate(viewTarget.chequeDate)]] : []),
+        ...(viewTarget.paymentMode === 'آن لائن' ? [['بینک / والٹ کا نام', viewTarget.onlineWalletOrBank || '---'], ['ٹرانزیکشن / ریفرنس نمبر', viewTarget.onlineReferenceNo || '---']] : []),
+    ] : [];
+
+    const printEntry = (entry) => {
+        void logFinanceTransactionPrint(entry.id).catch(() => {});
+        const receiptWindow = window.open('', '_blank', 'width=800,height=900');
+        if (!receiptWindow) return;
+
+        const madrassaProfile = getAdminSession()?.madrassaProfile || {};
+        const madrassaName = madrassaProfile.name || 'دارالعلوم المحمدیہ';
+        const receiptLogo = madrassaProfile.logoUrl
+            ? getApiAssetUrl(madrassaProfile.logoUrl)
+            : new URL(AppImages.logo, window.location.origin).toString();
+        const rows = [
+            ['تاریخ', formatDate(entry.transactionDate)],
+            ['قسم', entry.type === 'income' ? 'آمدن' : 'خرچ'],
+            ['مد', entry.financeHead?.name || '---'],
+            ['ادائیگی', entry.paymentMode || '---'],
+            ['حالت', entry.paymentStatus || '---'],
+            ['سلپ نمبر', entry.slipNo || '---'],
+            ['رقم', `${formatAmount(entry.amount)}/-`],
+            ['تفصیل', entry.details || '---'],
+        ];
+        receiptWindow.document.write(`<!doctype html><html dir="rtl" lang="ur"><head><meta charset="utf-8"><title>آمدن و خرچ رسید</title><style>@page{size:A5;margin:0}*{box-sizing:border-box}body{margin:0;background:#edf2f7;color:#16243a;font-family:Arial,'Noto Nastaliq Urdu',serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{position:relative;width:148mm;min-height:210mm;margin:auto;padding:11mm;background:#fff;overflow:hidden}.watermark{position:absolute;inset:0;margin:auto;width:72mm;height:72mm;object-fit:contain;opacity:.045;transform:rotate(-12deg)}.content{position:relative;z-index:1}.topline{height:5px;background:#00c98d;border-radius:99px;margin-bottom:7mm}.header{display:flex;align-items:center;gap:12px;border-bottom:2px solid #00c98d;padding-bottom:5mm}.logo{width:58px;height:58px;object-fit:contain}.identity{flex:1}.name{margin:0;color:#063f3a;font-size:25px;font-weight:800}.subtitle{display:inline-block;margin-top:7px;padding:5px 14px;border-radius:99px;background:#063f3a;color:#fff;font-size:13px;font-weight:700}.date{font-size:11px;color:#617089;text-align:left}.title{margin:8mm 0 5mm;text-align:center;font-size:25px;font-weight:800;color:#172b4d}.entryNo{margin:auto auto 5mm;width:max-content;border:1px solid #b8ead9;border-radius:99px;padding:5px 15px;background:#effcf7;color:#08765b;font-size:12px;font-weight:700}table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #c9d7e5;border-radius:10px;overflow:hidden}th,td{padding:10px 12px;border-bottom:1px solid #dce5ed;text-align:right;font-size:14px}tr:last-child th,tr:last-child td{border-bottom:0}th{width:35%;background:#f3f8fb;color:#496078;font-weight:700}td{font-weight:700}.amount{color:#078b68;font-size:20px}.footer{position:absolute;right:11mm;left:11mm;bottom:11mm;padding-top:4mm;border-top:1px dashed #b8c6d4;color:#718096;font-size:10px;display:flex;justify-content:space-between}.signatures{margin-top:13mm;display:flex;justify-content:space-between;color:#52657b;font-size:12px}.signature{width:37%;border-top:1px solid #90a4b8;padding-top:6px;text-align:center}@media print{body{background:#fff}.page{margin:0}}</style></head><body><main class="page"><img class="watermark" src="${escapeHtml(receiptLogo)}" alt=""><div class="content"><div class="topline"></div><header class="header"><img class="logo" src="${escapeHtml(receiptLogo)}" alt="مدرسہ لوگو"><div class="identity"><h1 class="name">${escapeHtml(madrassaName)}</h1><span class="subtitle">الیکٹرانک آمدن و خرچ رسید</span></div><div class="date">تاریخِ پرنٹ<br>${escapeHtml(formatDate(new Date()))}</div></header><h2 class="title">آمدن و خرچ رسید</h2><div class="entryNo">ریکارڈ نمبر: ${escapeHtml(entry.id)}</div><table>${rows.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td class="${label === 'رقم' ? 'amount' : ''}">${escapeHtml(value)}</td></tr>`).join('')}</table><div class="signatures"><div class="signature">تیار کنندہ</div><div class="signature">منظور کنندہ</div></div></div><footer class="footer"><span>${escapeHtml(madrassaName)}</span><span>یہ کمپیوٹر سے تیار شدہ رسید ہے</span></footer></main><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`);
+        receiptWindow.document.close();
+    };
 
     return (
         <div className="min-h-screen bg-[var(--color-bg)] p-3 md:p-6 text-[var(--color-text-main)] font-urdu" dir="rtl">
@@ -287,7 +336,7 @@ export const OtherIncomeExpense = () => {
                             {editingEntry ? <Edit2 size={20} /> : <Receipt size={20} />}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <h1 className="text-xl font-black text-[var(--color-primary)]">{editingEntry ? 'ریکارڈ تبدیل کریں' : 'دیگر آمدن و خرچ'}</h1>
+                            <h1 className="text-xl font-black text-[var(--color-primary)]">{editingEntry ? 'ریکارڈ تبدیل کریں' : 'آمدن و خرچ اندراج'}</h1>
                             <p className="text-xs text-[var(--color-text-muted)] mt-1">روزانہ آمدنی یا خرچ محفوظ کریں</p>
                         </div>
                         </div>
@@ -298,6 +347,20 @@ export const OtherIncomeExpense = () => {
                             </button>
                         ) : null}
                     </div>
+
+                    {editingEntry ? (
+                        <div className="space-y-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                            <label className="mr-2 text-[11px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">ترمیم کی وجہ / تفصیل <span className="text-red-500">*</span></label>
+                            <textarea
+                                required
+                                rows={2}
+                                className="min-h-[92px] w-full resize-none rounded-2xl border border-transparent bg-[var(--color-input)] p-4 text-sm font-bold outline-none transition-all focus:border-[var(--color-primary)]"
+                                placeholder="ریکارڈ میں تبدیلی کی وجہ لکھیں"
+                                value={formData.editReason}
+                                onChange={(event) => setFormData({ ...formData, editReason: event.target.value })}
+                            />
+                        </div>
+                    ) : null}
 
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -401,6 +464,9 @@ export const OtherIncomeExpense = () => {
                             />
                         </div>
 
+                        {formData.paymentMode === 'چیک' ? <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:items-start"><BankSearchField label="بینک کا نام" value={formData.chequeBankName} options={pakistanBanks} isDark onSelect={(bank) => setFormData({ ...formData, chequeBankName: bank })} onChange={(bank) => setFormData({ ...formData, chequeBankName: bank })} /><InputField label="برانچ کوڈ" value={formData.chequeBranchCode} onChange={(e) => setFormData({ ...formData, chequeBranchCode: e.target.value })} /><InputField label="چیک نمبر" value={formData.chequeNumber} onChange={(e) => setFormData({ ...formData, chequeNumber: e.target.value })} /><InputField type="date" label="چیک کی تاریخ" value={formData.chequeDate} onChange={(e) => setFormData({ ...formData, chequeDate: e.target.value })} /><div className="space-y-2"><label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ثبوت کی تصویر <span className="text-red-500">*</span></label><input type="file" accept="image/jpeg,image/png,image/webp" required onChange={(e) => setFormData({ ...formData, paymentProof: e.target.files?.[0] || null })} className="h-[76px] w-full rounded-2xl bg-[var(--color-input)] p-4" /></div></div> : null}
+                        {formData.paymentMode === 'آن لائن' ? <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start"><InputField label="بینک / والٹ کا نام" value={formData.onlineWalletOrBank} onChange={(e) => setFormData({ ...formData, onlineWalletOrBank: e.target.value })} /><InputField label="ٹرانزیکشن / ریفرنس نمبر" required value={formData.onlineReferenceNo} onChange={(e) => setFormData({ ...formData, onlineReferenceNo: e.target.value })} /><div className="space-y-2"><label className="text-[11px] font-black text-[var(--color-text-muted)] mr-2 uppercase tracking-widest">ثبوت کی تصویر <span className="text-red-500">*</span></label><input type="file" accept="image/jpeg,image/png,image/webp" required onChange={(e) => setFormData({ ...formData, paymentProof: e.target.files?.[0] || null })} className="h-[76px] w-full rounded-2xl bg-[var(--color-input)] p-4" /></div></div> : null}
+
                         <textarea
                             rows={3}
                             className="w-full resize-none rounded-2xl border border-transparent bg-[var(--color-input)] p-4 text-sm font-bold outline-none transition-all focus:border-[var(--color-primary)] min-h-[120px]"
@@ -408,15 +474,16 @@ export const OtherIncomeExpense = () => {
                             value={formData.details}
                             onChange={(event) => setFormData({ ...formData, details: event.target.value })}
                         />
+
                     </div>
 
                     {activeHeads.length === 0 ? (
                         <p className="text-[11px] font-bold text-rose-500">
-                            پہلے آمدن و خرچ سیٹ اَپ میں {formData.type === 'income' ? 'آمدن' : 'خرچ'} کی مد شامل کریں۔
+                            پہلے آمدن و خرچ اقسام میں {formData.type === 'income' ? 'آمدن' : 'خرچ'} کی مد شامل کریں۔
                         </p>
                     ) : (
                         <p className="text-[11px] font-bold text-[var(--color-text-muted)]">
-                            یہ فہرست آمدن و خرچ سیٹ اَپ میں admin کی بنائی ہوئی مدوں سے آ رہی ہے۔
+                            یہ فہرست آمدن و خرچ اقسام میں admin کی بنائی ہوئی مدوں سے آ رہی ہے۔
                         </p>
                     )}
 
@@ -530,6 +597,12 @@ export const OtherIncomeExpense = () => {
                                             <td className="p-4 text-sm text-[var(--color-text-muted)]">{entry.details || '---'}</td>
                                             <td className="p-4">
                                                 <div className="flex items-center justify-center gap-2">
+                                                    <button type="button" onClick={() => setViewTarget(entry)} className="rounded-xl bg-emerald-500/10 p-2 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-[#0b1120]" aria-label="دیکھیں" title="دیکھیں">
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button type="button" onClick={() => printEntry(entry)} className="rounded-xl bg-violet-500/10 p-2 text-violet-400 transition-all hover:bg-violet-500 hover:text-white" aria-label="پرنٹ" title="پرنٹ">
+                                                        <Printer size={16} />
+                                                    </button>
                                                     <button type="button" disabled={!canManageTransactions} onClick={() => startEdit(entry)} className="rounded-xl bg-blue-500/10 p-2 text-blue-400 transition-all hover:bg-blue-500 hover:text-white disabled:opacity-40" aria-label="تبدیل کریں">
                                                         <Edit2 size={16} />
                                                     </button>
@@ -572,6 +645,44 @@ export const OtherIncomeExpense = () => {
                         </div>
                     </div>
                 </div>
+
+                {viewTarget ? (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">
+                        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-2xl" dir="rtl">
+                            <div className="mb-6 flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 className="text-2xl font-black text-[var(--color-text-main)]">آمدن و خرچ کی تفصیل</h3>
+                                    <p className="mt-1 text-sm font-bold text-[var(--color-text-muted)]">{viewTarget.financeHead?.name || '---'}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button type="button" onClick={() => printEntry(viewTarget)} className="rounded-xl bg-[var(--color-primary)]/10 p-2 text-[var(--color-primary)] transition-all hover:bg-[var(--color-primary)] hover:text-[#0b1120]" aria-label="پرنٹ" title="پرنٹ"><Printer size={18} /></button>
+                                    <button type="button" onClick={() => setViewTarget(null)} className="rounded-xl bg-[var(--color-bg)] p-2 text-[var(--color-text-muted)] transition-all hover:text-rose-500" aria-label="بند کریں"><X size={18} /></button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                {viewDetails.map(([label, value]) => (
+                                    <div key={label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                        <p className="text-xs font-black text-[var(--color-text-muted)]">{label}</p>
+                                        <p className={`mt-1 break-words text-base font-bold ${label === 'رقم' ? 'text-[var(--color-primary)]' : ''}`}>{value}</p>
+                                    </div>
+                                ))}
+                                {viewPaymentProofUrl ? (
+                                    <div className="sm:col-span-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                            <p className="text-xs font-black text-[var(--color-text-muted)]">ادائیگی کی سلپ / ثبوت کی تصویر</p>
+                                            <a href={viewPaymentProofUrl} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-3 py-2 text-xs font-black text-[#0b1120]">
+                                                <Download size={15} /> ڈاؤن لوڈ کریں
+                                            </a>
+                                        </div>
+                                        <a href={viewPaymentProofUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-xl border border-[var(--color-border)]">
+                                            <img src={viewPaymentProofUrl} alt="ادائیگی کی سلپ" className="max-h-80 w-full object-contain" />
+                                        </a>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
 
                 {deleteTarget ? (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-sm">

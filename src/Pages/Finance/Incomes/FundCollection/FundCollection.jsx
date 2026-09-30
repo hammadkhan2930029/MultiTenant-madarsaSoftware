@@ -6,7 +6,7 @@ import { BankSearchField, DateField, InputField } from '../../../../Components/H
 import { pakistanBanks } from '../../../../Constant/AllBanks';
 import {AppImages} from '../../../../Constant/AppImages'
 import { useNotificationBridge } from '../../../../Components/Notifications/useNotificationBridge';
-import { createFundCollection, getFundCollections } from '../../../../Constant/FundCollectionsApi';
+import { createFundCollection, getFundCollections, logFundCollectionPrint } from '../../../../Constant/FundCollectionsApi';
 import { getAdminSession, getApiAssetUrl } from '../../../../Constant/AdminAuth';
 import { printFundReceipt } from '../../../../Utils/FundReceiptPrint';
 import { createClientId } from '../../../../Utils/createClientId';
@@ -28,7 +28,10 @@ const createFundEntry = () => ({
     bankName: '',
     branchCode: '',
     chequeNo: '',
-    chequeDate: ''
+    chequeDate: '',
+    onlineWalletOrBank: '',
+    onlineReferenceNo: '',
+    paymentProof: null
 });
 
 const getPaymentModeLabel = (mode) => {
@@ -124,6 +127,8 @@ export const FundCollection = () => {
             fund.bankName ? `بینک: ${fund.bankName}` : '',
             fund.branchCode ? `برانچ کوڈ: ${fund.branchCode}` : '',
             fund.chequeNo ? `چیک نمبر: ${fund.chequeNo}` : '',
+            fund.onlineWalletOrBank ? `بینک / والٹ: ${fund.onlineWalletOrBank}` : '',
+            fund.onlineReferenceNo ? `ریفرنس نمبر: ${fund.onlineReferenceNo}` : '',
         ].filter(Boolean);
 
         return details.join(' | ').slice(0, 255);
@@ -308,13 +313,21 @@ export const FundCollection = () => {
             setError('براہ کرم چیک کی تاریخ درج کریں۔');
             return;
         }
+        if (funds.some((fund) => fund.paymentMode === 'آن لائن' && !fund.onlineReferenceNo.trim())) {
+            setError('براہ کرم آن لائن ٹرانزیکشن / ریفرنس نمبر درج کریں۔');
+            return;
+        }
+        if (funds.some((fund) => ['چیک', 'آن لائن'].includes(fund.paymentMode) && !fund.paymentProof)) {
+            setError('براہ کرم چیک یا آن لائن ادائیگی کے لیے ثبوت کی تصویر منتخب کریں۔');
+            return;
+        }
 
         try {
             setIsSaving(true);
             setError('');
             const collectionGroupId = `FG-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
-            await Promise.all(
+            const savedFunds = await Promise.all(
                 funds.map((fund) =>
                     createFundCollection({
                         collectionGroupId,
@@ -330,14 +343,20 @@ export const FundCollection = () => {
                         details: fund.details.trim(),
                         paymentDate: new Date().toISOString().split('T')[0],
                         chequeDate: fund.paymentMode === 'چیک' ? fund.chequeDate : null,
+                        chequeBankName: fund.paymentMode === 'چیک' ? fund.bankName.trim() : '',
+                        chequeBranchCode: fund.paymentMode === 'چیک' ? fund.branchCode.trim() : '',
+                        chequeNumber: fund.paymentMode === 'چیک' ? fund.chequeNo.trim() : '',
+                        onlineWalletOrBank: fund.paymentMode === 'آن لائن' ? fund.onlineWalletOrBank.trim() : '',
+                        onlineReferenceNo: fund.paymentMode === 'آن لائن' ? fund.onlineReferenceNo.trim() : '',
                         remarks: buildRemarks(fund),
-                    })
+                    }, fund.paymentProof)
                 )
             );
 
             setIsModalOpen(false);
             setSuccess('فنڈ وصولی کامیابی سے محفوظ ہو گئی۔');
             if (shouldPrint) {
+                savedFunds.forEach((fund) => { void logFundCollectionPrint(fund.id).catch(() => {}); });
                 printFundReceipt({
                     donorInfo,
                     collectionGroupId,
@@ -409,7 +428,6 @@ export const FundCollection = () => {
                                     <h2 className="text-xl font-bold text-[var(--color-primary)]">فنڈ کی تفصیلات #{index + 1}</h2>
                                 </div>
                                 <div className="flex gap-2">
-                                    <InputField type='file' placeholder='تصویر منتضب فرمائے' />
                                     <button onClick={() => handleCopyFund(index)} className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-lg transition-all"><Copy size={20} /></button>
                                     {funds.length > 1 && <button onClick={() => removeFund(fund.id)} className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg transition-all"><Trash2 size={20} /></button>}
                                 </div>
@@ -456,8 +474,17 @@ export const FundCollection = () => {
                                     <InputField label='برانچ کوڈ' type="number" placeholder="0021" value={fund.branchCode} onChange={(e) => updateFund(index, 'branchCode', e.target.value)} />
                                     <InputField label='چیک نمبر' type="number" placeholder="0021000" value={fund.chequeNo} onChange={(e) => updateFund(index, 'chequeNo', e.target.value)} />
                                     <DateField label='چیک کی تاریخ' required value={fund.chequeDate} onChange={(value) => updateFund(index, 'chequeDate', value)} />
-                                </motion.div>
-                            )}
+                                    <div className="space-y-2"><label className="text-sm font-semibold pr-2">ثبوت کی تصویر<span className="text-red-500"> *</span></label><input type="file" accept="image/*" required onChange={(event) => updateFund(index, 'paymentProof', event.target.files?.[0] || null)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)]" /></div>
+                        </motion.div>
+                    )}
+                    {fund.paymentMode === 'آن لائن' && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+                            className="mt-6 p-4 bg-[var(--color-surface)] rounded-2xl border border-blue-200 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <InputField label='بینک / والٹ کا نام' placeholder="مثلاً Meezan Bank" value={fund.onlineWalletOrBank} onChange={(e) => updateFund(index, 'onlineWalletOrBank', e.target.value)} />
+                            <InputField label='ٹرانزیکشن / ریفرنس نمبر' required placeholder="مثلاً TXN-123456" value={fund.onlineReferenceNo} onChange={(e) => updateFund(index, 'onlineReferenceNo', e.target.value)} />
+                            <div className="space-y-2"><label className="text-sm font-semibold pr-2">ثبوت کی تصویر<span className="text-red-500"> *</span></label><input type="file" accept="image/*" required onChange={(event) => updateFund(index, 'paymentProof', event.target.files?.[0] || null)} className="w-full bg-[var(--color-input)] p-3 rounded-xl border border-[var(--color-border)]" /></div>
+                        </motion.div>
+                    )}
                         </motion.div>
                     ))}
                 </AnimatePresence>

@@ -229,7 +229,7 @@ export const ROLE_PERMISSION_MODULES = [
     label: 'مالیات',
     permissions: [
       { key: 'finance.view', name: 'مالیات دیکھیں' },
-      { key: 'finance.heads.view', name: 'آمدن و خرچ سیٹ اپ دیکھیں' },
+      { key: 'finance.heads.view', name: 'آمدن و خرچ اقسام دیکھیں' },
       { key: 'finance.heads.edit', name: 'آمدن و خرچ کی مد یا کیٹیگری کا انتظام کریں' },
       { key: 'finance.transactions.view', name: 'آمدن و خرچ اندراج دیکھیں' },
       { key: 'finance.transactions.create', name: 'آمدن و خرچ درج کریں' },

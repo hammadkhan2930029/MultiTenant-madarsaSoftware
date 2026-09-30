@@ -163,7 +163,6 @@ export const StudentFeeDetail = () => {
                                 <option value="Cash">Cash</option>
                                 <option value="Online">Online</option>
                                 <option value="Cheque">Cheque</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
                             </Select>
                             {isEditing ? (
                                 <Can anyPermissions={['student_fees.collect', 'student_fees.edit']}>

@@ -20,17 +20,27 @@ export const getFinanceTransactions = async (query = '') => {
   return result?.data || { items: [], meta: null };
 };
 
-export const createFinanceTransaction = async (payload) => {
-  const result = await apiRequest('/finance/transactions', withJson('POST', payload));
+export const createFinanceTransaction = async (payload, paymentProof = null) => {
+  const body = new FormData();
+  Object.entries(payload).forEach(([key, value]) => { if (value !== null && value !== undefined) body.append(key, String(value)); });
+  if (paymentProof) body.append('paymentProof', paymentProof);
+  const result = await apiRequest('/finance/transactions', withToken({ method: 'POST', body }));
   return result?.data;
 };
 
-export const updateFinanceTransaction = async (id, payload) => {
-  const result = await apiRequest(`/finance/transactions/${id}`, withJson('PUT', payload));
+export const updateFinanceTransaction = async (id, payload, paymentProof = null) => {
+  const body = new FormData();
+  Object.entries(payload).forEach(([key, value]) => { if (value !== null && value !== undefined) body.append(key, String(value)); });
+  if (paymentProof) body.append('paymentProof', paymentProof);
+  const result = await apiRequest(`/finance/transactions/${id}`, withToken({ method: 'PUT', body }));
   return result?.data;
 };
 
 export const deactivateFinanceTransaction = async (id) => {
   const result = await apiRequest(`/finance/transactions/${id}/deactivate`, withToken({ method: 'PATCH' }));
   return result?.data;
+};
+
+export const logFinanceTransactionPrint = async (id) => {
+  await apiRequest(`/finance/transactions/${id}/print`, withToken({ method: 'POST' }));
 };

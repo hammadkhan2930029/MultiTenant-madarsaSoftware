@@ -363,7 +363,7 @@ export const SideBar = () => {
             subMenu: [
                 {
                     id: 'income-heads-config',
-                    label: 'آمدن و خرچ سیٹ اَپ',
+                    label: 'آمدن و خرچ اقسام',
                     icon: Settings2,
                     path: '/finance/setup/income-expence',
                     permissions: ['finance.heads.view', 'finance.heads.edit'],
@@ -401,7 +401,7 @@ export const SideBar = () => {
                 // --- Expenses Section ---
                 {
                     id: 'expenses',
-                    label: 'دیگر آمدن و خرچ',
+                    label: 'آمدن و خرچ اندراج',
                     icon: TrendingDown,
                     path: '/finance/other-income-expense',
                     permissions: ['finance.transactions.view', 'finance.transactions.create']
@@ -536,6 +536,7 @@ export const SideBar = () => {
                 { id: 'degree', label: 'تعلیمی اسناد کا انتظام', path: '/setting/degree-name', permissions: ['settings.view', 'settings.update', 'settings.degrees.view'] },
                 { id: 'role_management', label: 'کردار مینجمنٹ', path: '/role-management', permissions: ['roles.view', 'roles.manage'] },
                 { id: 'user_management', label: 'صارفین مینجمنٹ', path: '/role-management/users', permissions: ['users.view', 'users.manage'] },
+                { id: 'audit_logs', label: 'آڈٹ لاگز', path: '/audit-logs', permissions: ['audit.view'] },
                 { id: 'tenant_management', label: 'مدارس کا انتظام', path: '/tenant-management', permission: 'tenant_management.view' },
                 { id: 'result_grades', label: 'رزلٹ فیصد رینج', path: '/exams/result-grades', permissions: ['result_grades.view'] },
 
@@ -582,11 +583,11 @@ export const SideBar = () => {
         t_salary_increment: 'تنخواہ انکریمنٹ',
         t_salary: 'تنخواہ کی ادائیگی',
         finance: 'مالیات',
-        'income-heads-config': 'آمدن و خرچ سیٹ اپ',
+        'income-heads-config': 'آمدن و خرچ اقسام',
         income: 'عطیات',
         'fee-collection': 'فنڈ وصولی',
         'fund-list': 'عطیات کی فہرست',
-        expenses: 'دیگر آمدن و خرچ',
+        expenses: 'آمدن و خرچ اندراج',
         finance_reports: 'رپورٹس',
         accounts: 'بینک اور کیش',
         'cash-management': 'کیش مینجمنٹ',
