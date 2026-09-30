@@ -29,6 +29,7 @@
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.0",
     "styled-components": "^6.3.12",
+    "xlsx": "^0.18.5",
     "yup": "^1.7.1"
   },
   "devDependencies": {
