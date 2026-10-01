@@ -326,7 +326,14 @@ export const UserManagement = () => {
     setIsLoading(true);
     setError('');
     try {
-      const result = await getUsers({ page, limit: PAGE_SIZE, search, roleId: roleFilter, status: statusFilter });
+      const result = await getUsers({
+        page,
+        limit: PAGE_SIZE,
+        search,
+        roleId: roleFilter,
+        status: statusFilter,
+        branchId: branchScopedSession ? sessionBranchId : selectedTenantBranchId,
+      });
       setUsers(result.items || []);
       setUsersMeta(result.meta || { currentPage: page, totalPages: 1, totalItems: result.items?.length || 0, perPage: PAGE_SIZE });
     } catch (loadError) {
@@ -334,7 +341,7 @@ export const UserManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, roleFilter, search, statusFilter]);
+  }, [branchScopedSession, page, roleFilter, search, selectedTenantBranchId, sessionBranchId, statusFilter]);
 
   const loadTeachers = useCallback(async () => {
     if (mode === 'list' || !assignmentBranchId) {
@@ -421,12 +428,13 @@ export const UserManagement = () => {
     if (formData.password.trim() && formData.password !== formData.confirmPassword) {
       nextErrors.confirmPassword = 'پاس ورڈ اور تصدیقی پاس ورڈ ایک جیسے ہونے چاہئیں۔';
     }
+    if (!assignmentBranchId) nextErrors.branchId = 'برانچ منتخب کریں۔';
     if (!formData.roleId && !isSuperAdminUser(currentUser)) nextErrors.roleId = 'کردار منتخب کریں۔';
     if (formData.phone.trim() && !isValidPhoneNumber(formData.phone)) nextErrors.phone = PHONE_VALIDATION_MESSAGE;
     if (Object.keys(nextErrors).length) {
       setFormErrors(nextErrors);
       setError('درج کردہ معلومات میں غلطی ہے۔ متعلقہ خانوں کو درست کریں۔');
-      focusFirstInvalidField(nextErrors, { name: 'user-name', email: 'user-email', username: 'user-username', password: 'user-password', confirmPassword: 'user-confirm-password', roleId: 'user-role', phone: 'user-phone' });
+      focusFirstInvalidField(nextErrors, { name: 'user-name', email: 'user-email', username: 'user-username', password: 'user-password', confirmPassword: 'user-confirm-password', branchId: 'user-branch', roleId: 'user-role', phone: 'user-phone' });
       return undefined;
     }
 
@@ -475,7 +483,7 @@ export const UserManagement = () => {
       if (Object.keys(backendErrors).length) {
         setFormErrors(backendErrors);
         setError('درج کردہ معلومات میں غلطی ہے۔ متعلقہ خانوں کو درست کریں۔');
-        focusFirstInvalidField(backendErrors, { name: 'user-name', email: 'user-email', username: 'user-username', password: 'user-password', roleId: 'user-role', phone: 'user-phone' });
+        focusFirstInvalidField(backendErrors, { name: 'user-name', email: 'user-email', username: 'user-username', password: 'user-password', branchId: 'user-branch', roleId: 'user-role', phone: 'user-phone' });
       } else {
         setError(saveError.message || 'صارف محفوظ نہیں ہو سکا۔');
       }
@@ -581,7 +589,7 @@ export const UserManagement = () => {
               readOnly
             />
           ) : (
-            <SelectField id="user-branch" label="برانچ" options={branchOptions} value={formData.branchId} onChange={(event) => setFormData((prev) => ({ ...prev, branchId: event.target.value, teacherId: '' }))} />
+            <SelectField id="user-branch" error={formErrors.branchId} label="برانچ" required options={branchOptions} value={formData.branchId} onChange={(event) => { clearFieldError(setFormErrors, 'branchId'); setFormData((prev) => ({ ...prev, branchId: event.target.value, teacherId: '' })); }} />
           )}
           <SelectField
             id="user-teacher"

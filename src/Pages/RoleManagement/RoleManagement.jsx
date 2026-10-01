@@ -925,7 +925,7 @@ export const RoleManagement = () => {
           : null,
       };
 
-      if (mode === 'create' && canAssignRoleBranch) {
+      if (canAssignRoleBranch) {
         payload.branchId = Number(formData.branchId);
       }
 
@@ -1267,7 +1267,7 @@ export const RoleManagement = () => {
             disabled={mode === 'edit' && isRoleModificationProtected(currentRole)}
           />
 
-          {mode === 'create' && canAssignRoleBranch ? (
+          {(mode === 'create' || mode === 'edit') && canAssignRoleBranch ? (
             <SelectField
               id="role-branch"
               error={formErrors.branchId}

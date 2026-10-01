@@ -9,7 +9,7 @@ const withToken = (options = {}) => ({
 const buildQuery = (filters = {}) => {
   const params = new URLSearchParams();
 
-  ['page', 'limit', 'search', 'status', 'roleId'].forEach((key) => {
+  ['page', 'limit', 'search', 'status', 'roleId', 'branchId'].forEach((key) => {
     const value = filters[key];
     if (value !== undefined && value !== null && value !== '') params.set(key, value);
   });
